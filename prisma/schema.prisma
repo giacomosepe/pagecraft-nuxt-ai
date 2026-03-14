@@ -1,0 +1,313 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+  // No output line — important for Nuxt compatibility
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+
+
+// ─── Users ────────────────────────────────────────────────────────────────────
+// Mirrors Supabase auth.users. id MUST match auth.uid() for RLS to work.
+// Created automatically via a Supabase trigger on signup — never manually.
+
+model User {
+  id        String   @id @db.Uuid
+  email     String   @unique
+  fullName  String?  @map("full_name")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  folders         Folder[]
+  companyProfiles CompanyProfile[]
+  pages           Page[]
+  files           File[]
+
+  @@map("users")
+}
+
+// ─── Company Profiles ─────────────────────────────────────────────────────────
+// Reusable company context. A user can have multiple (one per client).
+// Attached to pages so the prompt builder can inject company data automatically.
+// All fields nullable — user fills them progressively.
+
+model CompanyProfile {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  name   String // profile display name e.g. "Acme SpA - 2024"
+
+  // Core company info
+  companyName    String? @map("company_name")
+  taxYear        Int?    @map("tax_year")
+  industrySector String? @map("industry_sector")
+  employeeCount  Int?    @map("employee_count")
+
+  // Legal structure
+  legalRepresentative String?  @map("legal_representative")
+  boardMembers        String[] @map("board_members")
+
+  // Shareholders — variable nested structure, JSONB is correct here
+  // Shape: [{ name, type: 'individual'|'company', ownership_pct, legal_rep? }]
+  shareholders Json? @db.JsonB
+
+  // Subsidiaries — variable nested structure, JSONB is correct here
+  // Shape: [{ name, country, legal_rep }]
+  subsidiaries Json? @db.JsonB
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pages Page[]
+
+  @@map("company_profiles")
+}
+
+// ─── Folders ──────────────────────────────────────────────────────────────────
+// Optional organisational layer. Pages do not have to be in a folder.
+
+model Folder {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pages Page[]
+
+  @@map("folders")
+}
+
+// ─── Frameworks ───────────────────────────────────────────────────────────────
+// System-owned writing templates. Seeded by admin, read-only for users in v1.
+// isPublic = true makes a framework visible in the framework picker.
+// deprecatedAt hides a framework from the picker without deleting it —
+// existing pages that reference it are unaffected.
+
+model Framework {
+  id           String    @id @default(uuid()) @db.Uuid
+  name         String
+  slug         String    @unique
+  description  String?
+  isPublic     Boolean   @default(true) @map("is_public")
+  deprecatedAt DateTime? @map("deprecated_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  frameworkSteps FrameworkStep[]
+  pages          Page[]
+
+  @@map("frameworks")
+}
+
+// ─── Framework Steps ──────────────────────────────────────────────────────────
+// Blueprint steps for a framework. Admin-defined, never edited by users.
+// order is 1-based. @@unique prevents duplicate positions per framework.
+// These are the source for snapshotting into user Step rows at page creation.
+
+model FrameworkStep {
+  id                   String   @id @default(uuid()) @db.Uuid
+  frameworkId          String   @map("framework_id") @db.Uuid
+  order                Int
+  title                String
+  description          String?
+  systemPromptTemplate String   @map("system_prompt_template") @db.Text
+  refinePromptTemplate String   @map("refine_prompt_template") @db.Text
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  framework Framework @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+  steps     Step[]
+
+  @@unique([frameworkId, order])
+  @@map("framework_steps")
+}
+
+// ─── Pages ────────────────────────────────────────────────────────────────────
+// A user's document instance built on a framework.
+// frameworkId is nullable (SetNull) — a completed page is a standalone document.
+// frameworkName is snapshotted at creation so history is preserved even if
+// the framework is later deleted or renamed.
+// folderId and companyProfileId are optional — can be set later.
+
+model Page {
+  id               String     @id @default(uuid()) @db.Uuid
+  userId           String     @map("user_id") @db.Uuid
+  folderId         String?    @map("folder_id") @db.Uuid
+  frameworkId      String?    @map("framework_id") @db.Uuid
+  frameworkName    String     @map("framework_name")
+  companyProfileId String?    @map("company_profile_id") @db.Uuid
+  title            String
+  status           PageStatus @default(DRAFT)
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder         Folder?         @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  framework      Framework?      @relation(fields: [frameworkId], references: [id], onDelete: SetNull)
+  companyProfile CompanyProfile? @relation(fields: [companyProfileId], references: [id], onDelete: SetNull)
+  steps          Step[]
+  files          File[]
+
+  @@map("pages")
+}
+
+// ─── Steps ────────────────────────────────────────────────────────────────────
+// The user's instance of a framework step — their actual writing work.
+// Snapshotted from FrameworkStep at page creation time.
+// Prompt templates are copied so blueprint edits never affect existing pages.
+// frameworkStepId is nullable — SetNull means a FrameworkStep blueprint can be
+// deleted without destroying the user's work (snapshot is self-contained).
+
+model Step {
+  id                   String     @id @default(uuid()) @db.Uuid
+  pageId               String     @map("page_id") @db.Uuid
+  frameworkStepId      String?    @map("framework_step_id") @db.Uuid
+  order                Int
+  title                String
+  systemPromptTemplate String     @map("system_prompt_template") @db.Text
+  refinePromptTemplate String     @map("refine_prompt_template") @db.Text
+  lastPromptUsed       String?    @map("last_prompt_used") @db.Text
+  committedOutput      String?    @map("committed_output") @db.Text
+  status               StepStatus @default(PENDING)
+  createdAt            DateTime   @default(now()) @map("created_at")
+  updatedAt            DateTime   @updatedAt @map("updated_at")
+
+  page          Page           @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  frameworkStep FrameworkStep? @relation(fields: [frameworkStepId], references: [id], onDelete: SetNull)
+  generations   Generation[]
+  files         File[]
+
+  @@unique([pageId, order])
+  @@map("steps")
+}
+
+// ─── Generations ──────────────────────────────────────────────────────────────
+// Every AI output or manual draft for a step. Append-only log.
+// isCommitted marks the approved version — mirrors step.committedOutput.
+// updatedAt tracks when isCommitted is toggled.
+
+model Generation {
+  id          String           @id @default(uuid()) @db.Uuid
+  stepId      String           @map("step_id") @db.Uuid
+  promptUsed  String           @map("prompt_used") @db.Text
+  output      String           @db.Text
+  source      GenerationSource
+  isCommitted Boolean          @default(false) @map("is_committed")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  step  Step             @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  files GenerationFile[]
+
+  @@map("generations")
+}
+
+// ─── Files ────────────────────────────────────────────────────────────────────
+// Uploaded documents providing context for AI generation.
+// scope = PAGE means available to all steps in the page.
+// scope = STEP means attached to one specific step only.
+// stepId is null when scope = PAGE.
+// extractedText is populated at upload time — this is what gets sent to Claude.
+// extractionStatus tracks the async extraction process.
+// storagePath is the Supabase Storage bucket path for the original file.
+
+model File {
+  id               String           @id @default(uuid()) @db.Uuid
+  userId           String           @map("user_id") @db.Uuid
+  pageId           String           @map("page_id") @db.Uuid
+  stepId           String?          @map("step_id") @db.Uuid
+  fileName         String           @map("file_name")
+  fileType         FileType         @map("file_type")
+  storagePath      String           @map("storage_path")
+  extractedText    String?          @map("extracted_text") @db.Text
+  extractionStatus ExtractionStatus @default(PENDING) @map("extraction_status")
+  scope            FileScope
+  sizeBytes        Int?             @map("size_bytes")
+  createdAt        DateTime         @default(now()) @map("created_at")
+
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  page        Page             @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  step        Step?            @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  generations GenerationFile[]
+
+  @@map("files")
+}
+
+// ─── Generation Files ─────────────────────────────────────────────────────────
+// Join table — records exactly which files were sent to Claude
+// for a specific generation. Audit trail for reproducibility.
+
+model GenerationFile {
+  id           String @id @default(uuid()) @db.Uuid
+  generationId String @map("generation_id") @db.Uuid
+  fileId       String @map("file_id") @db.Uuid
+
+  generation Generation @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  file       File       @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@unique([generationId, fileId])
+  @@map("generation_files")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum PageStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+  ARCHIVED
+
+  @@map("page_status")
+}
+
+enum StepStatus {
+  PENDING
+  IN_PROGRESS
+  COMMITTED
+  SKIPPED
+
+  @@map("step_status")
+}
+
+enum GenerationSource {
+  AI_GENERATED
+  MANUAL_EDIT
+  AI_REFINED
+
+  @@map("generation_source")
+}
+
+enum FileScope {
+  PAGE
+  STEP
+
+  @@map("file_scope")
+}
+
+enum FileType {
+  PDF
+  DOCX
+  XLSX
+  CSV
+  PPTX
+  IMAGE
+  TXT
+
+  @@map("file_type")
+}
+
+enum ExtractionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+
+  @@map("extraction_status")
+}
