@@ -10,12 +10,21 @@ export default defineNuxtConfig({
     "@nuxtjs/i18n",
     "@nuxtjs/sitemap",
     "@nuxtjs/supabase",
-    "@nuxtjs/tailwindcss",
+    "@nuxt/ui",
   ],
+  css: ["./assets/css/main.css"],
   supabase: {
-    // Redirect unauthenticated users to /login
-    // We'll define protected routes later
-    redirect: false, // start with false, enable once auth pages are built
+    redirectOptions: {
+      login: "/login",
+      callback: "/confirm",
+      exclude: ["/", "/about", "/pricing", "/docs"], // public pages
+      saveRedirectToCookie: true, // sends user back where they tried to go
+    },
+    url: process.env.NUXT_PUBLIC_SUPABASE_URL,
+    key: process.env.NUXT_PUBLIC_SUPABASE_KEY,
+  },
+  ui: {
+    safelistColors: ["brand"],
   },
   // Railway needs this for production
   nitro: {
@@ -26,7 +35,7 @@ export default defineNuxtConfig({
     anthropicApiKey: "", // set via env var NUXT_ANTHROPIC_API_KEY
     databaseUrl: "", // set via env var NUXT_DATABASE_URL
     directDatabaseUrl: "", // set via env var NUXT_DIRECT_DATABASE_URL
-
+    supabaseServiceKey: "", // set via env var SUPABASE_SECRET_KEY
     // Public — safe to expose to browser
     public: {
       supabaseUrl: "", // set via NUXT_PUBLIC_SUPABASE_URL
@@ -44,7 +53,5 @@ export default defineNuxtConfig({
       { code: "it", name: "Italiano", file: "it.json" },
     ],
     strategy: "prefix_except_default",
-    langDir: "locales/",
-    vueI18n: "./i18n/i18n.config.ts",
   },
 });

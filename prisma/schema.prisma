@@ -27,6 +27,7 @@ model User {
   companyProfiles CompanyProfile[]
   pages           Page[]
   files           File[]
+  clients         Client[]
 
   @@map("users")
 }
@@ -39,6 +40,7 @@ model User {
 model CompanyProfile {
   id     String @id @default(uuid()) @db.Uuid
   userId String @map("user_id") @db.Uuid
+  clientId  String?  @map("client_id") @db.Uuid  // ← ADD THIS FOR CLIENT BASED ARCHITECTURE
   name   String // profile display name e.g. "Acme SpA - 2024"
 
   // Core company info
@@ -62,8 +64,10 @@ model CompanyProfile {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  pages Page[]
+  // relations
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+    pages  Page[]
 
   @@map("company_profiles")
 }
@@ -143,15 +147,18 @@ model Page {
   frameworkId      String?    @map("framework_id") @db.Uuid
   frameworkName    String     @map("framework_name")
   companyProfileId String?    @map("company_profile_id") @db.Uuid
+  clientId         String?    @map("client_id") @db.Uuid  // ← ADD THIS FOR CLIENT BASED ARCHITECTURE
   title            String
   status           PageStatus @default(DRAFT)
   createdAt        DateTime   @default(now()) @map("created_at")
   updatedAt        DateTime   @updatedAt @map("updated_at")
 
+  // relations
   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   folder         Folder?         @relation(fields: [folderId], references: [id], onDelete: SetNull)
   framework      Framework?      @relation(fields: [frameworkId], references: [id], onDelete: SetNull)
   companyProfile CompanyProfile? @relation(fields: [companyProfileId], references: [id], onDelete: SetNull)
+  client         Client?         @relation(fields: [clientId], references: [id], onDelete: SetNull)
   steps          Step[]
   files          File[]
 
@@ -173,6 +180,7 @@ model Step {
   title                String
   systemPromptTemplate String     @map("system_prompt_template") @db.Text
   refinePromptTemplate String     @map("refine_prompt_template") @db.Text
+  userContext          String?    @map("user_context") @db.Text
   lastPromptUsed       String?    @map("last_prompt_used") @db.Text
   committedOutput      String?    @map("committed_output") @db.Text
   status               StepStatus @default(PENDING)
@@ -255,6 +263,27 @@ model GenerationFile {
   @@unique([generationId, fileId])
   @@map("generation_files")
 }
+
+
+// ─── Clients ──────────────────────────────────────────────────────────────────
+// A client is a container for a real-world company.
+// One client can have multiple company profiles (one per tax year)
+// and multiple pages (all documents produced for that client).
+
+model Client {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyProfiles CompanyProfile[]
+  pages           Page[]
+
+  @@map("clients")
+}
+
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
