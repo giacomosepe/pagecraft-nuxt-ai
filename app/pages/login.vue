@@ -21,8 +21,11 @@ async function handleSubmit() {
 			email: email.value,
 			password: password.value,
 		});
-		if (error) errorMsg.value = error.message;
-		// on success, @nuxtjs/supabase redirects automatically via redirectOptions
+		if (error) {
+			errorMsg.value = error.message; // ← signin failed, show error
+		} else {
+			await navigateTo("/dashboard"); // ← signin succeeded, go to dashboard
+		}
 	} else {
 		const { error } = await supabase.auth.signUp({
 			email: email.value,

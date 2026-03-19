@@ -5,5 +5,8 @@ export default defineAppConfig({
       primary: "brand",
       neutral: "zinc",
     },
+    button: {
+      base: "cursor-pointer",
+    },
   },
 });

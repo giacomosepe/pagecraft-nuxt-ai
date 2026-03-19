@@ -20,8 +20,8 @@ export default defineNuxtConfig({
       exclude: ["/", "/about", "/pricing", "/docs"], // public pages
       saveRedirectToCookie: true, // sends user back where they tried to go
     },
-    url: process.env.NUXT_PUBLIC_SUPABASE_URL,
-    key: process.env.NUXT_PUBLIC_SUPABASE_KEY,
+    // url: process.env.NUXT_PUBLIC_SUPABASE_URL,
+    // key: process.env.NUXT_PUBLIC_SUPABASE_KEY,
   },
   ui: {
     safelistColors: ["brand"],

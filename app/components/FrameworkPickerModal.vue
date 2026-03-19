@@ -26,7 +26,7 @@ const selected = ref<string | null>(null);
 function confirm() {
 	const fw = frameworks.value?.find((f) => f.id === selected.value);
 	if (!fw) return;
-	emit("select", fw.id, fw.slug);
+	emit("select", fw.id, fw.name); //<!-- changed fw.slug to fw.name -->
 }
 </script>
 

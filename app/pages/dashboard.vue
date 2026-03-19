@@ -2,18 +2,19 @@
 definePageMeta({ middleware: "auth" });
 
 const client = useSupabaseClient();
-const user = useSupabaseUser();
 
-const { data: pages, pending } = useAsyncData("pages-list", async () => {
-	const { data, error } = await client
-		.from("pages")
-		.select("id, title, status, framework_name, updated_at, client_id")
-		.eq("user_id", user.value!.id)
-		.order("updated_at", { ascending: false });
-	if (error) throw error;
-	return data;
-});
-
+const { data: pages, pending } = await useAsyncData(
+	"pages-list",
+	async () => {
+		const { data, error } = await client
+			.from("pages")
+			.select("id, title, status, framework_name, updated_at, client_id")
+			.order("updated_at", { ascending: false });
+		if (error) throw error;
+		return data ?? [];
+	},
+	{ server: false },
+);
 const showFrameworkModal = ref(false);
 
 function onFrameworkSelected(frameworkId: string, frameworkSlug: string) {
