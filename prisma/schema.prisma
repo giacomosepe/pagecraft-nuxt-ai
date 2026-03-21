@@ -2,15 +2,11 @@
 
 generator client {
   provider = "prisma-client-js"
-  // No output line — important for Nuxt compatibility
 }
 
 datasource db {
   provider = "postgresql"
 }
-
-
-
 
 // ─── Users ────────────────────────────────────────────────────────────────────
 // Mirrors Supabase auth.users. id MUST match auth.uid() for RLS to work.
@@ -23,57 +19,57 @@ model User {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  folders         Folder[]
-  companyProfiles CompanyProfile[]
-  pages           Page[]
-  files           File[]
-  clients         Client[]
+  folders Folder[]
+  clients Client[]
+  pages   Page[]
+  files   File[]
 
   @@map("users")
 }
 
-// ─── Company Profiles ─────────────────────────────────────────────────────────
-// Reusable company context. A user can have multiple (one per client).
-// Attached to pages so the prompt builder can inject company data automatically.
-// All fields nullable — user fills them progressively.
+// ─── Clients ──────────────────────────────────────────────────────────────────
+// A client is a real-world company. One record per company.
+// All company data lives here — no separate "profile" table.
+// Only `name` is required at creation. All other fields are filled progressively.
+//
+// JSONB fields:
+//   shareholders: ShareholderPerson[] | ShareholderCompany[]  (see company.types.ts)
+//   subsidiaries: SubsidiaryCompany[] | SubsidiaryPerson[]    (see company.types.ts)
 
-model CompanyProfile {
+model Client {
   id     String @id @default(uuid()) @db.Uuid
   userId String @map("user_id") @db.Uuid
-  clientId  String?  @map("client_id") @db.Uuid  // ← ADD THIS FOR CLIENT BASED ARCHITECTURE
-  name   String // profile display name e.g. "Acme SpA - 2024"
+  name   String // Required — the only field needed at creation
 
   // Core company info
-  companyName    String? @map("company_name")
-  taxYear        Int?    @map("tax_year")
-  industrySector String? @map("industry_sector")
-  employeeCount  Int?    @map("employee_count")
+  companyName         String?  @map("company_name")
+  industrySector      String?  @map("industry_sector")
+  employeeCount       Int?     @map("employee_count")
+  legalRepresentative String?  @map("legal_representative")
+  vatNumber           String?  @map("vat_number")       // Partita IVA
+  codiceFiscale       String?  @map("codice_fiscale")
+  registeredAddress   String?  @map("registered_address") // Sede legale
 
   // Legal structure
-  legalRepresentative String?  @map("legal_representative")
-  boardMembers        String[] @map("board_members")
+  companyForm  String?  @map("company_form")   // S.r.l., S.p.A., etc.
+  boardMembers String[] @map("board_members")
 
-  // Shareholders — variable nested structure, JSONB is correct here
-  // Shape: [{ name, type: 'individual'|'company', ownership_pct, legal_rep? }]
+  // Variable nested structures — JSONB is correct here
   shareholders Json? @db.JsonB
-
-  // Subsidiaries — variable nested structure, JSONB is correct here
-  // Shape: [{ name, country, legal_rep }]
   subsidiaries Json? @db.JsonB
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  // relations
-  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-    client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
-    pages  Page[]
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pages Page[]
 
-  @@map("company_profiles")
+  @@map("clients")
 }
 
 // ─── Folders ──────────────────────────────────────────────────────────────────
 // Optional organisational layer. Pages do not have to be in a folder.
+// A system folder named "Free pages" is used for pages without a client.
 
 model Folder {
   id        String   @id @default(uuid()) @db.Uuid
@@ -91,18 +87,19 @@ model Folder {
 // ─── Frameworks ───────────────────────────────────────────────────────────────
 // System-owned writing templates. Seeded by admin, read-only for users in v1.
 // isPublic = true makes a framework visible in the framework picker.
-// deprecatedAt hides a framework from the picker without deleting it —
-// existing pages that reference it are unaffected.
+// deprecatedAt hides a framework from the picker without deleting it.
+// basePromptTemplate: shared preamble prepended to every step's system prompt.
 
 model Framework {
-  id           String    @id @default(uuid()) @db.Uuid
-  name         String
-  slug         String    @unique
-  description  String?
-  isPublic     Boolean   @default(true) @map("is_public")
-  deprecatedAt DateTime? @map("deprecated_at")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  id                 String    @id @default(uuid()) @db.Uuid
+  name               String
+  slug               String    @unique
+  description        String?
+  basePromptTemplate String?   @map("base_prompt_template") @db.Text
+  isPublic           Boolean   @default(true) @map("is_public")
+  deprecatedAt       DateTime? @map("deprecated_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
   frameworkSteps FrameworkStep[]
   pages          Page[]
@@ -114,6 +111,9 @@ model Framework {
 // Blueprint steps for a framework. Admin-defined, never edited by users.
 // order is 1-based. @@unique prevents duplicate positions per framework.
 // These are the source for snapshotting into user Step rows at page creation.
+//
+// formSchema: JSONB array of field definitions for Form-type steps.
+// Shape: [{ key: string, label: string, type: 'text'|'textarea'|'select', options?: string[], aiSuggestable: boolean }]
 
 model FrameworkStep {
   id                   String   @id @default(uuid()) @db.Uuid
@@ -123,6 +123,7 @@ model FrameworkStep {
   description          String?
   systemPromptTemplate String   @map("system_prompt_template") @db.Text
   refinePromptTemplate String   @map("refine_prompt_template") @db.Text
+  formSchema           Json?    @map("form_schema") @db.JsonB
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
 
@@ -135,32 +136,31 @@ model FrameworkStep {
 
 // ─── Pages ────────────────────────────────────────────────────────────────────
 // A user's document instance built on a framework.
-// frameworkId is nullable (SetNull) — a completed page is a standalone document.
+// clientId is nullable — pages without a client go in a "Free pages" folder.
+// taxYear is stored on the page, not the client — a company can have
+// Patent Box 2024 and Patent Box 2025 as two separate pages.
 // frameworkName is snapshotted at creation so history is preserved even if
 // the framework is later deleted or renamed.
-// folderId and companyProfileId are optional — can be set later.
 
 model Page {
-  id               String     @id @default(uuid()) @db.Uuid
-  userId           String     @map("user_id") @db.Uuid
-  folderId         String?    @map("folder_id") @db.Uuid
-  frameworkId      String?    @map("framework_id") @db.Uuid
-  frameworkName    String     @map("framework_name")
-  companyProfileId String?    @map("company_profile_id") @db.Uuid
-  clientId         String?    @map("client_id") @db.Uuid  // ← ADD THIS FOR CLIENT BASED ARCHITECTURE
-  title            String
-  status           PageStatus @default(DRAFT)
-  createdAt        DateTime   @default(now()) @map("created_at")
-  updatedAt        DateTime   @updatedAt @map("updated_at")
+  id            String     @id @default(uuid()) @db.Uuid
+  userId        String     @map("user_id") @db.Uuid
+  folderId      String?    @map("folder_id") @db.Uuid
+  frameworkId   String?    @map("framework_id") @db.Uuid
+  frameworkName String     @map("framework_name")
+  clientId      String?    @map("client_id") @db.Uuid
+  taxYear       Int?       @map("tax_year")
+  title         String
+  status        PageStatus @default(DRAFT)
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
 
-  // relations
-  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  folder         Folder?         @relation(fields: [folderId], references: [id], onDelete: SetNull)
-  framework      Framework?      @relation(fields: [frameworkId], references: [id], onDelete: SetNull)
-  companyProfile CompanyProfile? @relation(fields: [companyProfileId], references: [id], onDelete: SetNull)
-  client         Client?         @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  steps          Step[]
-  files          File[]
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder    Folder?    @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  framework Framework? @relation(fields: [frameworkId], references: [id], onDelete: SetNull)
+  client    Client?    @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  steps     Step[]
+  files     File[]
 
   @@map("pages")
 }
@@ -168,9 +168,13 @@ model Page {
 // ─── Steps ────────────────────────────────────────────────────────────────────
 // The user's instance of a framework step — their actual writing work.
 // Snapshotted from FrameworkStep at page creation time.
-// Prompt templates are copied so blueprint edits never affect existing pages.
-// frameworkStepId is nullable — SetNull means a FrameworkStep blueprint can be
-// deleted without destroying the user's work (snapshot is self-contained).
+//
+// formData: JSONB — stores values the user filled in via the step form.
+// Shape mirrors the formSchema on FrameworkStep: { [key]: value }
+// This is what gets serialised into the userContext sent to Claude.
+//
+// userContext: free-text prompt additions (typed directly or assembled from formData).
+// committedOutput: the approved generated text for this step.
 
 model Step {
   id                   String     @id @default(uuid()) @db.Uuid
@@ -180,6 +184,8 @@ model Step {
   title                String
   systemPromptTemplate String     @map("system_prompt_template") @db.Text
   refinePromptTemplate String     @map("refine_prompt_template") @db.Text
+  formSchema           Json?      @map("form_schema") @db.JsonB
+  formData             Json?      @map("form_data") @db.JsonB
   userContext          String?    @map("user_context") @db.Text
   lastPromptUsed       String?    @map("last_prompt_used") @db.Text
   committedOutput      String?    @map("committed_output") @db.Text
@@ -199,7 +205,6 @@ model Step {
 // ─── Generations ──────────────────────────────────────────────────────────────
 // Every AI output or manual draft for a step. Append-only log.
 // isCommitted marks the approved version — mirrors step.committedOutput.
-// updatedAt tracks when isCommitted is toggled.
 
 model Generation {
   id          String           @id @default(uuid()) @db.Uuid
@@ -219,12 +224,8 @@ model Generation {
 
 // ─── Files ────────────────────────────────────────────────────────────────────
 // Uploaded documents providing context for AI generation.
-// scope = PAGE means available to all steps in the page.
-// scope = STEP means attached to one specific step only.
-// stepId is null when scope = PAGE.
-// extractedText is populated at upload time — this is what gets sent to Claude.
-// extractionStatus tracks the async extraction process.
-// storagePath is the Supabase Storage bucket path for the original file.
+// scope = PAGE: available to all steps in the page.
+// scope = STEP: attached to one specific step only (reference examples).
 
 model File {
   id               String           @id @default(uuid()) @db.Uuid
@@ -249,8 +250,7 @@ model File {
 }
 
 // ─── Generation Files ─────────────────────────────────────────────────────────
-// Join table — records exactly which files were sent to Claude
-// for a specific generation. Audit trail for reproducibility.
+// Join table — records exactly which files were sent to Claude for a generation.
 
 model GenerationFile {
   id           String @id @default(uuid()) @db.Uuid
@@ -263,27 +263,6 @@ model GenerationFile {
   @@unique([generationId, fileId])
   @@map("generation_files")
 }
-
-
-// ─── Clients ──────────────────────────────────────────────────────────────────
-// A client is a container for a real-world company.
-// One client can have multiple company profiles (one per tax year)
-// and multiple pages (all documents produced for that client).
-
-model Client {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
-  name      String
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  companyProfiles CompanyProfile[]
-  pages           Page[]
-
-  @@map("clients")
-}
-
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
 

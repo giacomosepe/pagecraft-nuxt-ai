@@ -13,15 +13,14 @@ import type { Shareholder, Subsidiary } from "~/types/company.types";
 const props = defineProps<{
 	stepOrder: number;
 	stepTitle: string;
-	companyProfile: {
+	clientData: {
 		company_name?: string | null;
-		tax_year?: number | null;
 		industry_sector?: string | null;
 		employee_count?: number | null;
 		legal_representative?: string | null;
 		board_members?: string[] | null;
-		shareholders?: Shareholder[] | null;
-		subsidiaries?: Subsidiary[] | null;
+		shareholders?: any | null;
+		subsidiaries?: any | null;
 	} | null;
 }>();
 
@@ -42,8 +41,8 @@ const intestazione = reactive({
 
 // ─── Step 2 — Premessa ────────────────────────────────────────────────────────
 const premessa = reactive({
-	taxYearStart: props.companyProfile?.tax_year ?? new Date().getFullYear() - 1,
-	taxYearEnd: props.companyProfile?.tax_year ?? new Date().getFullYear() - 1,
+	taxYearStart: new Date().getFullYear() - 1,
+	taxYearEnd: new Date().getFullYear() - 1,
 });
 
 // ─── Step 3 — Struttura Partecipativa ────────────────────────────────────────

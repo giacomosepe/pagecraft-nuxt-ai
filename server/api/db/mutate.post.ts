@@ -2,11 +2,11 @@ import { serverSupabaseClient } from "#supabase/server";
 import { z } from "zod";
 
 // Supported tables and operations
+// NOTE: company_profiles removed — all company data lives on clients now
 const MutateSchema = z.object({
   table: z.enum([
     "clients",
     "folders",
-    "company_profiles",
     "pages",
     "files",
     "steps",
@@ -21,25 +21,22 @@ const MutateSchema = z.object({
 const ALLOWED_WHERE_KEYS: Record<string, string[]> = {
   clients: ["id"],
   folders: ["id"],
-  company_profiles: ["id", "client_id"],
   pages: ["id", "folder_id", "client_id"],
   files: ["id", "page_id", "step_id"],
   steps: ["id", "page_id"],
   generations: ["id", "step_id"],
 };
 
-// ← NEW: only these tables have user_id directly on the row
-// steps and generations do not — they're protected by RLS through parent tables
+// Tables that have user_id directly on the row (used for RLS double-check on writes)
+// steps and generations are protected by RLS through their parent chain
 const TABLES_WITH_USER_ID = [
   "clients",
   "folders",
-  "company_profiles",
   "pages",
   "files",
 ];
 
 export default defineEventHandler(async (event) => {
-  // Always verify auth first
   const client = await serverSupabaseClient(event);
   const {
     data: { user },
@@ -72,7 +69,6 @@ export default defineEventHandler(async (event) => {
   }
 
   // Always inject user_id on insert — never trust it from the client
-  // Only for tables that have user_id directly
   const payload =
     operation === "insert" && TABLES_WITH_USER_ID.includes(table)
       ? { ...data, user_id: user.id }
@@ -94,8 +90,6 @@ export default defineEventHandler(async (event) => {
     for (const [key, value] of Object.entries(where)) {
       q = q.eq(key, value);
     }
-    // Defence in depth — only add user_id filter for tables that have it
-    // For steps/generations, RLS protects through the parent chain
     if (TABLES_WITH_USER_ID.includes(table)) {
       q = q.eq("user_id", user.id);
     }
@@ -109,7 +103,6 @@ export default defineEventHandler(async (event) => {
     for (const [key, value] of Object.entries(where)) {
       q = q.eq(key, value);
     }
-    // Same — only add user_id filter for tables that have it directly
     if (TABLES_WITH_USER_ID.includes(table)) {
       q = q.eq("user_id", user.id);
     }

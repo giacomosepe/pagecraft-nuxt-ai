@@ -18,51 +18,20 @@ if (!frameworkId) {
 }
 
 // ─── Load clients ──────────────────────────────────────────────────────────
+// No .eq("user_id") needed — RLS scopes the query automatically
 const { data: clients } = await useAsyncData("clients-for-new-page", async () => {
 	const { data, error } = await client
 		.from("clients")
 		.select("id, name")
-		.eq("user_id", user.value!.id)
 		.order("name");
 	if (error) throw error;
 	return data;
-});
+}, { server: false });
 
-// ─── Load profiles when client is selected ────────────────────────────────
 const selectedClientId = ref<string | null>(null);
-const selectedProfileId = ref<string | null>(null);
-
-const { data: profiles } = await useAsyncData(
-	() => `profiles-${selectedClientId.value}`,
-	async () => {
-		if (!selectedClientId.value) return [];
-		const { data, error } = await client
-			.from("company_profiles")
-			.select("id, name, tax_year")
-			.eq("client_id", selectedClientId.value)
-			.order("tax_year", { ascending: false });
-		if (error) throw error;
-		return data;
-	},
-	{ watch: [selectedClientId] },
-);
-
-// Reset profile when client changes
-watch(selectedClientId, () => {
-	selectedProfileId.value = null;
-});
 
 // Computed state helpers
 const hasClients = computed(() => (clients.value?.length ?? 0) > 0);
-const clientHasNoProfiles = computed(
-	() => selectedClientId.value && (profiles.value?.length ?? 0) === 0,
-);
-const profileItems = computed(() =>
-	(profiles.value ?? []).map((p) => ({
-		label: `${p.name ?? p.tax_year} · ${p.tax_year}`,
-		value: p.id,
-	})),
-);
 const clientItems = computed(() =>
 	(clients.value ?? []).map((c) => ({ label: c.name, value: c.id })),
 );
@@ -119,7 +88,6 @@ async function createPage() {
 				frameworkId,
 				title: title.value.trim(),
 				clientId: selectedClientId.value,
-				companyProfileId: selectedProfileId.value,
 			},
 		});
 
@@ -222,58 +190,14 @@ function fileType(file: File): string {
 
 				<!-- Has clients — show dropdowns -->
 				<template v-else>
-					<div class="grid grid-cols-2 gap-4">
-						<UFormField label="Cliente">
-							<USelect
-								v-model="selectedClientId"
-								:items="clientItems"
-								placeholder="Seleziona cliente"
-								class="w-full"
-							/>
-						</UFormField>
-
-						<UFormField label="Profilo aziendale">
-							<USelect
-								v-model="selectedProfileId"
-								:items="profileItems"
-								placeholder="Seleziona profilo"
-								:disabled="!selectedClientId"
-								class="w-full"
-							/>
-						</UFormField>
-					</div>
-
-					<!-- Client selected but has no profiles -->
-					<div
-						v-if="clientHasNoProfiles"
-						class="flex items-start gap-3 rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-800 dark:bg-yellow-950"
-					>
-						<UIcon name="i-lucide-triangle-alert" class="mt-0.5 size-4 shrink-0 text-yellow-600 dark:text-yellow-400" />
-						<div>
-							<p class="text-xs font-medium text-yellow-800 dark:text-yellow-300">
-								Questo cliente non ha ancora un profilo aziendale
-							</p>
-							<p class="mt-0.5 text-xs text-yellow-700 dark:text-yellow-400">
-								Il profilo contiene i dati (azionisti, CdA, settore) che l'AI usa automaticamente.
-								<NuxtLink
-									:to="`/clients/${selectedClientId}/profiles/new`"
-									target="_blank"
-									class="font-medium underline"
-								>
-									Crea un profilo ora →
-								</NuxtLink>
-							</p>
-						</div>
-					</div>
-
-					<!-- Profile selected — confirmation pill -->
-					<div
-						v-if="selectedProfileId"
-						class="flex items-center gap-2 text-xs text-green-700 dark:text-green-400"
-					>
-						<UIcon name="i-lucide-check-circle" class="size-3.5" />
-						Profilo collegato — i dati aziendali verranno iniettati automaticamente in ogni sezione.
-					</div>
+					<UFormField label="Cliente">
+					<USelect
+					v-model="selectedClientId"
+					:items="clientItems"
+					placeholder="Seleziona cliente"
+					class="w-full"
+					/>
+					</UFormField>
 				</template>
 			</section>
 

@@ -4,12 +4,9 @@ const supabase = useSupabaseClient();
 const navMain = [
 	{ label: "Pages", to: "/dashboard", icon: "i-lucide-file-text" },
 	{ label: "Clients", to: "/clients", icon: "i-lucide-building-2" },
-	{ label: "Folders", to: "/folders", icon: "i-lucide-folder" },
 ];
 
-const navBottom = [
-	{ label: "Settings", to: "/settings", icon: "i-lucide-settings" },
-];
+const navBottom: { label: string; to: string; icon: string }[] = [];
 
 async function signOut() {
 	await supabase.auth.signOut();

@@ -22,7 +22,6 @@ const CreatePageSchema = z.object({
     .max(200)
     .transform((s) => s.trim()),
   clientId: nullable_uuid,
-  companyProfileId: nullable_uuid,
 });
 
 export default defineEventHandler(async (event) => {
@@ -53,7 +52,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // From here on, parsed.data is fully typed and guaranteed valid
-  const { frameworkId, title, clientId, companyProfileId } = parsed.data;
+  const { frameworkId, title, clientId } = parsed.data;
 
   // ─── Step 3: Get service role client ─────────────────────────────────────
   // The service role client bypasses Row Level Security. We need it here
@@ -114,7 +113,6 @@ export default defineEventHandler(async (event) => {
     title,
     status: "DRAFT",
     client_id: clientId ?? null,
-    company_profile_id: companyProfileId ?? null,
     folder_id: null,
     created_at: now,
     updated_at: now,

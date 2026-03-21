@@ -49,40 +49,9 @@ export type Database = {
       }
       clients: {
         Row: {
-          created_at: string
-          id: string
-          name: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id: string
-          name: string
-          updated_at: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          name?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "clients_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      company_profiles: {
-        Row: {
           board_members: string[] | null
-          client_id: string | null
+          codice_fiscale: string | null
+          company_form: string | null
           company_name: string | null
           created_at: string
           employee_count: number | null
@@ -90,15 +59,17 @@ export type Database = {
           industry_sector: string | null
           legal_representative: string | null
           name: string
+          registered_address: string | null
           shareholders: Json | null
           subsidiaries: Json | null
-          tax_year: number | null
           updated_at: string
           user_id: string
+          vat_number: string | null
         }
         Insert: {
           board_members?: string[] | null
-          client_id?: string | null
+          codice_fiscale?: string | null
+          company_form?: string | null
           company_name?: string | null
           created_at?: string
           employee_count?: number | null
@@ -106,15 +77,17 @@ export type Database = {
           industry_sector?: string | null
           legal_representative?: string | null
           name: string
+          registered_address?: string | null
           shareholders?: Json | null
           subsidiaries?: Json | null
-          tax_year?: number | null
           updated_at: string
           user_id: string
+          vat_number?: string | null
         }
         Update: {
           board_members?: string[] | null
-          client_id?: string | null
+          codice_fiscale?: string | null
+          company_form?: string | null
           company_name?: string | null
           created_at?: string
           employee_count?: number | null
@@ -122,22 +95,16 @@ export type Database = {
           industry_sector?: string | null
           legal_representative?: string | null
           name?: string
+          registered_address?: string | null
           shareholders?: Json | null
           subsidiaries?: Json | null
-          tax_year?: number | null
           updated_at?: string
           user_id?: string
+          vat_number?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "company_profiles_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "company_profiles_user_id_fkey"
+            foreignKeyName: "clients_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
@@ -248,6 +215,7 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          form_schema: Json | null
           framework_id: string
           id: string
           order: number
@@ -259,6 +227,7 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          form_schema?: Json | null
           framework_id: string
           id: string
           order: number
@@ -270,6 +239,7 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          form_schema?: Json | null
           framework_id?: string
           id?: string
           order?: number
@@ -290,6 +260,7 @@ export type Database = {
       }
       frameworks: {
         Row: {
+          base_prompt_template: string | null
           created_at: string
           deprecated_at: string | null
           description: string | null
@@ -300,6 +271,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          base_prompt_template?: string | null
           created_at?: string
           deprecated_at?: string | null
           description?: string | null
@@ -310,6 +282,7 @@ export type Database = {
           updated_at: string
         }
         Update: {
+          base_prompt_template?: string | null
           created_at?: string
           deprecated_at?: string | null
           description?: string | null
@@ -398,39 +371,39 @@ export type Database = {
       pages: {
         Row: {
           client_id: string | null
-          company_profile_id: string | null
           created_at: string
           folder_id: string | null
           framework_id: string | null
           framework_name: string
           id: string
           status: Database["public"]["Enums"]["page_status"]
+          tax_year: number | null
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
           client_id?: string | null
-          company_profile_id?: string | null
           created_at?: string
           folder_id?: string | null
           framework_id?: string | null
           framework_name: string
           id: string
           status?: Database["public"]["Enums"]["page_status"]
+          tax_year?: number | null
           title: string
           updated_at: string
           user_id: string
         }
         Update: {
           client_id?: string | null
-          company_profile_id?: string | null
           created_at?: string
           folder_id?: string | null
           framework_id?: string | null
           framework_name?: string
           id?: string
           status?: Database["public"]["Enums"]["page_status"]
+          tax_year?: number | null
           title?: string
           updated_at?: string
           user_id?: string
@@ -441,13 +414,6 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pages_company_profile_id_fkey"
-            columns: ["company_profile_id"]
-            isOneToOne: false
-            referencedRelation: "company_profiles"
             referencedColumns: ["id"]
           },
           {
@@ -477,6 +443,8 @@ export type Database = {
         Row: {
           committed_output: string | null
           created_at: string
+          form_data: Json | null
+          form_schema: Json | null
           framework_step_id: string | null
           id: string
           last_prompt_used: string | null
@@ -492,6 +460,8 @@ export type Database = {
         Insert: {
           committed_output?: string | null
           created_at?: string
+          form_data?: Json | null
+          form_schema?: Json | null
           framework_step_id?: string | null
           id: string
           last_prompt_used?: string | null
@@ -507,6 +477,8 @@ export type Database = {
         Update: {
           committed_output?: string | null
           created_at?: string
+          form_data?: Json | null
+          form_schema?: Json | null
           framework_step_id?: string | null
           id?: string
           last_prompt_used?: string | null

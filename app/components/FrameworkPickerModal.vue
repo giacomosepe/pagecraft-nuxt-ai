@@ -19,6 +19,7 @@ const { data: frameworks, pending } = await useAsyncData(
 		if (error) throw error;
 		return data;
 	},
+	{ server: false },  // must run client-side so the user session is available
 );
 
 const selected = ref<string | null>(null);

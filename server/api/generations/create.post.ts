@@ -2,7 +2,7 @@ import {
   serverSupabaseClient,
   serverSupabaseServiceRole,
 } from "#supabase/server";
-import { randomUUID } from "uncrypto"; // ← fix 3
+import { randomUUID } from "uncrypto";
 import { z } from "zod";
 
 // ─── Request schema ───────────────────────────────────────────────────────────
@@ -36,9 +36,6 @@ export default defineEventHandler(async (event) => {
   const { stepId, pageId, userContext, mode, existingOutput } = parsed.data;
 
   // ─── Step 3: Verify page ownership ───────────────────────────────────────
-  // Use the user's own client so RLS enforces ownership automatically.
-  // If this page doesn't belong to the current user, .single() returns
-  // an error and we reject before touching any AI resources.           ← fix 1
   const { error: ownerError } = await userClient
     .from("pages")
     .select("id")
@@ -49,9 +46,9 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, message: "Access denied" });
   }
 
-  // ─── Step 4: Load step and company data in one query ─────────────────────
-  // Service role is safe here — ownership already confirmed above.
-  // Single query replaces two sequential round trips.                  ← fix 2
+  // ─── Step 4: Load step + page + client data ───────────────────────────────
+  // client replaces company_profiles — all company data lives on clients now.
+  // tax_year is on the page, not the client.
   const supabase = serverSupabaseServiceRole(event);
 
   const { data: step, error: stepError } = await supabase
@@ -60,10 +57,11 @@ export default defineEventHandler(async (event) => {
       `
       id, title, system_prompt_template, refine_prompt_template,
       page:pages (
-        title,
-        company_profile:company_profiles (
-          company_name, industry_sector, employee_count,
-          tax_year, legal_representative
+        title, tax_year,
+        client:clients (
+          name, company_name, company_form, industry_sector, employee_count,
+          legal_representative, vat_number, codice_fiscale, registered_address,
+          board_members, shareholders, subsidiaries
         )
       )
     `,
@@ -77,32 +75,78 @@ export default defineEventHandler(async (event) => {
   }
 
   // ─── Step 5: Build company context string ─────────────────────────────────
-  const profile = (step.page as any)?.company_profile;
-  const companyContext = profile
+  const page = (step.page as any);
+  const c = page?.client;
+  const taxYear = page?.tax_year;
+
+  function formatShareholders(shareholders: any[]): string {
+    if (!shareholders?.length) return "Nessun azionista registrato.";
+    return shareholders.map((s: any, i: number) => {
+      if (s.type === "persona_fisica") {
+        return [
+          `Azionista ${i + 1} (persona fisica):`,
+          `  Nome: ${s.first_name ?? "[N/D]"} ${s.last_name ?? "[N/D]"}`,
+          `  Luogo di nascita: ${s.place_of_birth ?? "[N/D]"}`,
+          `  Data di nascita: ${s.date_of_birth ?? "[N/D]"}`,
+          `  Indirizzo: ${s.address ?? "[N/D]"}`,
+          `  Codice fiscale: ${s.codice_fiscale ?? "[N/D]"}`,
+          `  Quota: ${s.quota_pct != null ? `${s.quota_pct}%` : "[N/D]"}`,
+        ].join("\n");
+      } else {
+        return [
+          `Azionista ${i + 1} (persona giuridica):`,
+          `  Denominazione: ${s.company_name ?? "[N/D]"} ${s.company_form ?? ""}`,
+          `  Sede legale: ${s.registered_address ?? "[N/D]"}`,
+          `  Codice fiscale/P.IVA: ${s.codice_fiscale ?? "[N/D]"}`,
+          `  Quota: ${s.quota_pct != null ? `${s.quota_pct}%` : "[N/D]"}`,
+          `  Legale rappresentante: ${s.legal_rep ?? "[DA COMPLETARE]"}`,
+        ].join("\n");
+      }
+    }).join("\n\n");
+  }
+
+  function formatSubsidiaries(subsidiaries: any[]): string {
+    if (!subsidiaries?.length) return "Nessuna società partecipata registrata.";
+    return subsidiaries.map((s: any, i: number) => [
+      `Partecipata ${i + 1}:`,
+      `  Denominazione: ${s.company_name ?? "[N/D]"} ${s.company_form ?? ""}`,
+      `  Paese: ${s.country ?? "Italia"}`,
+      `  Quota detenuta: ${s.quota_held_pct != null ? `${s.quota_held_pct}%` : "[N/D]"}`,
+      `  Legale rappresentante: ${s.legal_rep ?? "[DA COMPLETARE]"}`,
+    ].join("\n")).join("\n\n");
+  }
+
+  const companyContext = c
     ? [
-        `Company: ${profile.company_name ?? "N/A"}`,
-        `Industry: ${profile.industry_sector ?? "N/A"}`,
-        `Employees: ${profile.employee_count ?? "N/A"}`,
-        `Tax year: ${profile.tax_year ?? "N/A"}`,
-        `Legal representative: ${profile.legal_representative ?? "N/A"}`,
-      ].join("\n")
+        `Ragione sociale: ${c.company_name ?? c.name ?? "N/D"} ${c.company_form ?? ""}`.trim(),
+        c.industry_sector       ? `Settore: ${c.industry_sector}` : null,
+        c.employee_count        ? `Dipendenti: ${c.employee_count}` : null,
+        taxYear                 ? `Anno fiscale: ${taxYear}` : null,
+        c.legal_representative  ? `Legale rappresentante: ${c.legal_representative}` : null,
+        c.vat_number            ? `P.IVA: ${c.vat_number}` : null,
+        c.codice_fiscale        ? `Codice fiscale: ${c.codice_fiscale}` : null,
+        c.registered_address    ? `Sede legale: ${c.registered_address}` : null,
+        c.board_members?.length
+          ? `Membri CdA: ${(c.board_members as string[]).join(", ")}`
+          : null,
+        `\nAzionisti:\n${formatShareholders(c.shareholders)}`,
+        `\nSocietà partecipate:\n${formatSubsidiaries(c.subsidiaries)}`,
+      ].filter(Boolean).join("\n")
     : "";
 
   // ─── Step 6: Build the prompt ─────────────────────────────────────────────
-  // Generate: system prompt + company context + user instructions
-  // Refine:   refine prompt + existing draft + user instructions
   const systemPrompt =
     mode === "generate"
       ? step.system_prompt_template
       : step.refine_prompt_template;
 
   const userMessage = [
-    companyContext ? `Company information:\n${companyContext}` : "",
+    companyContext ? `Informazioni aziendali:\n${companyContext}` : "",
     mode === "refine" && existingOutput
-      ? `Existing draft to refine:\n${existingOutput}`
+      ? `Bozza esistente da raffinare:\n${existingOutput}`
       : "",
-    userContext ? `Additional instructions:\n${userContext}` : "",
-    `Please ${mode === "generate" ? "write" : "refine"} the "${step.title}" section now.`,
+    userContext ? `Istruzioni aggiuntive:\n${userContext}` : "",
+    `Si prega di ${mode === "generate" ? "scrivere" : "raffinare"} la sezione "${step.title}" ora.`,
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -140,10 +184,6 @@ export default defineEventHandler(async (event) => {
   }
 
   // ─── Step 9: Stream response, accumulate full output, then save ───────────
-  // Stream to the client AND collect the full text server-side.
-  // After streaming completes, save the complete output to the database.
-  // This gives a proper audit trail and enables future "previous generations" UI.
-  // fix 4 + fix 5
   const generationId = randomUUID();
   const promptUsed = `${systemPrompt}\n\n---\n\n${userMessage}`;
 
@@ -151,7 +191,7 @@ export default defineEventHandler(async (event) => {
     "Content-Type": "text/plain; charset=utf-8",
     "Transfer-Encoding": "chunked",
     "Cache-Control": "no-cache",
-    "X-Generation-Id": generationId, // expose ID to client for commit flow
+    "X-Generation-Id": generationId,
   });
 
   const reader = anthropicRes.body!.getReader();
@@ -184,8 +224,8 @@ export default defineEventHandler(async (event) => {
                 parsed.delta?.type === "text_delta"
               ) {
                 const text = parsed.delta.text;
-                fullOutput += text; // accumulate
-                controller.enqueue(encoder.encode(text)); // stream to client
+                fullOutput += text;
+                controller.enqueue(encoder.encode(text));
               }
             } catch {
               // Skip malformed JSON lines
@@ -193,13 +233,12 @@ export default defineEventHandler(async (event) => {
           }
         }
 
-        // ─── Streaming complete — save generation record and update step ───
         await Promise.all([
           supabase.from("generations").insert({
             id: generationId,
             step_id: stepId,
             prompt_used: promptUsed,
-            output: fullOutput, // full text saved
+            output: fullOutput,
             source: mode === "generate" ? "AI_GENERATED" : "AI_REFINED",
             is_committed: false,
           }),
