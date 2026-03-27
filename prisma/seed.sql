@@ -394,15 +394,266 @@ ON CONFLICT (id) DO UPDATE SET
   step_type = EXCLUDED.step_type,
   updated_at = NOW();
 
+-- ─── Framework: Relazione Tecnica — Patent Box (ARKADIA-91) ──────────────────
+-- Standalone technical report framework. Separate from the main Patent Box.
+-- 11 steps, all type_c.
+
+INSERT INTO frameworks (id, name, description, is_public, created_at, updated_at)
+VALUES (
+  'b2c3d4e5-f6a7-8901-bcde-f12345678901',
+  'Relazione Tecnica — Patent Box',
+  'Standalone technical report required for Patent Box. Prepared by the R&D responsible and countersigned by the legal representative. Separate document from the Allegato A.',
+  true,
+  NOW(),
+  NOW()
+)
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  updated_at = NOW();
+
+-- Step 1: Trattazione del Titolo
+
+INSERT INTO framework_steps (id, framework_id, "order", title, description, step_type, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
+VALUES (
+  '22222222-0000-0000-0000-000000000001',
+  'b2c3d4e5-f6a7-8901-bcde-f12345678901',
+  1,
+  'Trattazione del Titolo',
+  'Trattazione legale del titolo sul bene immateriale — software, registrazione SIAE, originalità',
+  'type_c',
+  'Write the legal title treatment section (Trattazione del Titolo) for the Relazione Tecnica Patent Box document. This section establishes the legal basis for the intangible asset claim. Describe: the asset name and nature, SIAE registration details if applicable, the originality and creative intent of the software, and the company''s legal ownership. Write in formal Italian, third person, grounded only in the facts provided. Target: 300–450 words.',
+  'Revise the Trattazione del Titolo section as instructed. Maintain formal legal Italian. Correct any factual inaccuracies. Do not invent registration numbers or legal references not provided. Return only the revised text.',
+  '[
+    {"key":"asset_name","type":"text","label":"Nome del bene immateriale","placeholder":"es. PlatformX — sistema gestionale","aiSuggestable":false},
+    {"key":"siae_registration","type":"text","label":"Registrazione SIAE (se presente)","placeholder":"es. Numero deposito SIAE 2023/XXXXX","aiSuggestable":false},
+    {"key":"originality_description","type":"textarea","label":"Descrizione originalità e creatività","placeholder":"Cosa rende questo software originale? Quali scelte creative ha fatto il team?","aiSuggestable":true},
+    {"key":"legal_title","type":"select","label":"Titolo giuridico","options":["Titolarità originaria — sviluppato internamente","Titolarità derivata — acquisito o ceduto","Titolarità mista"],"aiSuggestable":false}
+  ]'::jsonb,
+  NOW(), NOW()
+)
+ON CONFLICT (id) DO UPDATE SET step_type = EXCLUDED.step_type, form_schema = EXCLUDED.form_schema, updated_at = NOW();
+
+-- Step 2: Attività Rilevanti Svolte
+
+INSERT INTO framework_steps (id, framework_id, "order", title, description, step_type, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
+VALUES (
+  '22222222-0000-0000-0000-000000000002',
+  'b2c3d4e5-f6a7-8901-bcde-f12345678901',
+  2,
+  'Attività Rilevanti Svolte',
+  'Tipologia di attività rilevante svolta — R&S, innovazione tecnologica, design',
+  'type_c',
+  'Write the qualifying activities section (Attività Rilevanti Svolte) for the Relazione Tecnica. Identify and describe the type of qualifying R&D activity: ricerca industriale, sviluppo sperimentale, innovazione tecnologica, or design. Link the activity directly to the intangible asset described in the previous section. Use precise regulatory language referencing Patent Box 2.0 (D.L. 146/2021). Write in formal Italian, third person. Target: 350–500 words.',
+  'Revise the Attività Rilevanti Svolte section as instructed. Strengthen regulatory precision. Ensure activity type matches the asset type. Return only the revised text.',
+  '[
+    {"key":"activity_type","type":"multiselect","label":"Tipo di attività rilevante","options":["Ricerca industriale","Sviluppo sperimentale","Innovazione tecnologica","Design e ideazione estetica"],"aiSuggestable":false},
+    {"key":"activity_description","type":"textarea","label":"Descrizione delle attività svolte","placeholder":"Cosa ha fatto concretamente il team? Quali esperimenti, prototipi, iterazioni?","aiSuggestable":true},
+    {"key":"team_involved","type":"textarea","label":"Chi ha svolto le attività","placeholder":"Ruoli coinvolti, numero di persone, competenze chiave","aiSuggestable":true}
+  ]'::jsonb,
+  NOW(), NOW()
+)
+ON CONFLICT (id) DO UPDATE SET step_type = EXCLUDED.step_type, form_schema = EXCLUDED.form_schema, updated_at = NOW();
+
+-- Step 3: Stato dell'Arte
+
+INSERT INTO framework_steps (id, framework_id, "order", title, description, step_type, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
+VALUES (
+  '22222222-0000-0000-0000-000000000003',
+  'b2c3d4e5-f6a7-8901-bcde-f12345678901',
+  3,
+  'Stato dell''Arte',
+  'Contesto tecnologico e di mercato prima dello sviluppo del bene',
+  'type_c',
+  'Write the prior art section (Stato dell''Arte) for the Relazione Tecnica. Describe the technological and market context that existed before the company developed its intangible asset. Explain what solutions existed, what their limitations were, and why the company''s development represents a meaningful advance. Do not invent specific competitor names or technical benchmarks not provided. Write in formal Italian, third person. Target: 400–550 words.',
+  'Revise the Stato dell''Arte section as instructed. Sharpen the contrast between prior solutions and the company''s innovation. Do not invent facts. Return only the revised text.',
+  '[
+    {"key":"prior_solutions","type":"textarea","label":"Soluzioni preesistenti sul mercato","placeholder":"Cosa esisteva già? Quali strumenti, software, processi usavano le aziende del settore?","aiSuggestable":true},
+    {"key":"limitations","type":"textarea","label":"Limiti delle soluzioni esistenti","placeholder":"Cosa non funzionava? Quali problemi non erano risolti?","aiSuggestable":true},
+    {"key":"market_context","type":"textarea","label":"Contesto di mercato","placeholder":"Settore, dimensione, tendenze tecnologiche al momento dello sviluppo","aiSuggestable":true}
+  ]'::jsonb,
+  NOW(), NOW()
+)
+ON CONFLICT (id) DO UPDATE SET step_type = EXCLUDED.step_type, form_schema = EXCLUDED.form_schema, updated_at = NOW();
+
+-- Step 4: Gantt di Progetto
+
+INSERT INTO framework_steps (id, framework_id, "order", title, description, step_type, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
+VALUES (
+  '22222222-0000-0000-0000-000000000004',
+  'b2c3d4e5-f6a7-8901-bcde-f12345678901',
+  4,
+  'Gantt di Progetto',
+  'Fasi del progetto e timeline di sviluppo',
+  'type_c',
+  'Write the project timeline section (Gantt di Progetto) for the Relazione Tecnica. Describe the development phases in chronological order: planning, design, development, testing, and deployment. For each phase state the approximate period, the activities performed, and the outputs. Present as narrative prose, not as a visual Gantt chart. Write in formal Italian, third person. Target: 350–500 words.',
+  'Revise the Gantt di Progetto section as instructed. Ensure phases are chronologically coherent and outputs are clearly stated per phase. Return only the revised text.',
+  '[
+    {"key":"project_start","type":"text","label":"Inizio progetto","placeholder":"es. Gennaio 2022","aiSuggestable":false},
+    {"key":"project_end","type":"text","label":"Fine progetto (o stato attuale)","placeholder":"es. Dicembre 2023 — in sviluppo continuo","aiSuggestable":false},
+    {"key":"phases","type":"textarea","label":"Fasi principali del progetto","placeholder":"Fase 1: analisi requisiti (gen-mar 2022)\nFase 2: sviluppo MVP (apr-set 2022)\nFase 3: test e rilascio (ott-dic 2022)\n...","aiSuggestable":true}
+  ]'::jsonb,
+  NOW(), NOW()
+)
+ON CONFLICT (id) DO UPDATE SET step_type = EXCLUDED.step_type, form_schema = EXCLUDED.form_schema, updated_at = NOW();
+
+-- Step 5: Team di Progetto
+
+INSERT INTO framework_steps (id, framework_id, "order", title, description, step_type, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
+VALUES (
+  '22222222-0000-0000-0000-000000000005',
+  'b2c3d4e5-f6a7-8901-bcde-f12345678901',
+  5,
+  'Team di Progetto',
+  'Composizione del team, ruoli, tipo di contratto e coinvolgimento nelle attività R&S',
+  'type_c',
+  'Write the project team section (Team di Progetto) for the Relazione Tecnica. Describe each person involved in the R&D activities: their role, employment type (dipendente, collaboratore, consulente esterno), their specific contribution to the qualifying activities, and — where relevant — their technical qualifications. Use only information provided. Do not invent names or credentials. Write in formal Italian, third person. Target: 300–450 words.',
+  'Revise the Team di Progetto section as instructed. Ensure each team member''s contribution to qualifying R&D is clearly stated. Return only the revised text.',
+  '[
+    {"key":"team_members","type":"textarea","label":"Membri del team","placeholder":"Nome (o ruolo), tipo contratto, attività svolta nel progetto\nes. Sviluppatore senior (dipendente) — architettura backend e sviluppo API\nes. Designer UX (collaboratore) — prototipazione interfacce","aiSuggestable":true},
+    {"key":"total_fte","type":"text","label":"FTE dedicati (approssimativo)","placeholder":"es. 2.5 FTE nel 2023","aiSuggestable":false}
+  ]'::jsonb,
+  NOW(), NOW()
+)
+ON CONFLICT (id) DO UPDATE SET step_type = EXCLUDED.step_type, form_schema = EXCLUDED.form_schema, updated_at = NOW();
+
+-- Step 6: Materiali e Beni Strumentali
+
+INSERT INTO framework_steps (id, framework_id, "order", title, description, step_type, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
+VALUES (
+  '22222222-0000-0000-0000-000000000006',
+  'b2c3d4e5-f6a7-8901-bcde-f12345678901',
+  6,
+  'Materiali e Beni Strumentali',
+  'Strumenti, infrastrutture e materiali utilizzati nelle attività di R&S',
+  'type_c',
+  'Write the materials and instrumental assets section (Materiali e Beni Strumentali) for the Relazione Tecnica. Describe the tools, infrastructure, and materials used in the R&D activities: hardware, cloud infrastructure, software licences, development environments, testing equipment. Distinguish between assets owned by the company and those accessed as services. Write in formal Italian, third person. Target: 250–400 words.',
+  'Revise the Materiali e Beni Strumentali section as instructed. Ensure assets are correctly categorised. Return only the revised text.',
+  '[
+    {"key":"hardware","type":"textarea","label":"Hardware e infrastruttura fisica","placeholder":"Server interni, workstation, dispositivi di test...","aiSuggestable":true},
+    {"key":"cloud_services","type":"textarea","label":"Servizi cloud e infrastruttura digitale","placeholder":"AWS, GCP, Azure, Supabase, hosting, CDN...","aiSuggestable":true},
+    {"key":"software_licences","type":"textarea","label":"Licenze software utilizzate","placeholder":"IDE, strumenti di design, librerie commerciali...","aiSuggestable":true}
+  ]'::jsonb,
+  NOW(), NOW()
+)
+ON CONFLICT (id) DO UPDATE SET step_type = EXCLUDED.step_type, form_schema = EXCLUDED.form_schema, updated_at = NOW();
+
+-- Step 7: Fasi di Sviluppo
+
+INSERT INTO framework_steps (id, framework_id, "order", title, description, step_type, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
+VALUES (
+  '22222222-0000-0000-0000-000000000007',
+  'b2c3d4e5-f6a7-8901-bcde-f12345678901',
+  7,
+  'Fasi di Sviluppo',
+  'Descrizione tecnica delle fasi di sviluppo, iterazioni e sotto-progetti',
+  'type_c',
+  'Write the development phases section (Fasi di Sviluppo) for the Relazione Tecnica. This is a deeper technical narrative than the Gantt section — describe each development phase from a technical perspective: the architectural decisions made, the technologies adopted, the iterations and pivots, and how each phase contributed to the final asset. Write in formal Italian, third person, with technical precision. Target: 500–700 words.',
+  'Revise the Fasi di Sviluppo section as instructed. Increase technical depth. Ensure each phase''s technical contribution is clearly articulated. Return only the revised text.',
+  '[
+    {"key":"phase_details","type":"textarea","label":"Dettaglio tecnico delle fasi","placeholder":"Descrivi ogni fase dal punto di vista tecnico: decisioni architetturali, tecnologie adottate, problemi affrontati, risultati intermedi","aiSuggestable":true},
+    {"key":"pivots","type":"textarea","label":"Cambiamenti di direzione significativi","placeholder":"Hai cambiato approccio tecnologico? Sostituito librerie? Ridisegnato l''architettura? Perché?","aiSuggestable":true}
+  ]'::jsonb,
+  NOW(), NOW()
+)
+ON CONFLICT (id) DO UPDATE SET step_type = EXCLUDED.step_type, form_schema = EXCLUDED.form_schema, updated_at = NOW();
+
+-- Step 8: Problematiche Tecniche e Scientifiche
+
+INSERT INTO framework_steps (id, framework_id, "order", title, description, step_type, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
+VALUES (
+  '22222222-0000-0000-0000-000000000008',
+  'b2c3d4e5-f6a7-8901-bcde-f12345678901',
+  8,
+  'Problematiche Tecniche e Scientifiche',
+  'Incertezze tecniche affrontate e risolte durante lo sviluppo',
+  'type_c',
+  'Write the technical and scientific challenges section (Problematiche Tecniche e Scientifiche) for the Relazione Tecnica. This is one of the most important sections for Patent Box eligibility — it must demonstrate that the development involved genuine technical uncertainty and problem-solving, not routine implementation. For each challenge: describe the problem, why it was uncertain or novel, the approach taken to resolve it, and the outcome. Write in formal Italian, third person. Target: 500–650 words.',
+  'Revise the Problematiche Tecniche section as instructed. Strengthen the demonstration of technical uncertainty — this is the core eligibility argument. Do not soften or genericise. Return only the revised text.',
+  '[
+    {"key":"technical_challenges","type":"textarea","label":"Sfide tecniche principali","placeholder":"Problema 1: [descrizione]\nPerché era incerto: [spiegazione]\nApproccio: [cosa avete fatto]\nEsito: [risultato]\n\nProblema 2: ...","aiSuggestable":true},
+    {"key":"failed_approaches","type":"textarea","label":"Approcci falliti o abbandonati","placeholder":"Hai provato soluzioni che non hanno funzionato? Questo dimostra l''incertezza tecnica.","aiSuggestable":true}
+  ]'::jsonb,
+  NOW(), NOW()
+)
+ON CONFLICT (id) DO UPDATE SET step_type = EXCLUDED.step_type, form_schema = EXCLUDED.form_schema, updated_at = NOW();
+
+-- Step 9: Situazione Futura
+
+INSERT INTO framework_steps (id, framework_id, "order", title, description, step_type, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
+VALUES (
+  '22222222-0000-0000-0000-000000000009',
+  'b2c3d4e5-f6a7-8901-bcde-f12345678901',
+  9,
+  'Situazione Futura',
+  'Benefici futuri attesi a livello aziendale e di settore',
+  'type_c',
+  'Write the future outlook section (Situazione Futura) for the Relazione Tecnica. Describe the expected future benefits of the intangible asset at two levels: (1) for the company — revenue potential, competitive advantage, operational efficiency, IP exploitation plans; (2) for the sector — broader technological contribution, potential for diffusion or licensing. Keep projections realistic and grounded in the facts provided. Write in formal Italian, third person. Target: 300–450 words.',
+  'Revise the Situazione Futura section as instructed. Ensure projections are realistic and grounded. Distinguish company-level from sector-level benefits clearly. Return only the revised text.',
+  '[
+    {"key":"company_benefits","type":"textarea","label":"Benefici attesi per l''azienda","placeholder":"Crescita ricavi, riduzione costi, vantaggio competitivo, piani di commercializzazione...","aiSuggestable":true},
+    {"key":"sector_benefits","type":"textarea","label":"Contributo al settore","placeholder":"Come questa tecnologia può beneficiare il settore più ampio? Possibilità di licensing, open source, diffusione...","aiSuggestable":true}
+  ]'::jsonb,
+  NOW(), NOW()
+)
+ON CONFLICT (id) DO UPDATE SET step_type = EXCLUDED.step_type, form_schema = EXCLUDED.form_schema, updated_at = NOW();
+
+-- Step 10: Attività di Tutela del Bene
+
+INSERT INTO framework_steps (id, framework_id, "order", title, description, step_type, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
+VALUES (
+  '22222222-0000-0000-0000-000000000010',
+  'b2c3d4e5-f6a7-8901-bcde-f12345678901',
+  10,
+  'Attività di Tutela del Bene',
+  'Misure adottate per proteggere e tutelare il bene immateriale',
+  'type_c',
+  'Write the IP protection section (Attività di Tutela del Bene) for the Relazione Tecnica. Describe the measures taken by the company to protect its intangible asset: registration actions (SIAE, patent, trademark), contractual protections (NDA, employment IP clauses, supplier agreements), technical protections (access controls, code confidentiality), and internal IP policies. Write in formal Italian, third person. Target: 250–400 words.',
+  'Revise the Attività di Tutela section as instructed. Ensure all protection measures are clearly categorised. Return only the revised text.',
+  '[
+    {"key":"registration_actions","type":"textarea","label":"Registrazioni formali","placeholder":"SIAE, brevetti, marchi, design registrati — numero e data se disponibili","aiSuggestable":false},
+    {"key":"contractual_protections","type":"textarea","label":"Protezioni contrattuali","placeholder":"NDA con dipendenti e collaboratori, clausole IP nei contratti, accordi con fornitori","aiSuggestable":true},
+    {"key":"technical_protections","type":"textarea","label":"Protezioni tecniche","placeholder":"Controllo accessi al codice, repository privati, policy di sicurezza","aiSuggestable":true}
+  ]'::jsonb,
+  NOW(), NOW()
+)
+ON CONFLICT (id) DO UPDATE SET step_type = EXCLUDED.step_type, form_schema = EXCLUDED.form_schema, updated_at = NOW();
+
+-- Step 11: Altre Attività Rilevanti
+
+INSERT INTO framework_steps (id, framework_id, "order", title, description, step_type, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
+VALUES (
+  '22222222-0000-0000-0000-000000000011',
+  'b2c3d4e5-f6a7-8901-bcde-f12345678901',
+  11,
+  'Altre Attività Rilevanti',
+  'Attività rilevanti aggiuntive collegate al bene immateriale (opzionale)',
+  'type_c',
+  'Write the additional qualifying activities section (Altre Attività Rilevanti) for the Relazione Tecnica. This optional section covers any qualifying activities not described in the earlier sections that are connected to the intangible asset — for example, activities related to complementary IP, derivative works, or parallel innovation streams. If the user indicates there are no additional activities, write a brief formal statement to that effect. Write in formal Italian, third person. Target: 150–300 words.',
+  'Revise the Altre Attività Rilevanti section as instructed. If converting from "no additional activities" to describing activities, rewrite accordingly. Return only the revised text.',
+  '[
+    {"key":"has_additional","type":"select","label":"Ci sono altre attività rilevanti?","options":["No — le attività sono già descritte nelle sezioni precedenti","Sì"],"aiSuggestable":false},
+    {"key":"additional_description","type":"textarea","label":"Descrizione attività aggiuntive","placeholder":"Descrivi le attività rilevanti non coperte nelle sezioni precedenti","aiSuggestable":true}
+  ]'::jsonb,
+  NOW(), NOW()
+)
+ON CONFLICT (id) DO UPDATE SET step_type = EXCLUDED.step_type, form_schema = EXCLUDED.form_schema, updated_at = NOW();
+
 -- ─── Verify ───────────────────────────────────────────────────────────────────
--- Should return 7 rows, steps 1–7, no "Relazione Tecnica"
+-- Patent Box (Allegato A): should return 7 rows, steps 1–7, no "Relazione Tecnica"
 SELECT f.name as framework, fs."order", fs.title, fs.step_type
 FROM framework_steps fs
 JOIN frameworks f ON f.id = fs.framework_id
-ORDER BY fs."order";
+ORDER BY f.name, fs."order";
 
--- Should show: 2x type_a, 1x type_b, 4x type_c
+-- Patent Box step type distribution: 2x type_a, 1x type_b, 4x type_c
 SELECT step_type, count(*)
 FROM framework_steps
 WHERE framework_id = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
 GROUP BY step_type;
+
+-- Relazione Tecnica: should return 11 rows, all type_c
+SELECT "order", title, step_type
+FROM framework_steps
+WHERE framework_id = 'b2c3d4e5-f6a7-8901-bcde-f12345678901'
+ORDER BY "order";
