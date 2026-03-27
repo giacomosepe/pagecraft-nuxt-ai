@@ -371,18 +371,26 @@ Loose (caret ok): nuxt, vue, @nuxt/ui, tailwindcss, @nuxtjs/i18n, @nuxtjs/sitema
 - Auth trigger — recreated in trigger.sql, backfills existing users
 - grants.sql — documents and fixes all post-reset breakage
 
-### In progress 🔨
-- StepContextModal — clientData prop wired, guided forms work, step 3 shareholder
-  data not yet pulling from client record (needs connecting)
-- AI generation — premessa template route (/api/generations/premessa) not yet built
+### Done and merged ✅ (March 27, 2026)
+- ARKADIA-88: folders table — client_id and program_name columns added
+- ARKADIA-90: framework_steps — step_type enum (type_a/type_b/type_c) added.
+  Patent Box re-seeded to 7 steps. Relazione Tecnica removed from main framework.
+- ARKADIA-91: Relazione Tecnica seeded as standalone framework (11 steps, all type_c)
+- ARKADIA-94: /api/pages/create-batch.post.ts — multi-framework batch page creation
+  Request body uses `pages` array (not `frameworks`) — both files aligned on this name
+- ARKADIA-89: pages/new.vue — 3-step wizard (client → framework checkboxes → project name)
+  Calls /api/pages/create-batch, navigates to /folders/[folderId] on success
 
 ### Not started yet ⬜
-- Word document export
-- File upload and text extraction
-- /settings page
-- /folders page
-- Payments (Stripe) — v2
-- Framework recommender — v2
+- ARKADIA-92: step-type-aware input panel (replaces StepContextModal)
+- ARKADIA-95: client-centric navigation (dashboard → client → folder → page)
+- ARKADIA-96: /folders/[id].vue page
+- ARKADIA-93: generation pipeline update (use form_data not userContext)
+- ARKADIA-86: step 3 dynamic form (shareholders, board, pie chart)
+- ARKADIA-87: Word document export (.docx) — primary V0 deliverable
+
+### Canceled ❌
+- ARKADIA-85: /api/generations/premessa — step 2 is type_a, no AI generation needed
 
 ### Known issues / decisions
 - prisma/migrations table RLS warning in Supabase dashboard → intentional, ignore
@@ -390,3 +398,5 @@ Loose (caret ok): nuxt, vue, @nuxt/ui, tailwindcss, @nuxtjs/i18n, @nuxtjs/sitema
 - SUPABASE_SECRET_KEY and SUPABASE_SERVICE_KEY must both be set to same value
 - Column defaults (id, updated_at) not set by Prisma migrations — grants.sql fixes this
 - White screen after navigation = stale schema reference in useAsyncData — check query
+- prisma migrate dev causes drift errors — never use it. Manual migration pattern only.
+- pages/new.vue 3-step flow live. /folders/[id] page not yet built (ARKADIA-96).
