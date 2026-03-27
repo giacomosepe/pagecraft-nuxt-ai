@@ -73,14 +73,14 @@ export type Database = {
           company_name?: string | null
           created_at?: string
           employee_count?: number | null
-          id: string
+          id?: string
           industry_sector?: string | null
           legal_representative?: string | null
           name: string
           registered_address?: string | null
           shareholders?: Json | null
           subsidiaries?: Json | null
-          updated_at: string
+          updated_at?: string
           user_id: string
           vat_number?: string | null
         }
@@ -133,7 +133,7 @@ export type Database = {
           extraction_status?: Database["public"]["Enums"]["extraction_status"]
           file_name: string
           file_type: Database["public"]["Enums"]["file_type"]
-          id: string
+          id?: string
           page_id: string
           scope: Database["public"]["Enums"]["file_scope"]
           size_bytes?: number | null
@@ -181,27 +181,40 @@ export type Database = {
       }
       folders: {
         Row: {
+          client_id: string | null
           created_at: string
           id: string
           name: string
+          program_name: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          client_id?: string | null
           created_at?: string
-          id: string
+          id?: string
           name: string
-          updated_at: string
+          program_name?: string | null
+          updated_at?: string
           user_id: string
         }
         Update: {
+          client_id?: string | null
           created_at?: string
           id?: string
           name?: string
+          program_name?: string | null
           updated_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "folders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "folders_user_id_fkey"
             columns: ["user_id"]
@@ -220,6 +233,7 @@ export type Database = {
           id: string
           order: number
           refine_prompt_template: string
+          step_type: Database["public"]["Enums"]["step_type"]
           system_prompt_template: string
           title: string
           updated_at: string
@@ -232,9 +246,10 @@ export type Database = {
           id: string
           order: number
           refine_prompt_template: string
+          step_type?: Database["public"]["Enums"]["step_type"]
           system_prompt_template: string
           title: string
-          updated_at: string
+          updated_at?: string
         }
         Update: {
           created_at?: string
@@ -244,6 +259,7 @@ export type Database = {
           id?: string
           order?: number
           refine_prompt_template?: string
+          step_type?: Database["public"]["Enums"]["step_type"]
           system_prompt_template?: string
           title?: string
           updated_at?: string
@@ -279,7 +295,7 @@ export type Database = {
           is_public?: boolean
           name: string
           slug: string
-          updated_at: string
+          updated_at?: string
         }
         Update: {
           base_prompt_template?: string | null
@@ -303,7 +319,7 @@ export type Database = {
         Insert: {
           file_id: string
           generation_id: string
-          id: string
+          id?: string
         }
         Update: {
           file_id?: string
@@ -340,13 +356,13 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          id: string
+          id?: string
           is_committed?: boolean
           output: string
           prompt_used: string
           source: Database["public"]["Enums"]["generation_source"]
           step_id: string
-          updated_at: string
+          updated_at?: string
         }
         Update: {
           created_at?: string
@@ -388,11 +404,11 @@ export type Database = {
           folder_id?: string | null
           framework_id?: string | null
           framework_name: string
-          id: string
+          id?: string
           status?: Database["public"]["Enums"]["page_status"]
           tax_year?: number | null
           title: string
-          updated_at: string
+          updated_at?: string
           user_id: string
         }
         Update: {
@@ -463,7 +479,7 @@ export type Database = {
           form_data?: Json | null
           form_schema?: Json | null
           framework_step_id?: string | null
-          id: string
+          id?: string
           last_prompt_used?: string | null
           order: number
           page_id: string
@@ -471,7 +487,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["step_status"]
           system_prompt_template: string
           title: string
-          updated_at: string
+          updated_at?: string
           user_context?: string | null
         }
         Update: {
@@ -521,7 +537,7 @@ export type Database = {
           email: string
           full_name?: string | null
           id: string
-          updated_at: string
+          updated_at?: string
         }
         Update: {
           created_at?: string
@@ -546,6 +562,7 @@ export type Database = {
       generation_source: "AI_GENERATED" | "MANUAL_EDIT" | "AI_REFINED"
       page_status: "DRAFT" | "IN_PROGRESS" | "COMPLETED" | "ARCHIVED"
       step_status: "PENDING" | "IN_PROGRESS" | "COMMITTED" | "SKIPPED"
+      step_type: "type_a" | "type_b" | "type_c"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -679,6 +696,7 @@ export const Constants = {
       generation_source: ["AI_GENERATED", "MANUAL_EDIT", "AI_REFINED"],
       page_status: ["DRAFT", "IN_PROGRESS", "COMPLETED", "ARCHIVED"],
       step_status: ["PENDING", "IN_PROGRESS", "COMMITTED", "SKIPPED"],
+      step_type: ["type_a", "type_b", "type_c"],
     },
   },
 } as const

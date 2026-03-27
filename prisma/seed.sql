@@ -54,15 +54,19 @@ instructions the user has specified. Use all of this information.',
 );
 
 -- ─── Framework Steps ─────────────────────────────────────────────────────────
--- Step 1: Intestazione
+-- 7 steps total (ARKADIA-90): Relazione Tecnica removed (moved to ARKADIA-91 framework)
+-- step_type: type_a = pre-populated from client, type_b = structured from client, type_c = AI-generated
 
-INSERT INTO framework_steps (id, framework_id, "order", title, description, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
+-- Step 1: Intestazione (type_a)
+
+INSERT INTO framework_steps (id, framework_id, "order", title, description, step_type, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
 VALUES (
   '11111111-0000-0000-0000-000000000001',
   'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
   1,
   'Intestazione',
   'Frontespizio del documento con dati identificativi e citazione normativa',
+  'type_a',
   'Write the cover and header section ("Intestazione") of the Patent Box
 documentation package.
 
@@ -89,17 +93,22 @@ the revised section text.',
   ]',
   NOW(),
   NOW()
-);
+)
+ON CONFLICT (id) DO UPDATE SET
+  step_type = EXCLUDED.step_type,
+  form_schema = EXCLUDED.form_schema,
+  updated_at = NOW();
 
--- Step 2: Premessa
+-- Step 2: Premessa (type_a)
 
-INSERT INTO framework_steps (id, framework_id, "order", title, description, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
+INSERT INTO framework_steps (id, framework_id, "order", title, description, step_type, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
 VALUES (
   '11111111-0000-0000-0000-000000000002',
   'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
   2,
   'Premessa',
   'Testo normativo standardizzato — generato da template, non da AI',
+  'type_a',
   'TEMPLATE_STEP: This step uses the premessa template route, not AI generation.
 The system prompt is intentionally minimal — generation is handled by
 server/api/generations/premessa.post.ts which substitutes company name
@@ -113,17 +122,22 @@ only the revised section text.',
   ]',
   NOW(),
   NOW()
-);
+)
+ON CONFLICT (id) DO UPDATE SET
+  step_type = EXCLUDED.step_type,
+  form_schema = EXCLUDED.form_schema,
+  updated_at = NOW();
 
--- Step 3: Struttura Partecipativa
+-- Step 3: Struttura Partecipativa (type_b — data comes from clients table, no form fields)
 
-INSERT INTO framework_steps (id, framework_id, "order", title, description, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
+INSERT INTO framework_steps (id, framework_id, "order", title, description, step_type, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
 VALUES (
   '11111111-0000-0000-0000-000000000003',
   'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
   3,
   'Struttura Partecipativa',
   'Assetto societario, azionisti, partecipate, governance',
+  'type_b',
   'Write the corporate and ownership structure section ("Struttura Partecipativa")
 of the Patent Box documentation package. This section is a legal declaration —
 factual precision is paramount.
@@ -156,26 +170,25 @@ instructions provided. This is a legal declaration — apply corrections
 precisely. Verify names, percentages, and corporate relationships match the
 data in the instructions. Do not invent information. Return only the revised
 section text.',
-  '[
-    {"key": "company_history", "label": "Storia dell''impresa", "type": "textarea", "placeholder": "Data di fondazione, eventi societari rilevanti, denominazioni precedenti...", "aiSuggestable": false},
-    {"key": "market_position", "label": "Posizione di mercato", "type": "textarea", "placeholder": "Settore, quota di mercato, specializzazione, area geografica di operatività...", "aiSuggestable": false},
-    {"key": "main_competitors", "label": "Principali concorrenti", "type": "text", "placeholder": "es. Società A, Società B, Società C...", "aiSuggestable": false},
-    {"key": "admin_system", "label": "Sistema amministrativo", "type": "select", "options": ["Tradizionale (CdA + collegio sindacale)", "Monistico", "Dualistico", "Amministratore unico"], "aiSuggestable": false},
-    {"key": "statutory_clauses", "label": "Clausole statutarie rilevanti", "type": "textarea", "placeholder": "Prelazione, recesso, durata, poteri del CdA...", "aiSuggestable": false}
-  ]',
+  '[]',
   NOW(),
   NOW()
-);
+)
+ON CONFLICT (id) DO UPDATE SET
+  step_type = EXCLUDED.step_type,
+  form_schema = EXCLUDED.form_schema,
+  updated_at = NOW();
 
--- Step 4: Attività Rilevanti
+-- Step 4: Attività Rilevanti (type_c)
 
-INSERT INTO framework_steps (id, framework_id, "order", title, description, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
+INSERT INTO framework_steps (id, framework_id, "order", title, description, step_type, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
 VALUES (
   '11111111-0000-0000-0000-000000000004',
   'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
   4,
   'Attività Rilevanti',
   'Attività di R&S qualificanti e beni immateriali agevolabili',
+  'type_c',
   'Write the qualifying R&D activities section ("Attività Rilevanti") of the
 Patent Box documentation package.
 
@@ -215,17 +228,21 @@ intangible assets. Do not invent data. Return only the revised section text.',
   ]',
   NOW(),
   NOW()
-);
+)
+ON CONFLICT (id) DO UPDATE SET
+  step_type = EXCLUDED.step_type,
+  updated_at = NOW();
 
--- Step 5: Attività Commissionate a Terzi
+-- Step 5: Attività Commissionate a Terzi (type_c)
 
-INSERT INTO framework_steps (id, framework_id, "order", title, description, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
+INSERT INTO framework_steps (id, framework_id, "order", title, description, step_type, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
 VALUES (
   '11111111-0000-0000-0000-000000000005',
   'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
   5,
   'Attività Commissionate a Terzi',
   'R&S commissionata a università, enti di ricerca o fornitori terzi',
+  'type_c',
   'Write the section on R&D activities commissioned to third parties ("Attività
 Commissionate a Terzi") of the Patent Box documentation package.
 
@@ -263,17 +280,21 @@ Return only the revised section text.',
   ]',
   NOW(),
   NOW()
-);
+)
+ON CONFLICT (id) DO UPDATE SET
+  step_type = EXCLUDED.step_type,
+  updated_at = NOW();
 
--- Step 6: Modello Organizzativo
+-- Step 6: Modello Organizzativo (type_c)
 
-INSERT INTO framework_steps (id, framework_id, "order", title, description, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
+INSERT INTO framework_steps (id, framework_id, "order", title, description, step_type, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
 VALUES (
   '11111111-0000-0000-0000-000000000006',
   'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
   6,
   'Modello Organizzativo',
   'Struttura organizzativa per la gestione della R&S e della proprietà intellettuale',
+  'type_c',
   'Write the organisational model section ("Modello Organizzativo") of the
 Patent Box documentation package. The purpose of this section is to demonstrate
 to the Agenzia delle Entrate that the company has a structured, intentional
@@ -308,70 +329,22 @@ Do not invent facts. Return only the revised section text.',
   ]',
   NOW(),
   NOW()
-);
+)
+ON CONFLICT (id) DO UPDATE SET
+  step_type = EXCLUDED.step_type,
+  updated_at = NOW();
 
--- Step 7: Relazione Tecnica
+-- Step 7 (was step 8): Funzioni, Rischi e Beni (type_c)
+-- Note: step 7 "Relazione Tecnica" has been removed (moved to ARKADIA-91 framework)
 
-INSERT INTO framework_steps (id, framework_id, "order", title, description, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
-VALUES (
-  '11111111-0000-0000-0000-000000000007',
-  'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-  7,
-  'Relazione Tecnica',
-  'Descrizione tecnica approfondita del bene immateriale — sezione principale',
-  'Write the core technical report ("Relazione Tecnica") — the most detailed and
-legally significant section of the Patent Box documentation package. This
-section must build a technically credible and legally sufficient case for the
-eligibility of the company''s qualifying intangible asset(s).
-
-The section must:
-- Identify and describe the qualifying intangible asset(s) in technical detail:
-  their technical nature, architecture, functionality, or inventive character,
-  appropriate to the asset type (software, patent, know-how, design, trademark)
-- Describe the development history: when development began, the key phases,
-  and the technical challenges encountered and resolved
-- Articulate the element of novelty or originality: what distinguishes the asset
-  from the prior art or existing market solutions (stato dell''arte)
-- Describe the technical results achieved: performance, capabilities,
-  improvements, or the specific problem solved
-- Establish the nexus: confirm that the asset was created through the qualifying
-  R&D activities described in the "Attività Rilevanti" section
-
-Use all technical information provided in the user message. If specific technical
-details are absent, write at the appropriate level of abstraction for the stated
-sector. If critical technical information is missing, insert [DETTAGLIO TECNICO
-NON FORNITO] and continue.
-
-Target length: 600–800 words. Prioritise technical credibility and regulatory
-precision. This section carries the greatest legal weight in the submission.',
-  'Revise the existing "Relazione Tecnica" section according to the instructions
-provided. This is the most important section of the document. Strengthen the
-technical argument: sharpen the description of novelty, deepen technical
-specificity, improve regulatory framing, or correct factual inconsistencies
-as directed. Do not soften the technical register. Do not invent data.
-Return only the revised section text.',
-  '[
-    {"key": "asset_name", "label": "Nome del bene immateriale", "type": "text", "placeholder": "es. PlatformX — sistema di tracking LCL", "aiSuggestable": false},
-    {"key": "asset_type", "label": "Tipologia", "type": "select", "options": ["Software protetto da copyright", "Brevetto industriale", "Know-how", "Disegno o modello registrato", "Marchio registrato"], "aiSuggestable": false},
-    {"key": "technical_description", "label": "Descrizione tecnica", "type": "textarea", "placeholder": "Architettura, funzionalità, come funziona. Sii specifico.", "aiSuggestable": false},
-    {"key": "novelty", "label": "Novità rispetto allo stato dell''arte", "type": "textarea", "placeholder": "Cosa non esisteva prima? Cosa lo distingue dalle soluzioni esistenti?", "aiSuggestable": false},
-    {"key": "challenges", "label": "Sfide tecniche superate", "type": "textarea", "placeholder": "Problemi tecnici affrontati e risolti durante lo sviluppo...", "aiSuggestable": false},
-    {"key": "results", "label": "Risultati raggiunti", "type": "textarea", "placeholder": "Performance, funzionalità nuove, riduzione errori...", "aiSuggestable": false},
-    {"key": "timeline", "label": "Timeline di sviluppo", "type": "text", "placeholder": "es. Avvio 2021, MVP 2022, versione attuale 2023–2024", "aiSuggestable": false}
-  ]',
-  NOW(),
-  NOW()
-);
-
--- Step 8: Funzioni, Rischi e Beni
-
-INSERT INTO framework_steps (id, framework_id, "order", title, description, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
+INSERT INTO framework_steps (id, framework_id, "order", title, description, step_type, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
 VALUES (
   '11111111-0000-0000-0000-000000000008',
   'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-  8,
+  7,
   'Funzioni, Rischi e Beni',
   'Analisi funzionale ed economica — fondamento del calcolo nexus',
+  'type_c',
   'Write the functions, risks, and assets analysis section ("Funzioni, Rischi e
 Beni") — the final section of the Patent Box documentation package. This
 section provides the factual foundation for the nexus ratio and demonstrates
@@ -415,10 +388,21 @@ Do not invent facts or figures. Return only the revised section text.',
   ]',
   NOW(),
   NOW()
-);
+)
+ON CONFLICT (id) DO UPDATE SET
+  "order" = EXCLUDED."order",
+  step_type = EXCLUDED.step_type,
+  updated_at = NOW();
 
 -- ─── Verify ───────────────────────────────────────────────────────────────────
-SELECT f.name as framework, fs."order", fs.title
+-- Should return 7 rows, steps 1–7, no "Relazione Tecnica"
+SELECT f.name as framework, fs."order", fs.title, fs.step_type
 FROM framework_steps fs
 JOIN frameworks f ON f.id = fs.framework_id
 ORDER BY fs."order";
+
+-- Should show: 2x type_a, 1x type_b, 4x type_c
+SELECT step_type, count(*)
+FROM framework_steps
+WHERE framework_id = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
+GROUP BY step_type;

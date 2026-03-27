@@ -61,8 +61,9 @@ model Client {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  pages Page[]
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pages   Page[]
+  folders Folder[]
 
   @@map("clients")
 }
@@ -80,6 +81,10 @@ model Folder {
 
   user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   pages Page[]
+
+  clientId     String?   @map("client_id") @db.Uuid
+  programName  String?   @map("program_name")
+  client       Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
 
   @@map("folders")
 }
@@ -116,16 +121,17 @@ model Framework {
 // Shape: [{ key: string, label: string, type: 'text'|'textarea'|'select', options?: string[], aiSuggestable: boolean }]
 
 model FrameworkStep {
-  id                   String   @id @default(uuid()) @db.Uuid
-  frameworkId          String   @map("framework_id") @db.Uuid
+  id                   String    @id @default(uuid()) @db.Uuid
+  frameworkId          String    @map("framework_id") @db.Uuid
   order                Int
   title                String
   description          String?
-  systemPromptTemplate String   @map("system_prompt_template") @db.Text
-  refinePromptTemplate String   @map("refine_prompt_template") @db.Text
-  formSchema           Json?    @map("form_schema") @db.JsonB
-  createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
+  stepType             StepType  @default(type_c) @map("step_type")
+  systemPromptTemplate String    @map("system_prompt_template") @db.Text
+  refinePromptTemplate String    @map("refine_prompt_template") @db.Text
+  formSchema           Json?     @map("form_schema") @db.JsonB
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
 
   framework Framework @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
   steps     Step[]
@@ -318,4 +324,12 @@ enum ExtractionStatus {
   FAILED
 
   @@map("extraction_status")
+}
+
+enum StepType {
+  type_a
+  type_b
+  type_c
+
+  @@map("step_type")
 }
