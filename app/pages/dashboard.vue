@@ -15,15 +15,6 @@ const { data: pages, pending } = await useAsyncData(
 	},
 	{ server: false },
 );
-const showFrameworkModal = ref(false);
-
-function onFrameworkSelected(frameworkId: string, frameworkSlug: string) {
-	showFrameworkModal.value = false;
-	navigateTo({
-		path: "/pages/new",
-		query: { frameworkId, frameworkName: frameworkSlug },
-	});
-}
 
 const statusColor: Record<string, string> = {
 	DRAFT: "neutral",
@@ -40,20 +31,10 @@ const statusColor: Record<string, string> = {
 			<h1 class="text-xl font-semibold text-gray-900 dark:text-white">
 				Pages
 			</h1>
-			<UModal
-				v-model:open="showFrameworkModal"
-				title="Choose a framework"
-			>
-				<UButton icon="i-lucide-plus" size="sm"> New page </UButton>
-				<template #body>
-					<FrameworkPickerModal
-						@select="onFrameworkSelected"
-						@cancel="showFrameworkModal = false"
-					/>
-				</template>
-			</UModal>
+			<UButton icon="i-lucide-plus" size="sm" to="/pages/new">
+				New page
+			</UButton>
 		</div>
-		<!-- ← this was missing -->
 
 		<!-- Loading -->
 		<div v-if="pending" class="flex items-center justify-center py-24">
@@ -78,20 +59,9 @@ const statusColor: Record<string, string> = {
 			<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
 				Create your first Patent Box document to get started
 			</p>
-			<UModal
-				v-model:open="showFrameworkModal"
-				title="Choose a framework"
-			>
-				<UButton class="mt-5" icon="i-lucide-plus" size="sm">
-					Create your first page
-				</UButton>
-				<template #body>
-					<FrameworkPickerModal
-						@select="onFrameworkSelected"
-						@cancel="showFrameworkModal = false"
-					/>
-				</template>
-			</UModal>
+			<UButton class="mt-5" icon="i-lucide-plus" size="sm" to="/pages/new">
+				Create your first page
+			</UButton>
 		</div>
 
 		<!-- Pages list -->

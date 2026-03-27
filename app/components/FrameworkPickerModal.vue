@@ -1,34 +1,80 @@
 <script setup lang="ts">
+definePageMeta({ middleware: "auth" });
+
 const client = useSupabaseClient();
+const user = useSupabaseUser();
 
-const emit = defineEmits<{
-	select: [frameworkId: string, frameworkSlug: string];
-	cancel: [];
-}>();
+// ─── Step state ────────────────────────────────────────────────────────────
+// currentStep goes 0 → 3. Think of it as "which screen are we on?"
+const currentStep = ref(0);
 
-// Load available frameworks — public and not deprecated
-const { data: frameworks, pending } = await useAsyncData(
-	"frameworks",
+// ─── Step 1: Client ────────────────────────────────────────────────────────
+const { data: clients } = await useAsyncData(
+	"clients-for-new-page",
 	async () => {
 		const { data, error } = await client
-			.from("frameworks")
-			.select("id, name, slug, description")
-			.eq("is_public", true)
-			.is("deprecated_at", null)
+			.from("clients")
+			.select("id, name")
 			.order("name");
 		if (error) throw error;
 		return data;
 	},
-	{ server: false },  // must run client-side so the user session is available
+	{ server: false },
 );
 
-const selected = ref<string | null>(null);
+const selectedClientId = ref<string | null>(null);
 
-function confirm() {
-	const fw = frameworks.value?.find((f) => f.id === selected.value);
-	if (!fw) return;
-	emit("select", fw.id, fw.name); //<!-- changed fw.slug to fw.name -->
+const hasClients = computed(() => (clients.value?.length ?? 0) > 0);
+const clientItems = computed(() =>
+	(clients.value ?? []).map((c) => ({ label: c.name, value: c.id })),
+);
+
+// ─── Step 2: Folders ───────────────────────────────────────────────────────
+// folders is null until we load them. It reloads every time selectedClientId changes.
+const folders = ref<{ id: string; program_name: string }[]>([]);
+const foldersLoading = ref(false);
+const selectedFolderId = ref<string | null>(null);
+const isCreatingFolder = ref(false);
+const newFolderName = ref("");
+
+// watch() runs a function whenever a reactive value changes.
+// Here: when the user picks a client, we fetch that client's folders.
+watch(selectedClientId, async (clientId) => {
+	// Reset folder state when client changes
+	selectedFolderId.value = null;
+	isCreatingFolder.value = false;
+	newFolderName.value = "";
+	folders.value = [];
+
+	if (!clientId) return;
+
+	foldersLoading.value = true;
+	const { data, error } = await client
+		.from("folders")
+		.select("id, program_name")
+		.eq("client_id", clientId)
+		.order("program_name");
+
+	foldersLoading.value = false;
+	if (!error) folders.value = data ?? [];
+});
+
+// ─── Step 3: Framework ─────────────────────────────────────────────────────
+const selectedFrameworkId = ref<string | null>(null);
+const selectedFrameworkName = ref<string | null>(null);
+
+// Called by the FrameworkPicker component when user picks one
+function onFrameworkPicked(id: string, name: string) {
+	selectedFrameworkId.value = id;
+	selectedFrameworkName.value = name;
 }
+
+// ─── Step 4: Title + files ─────────────────────────────────────────────────
+// Title pre-fills from framework name, but user can edit it
+const title = ref("");
+watch(selectedFrameworkName, (name) => {
+	if (name && !title.value) title.value = name;
+});
 </script>
 
 <template>

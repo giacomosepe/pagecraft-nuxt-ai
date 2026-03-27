@@ -1,7 +1,8 @@
 # PageCraft — Project Context for AI Assistants
-# Last updated: March 21, 2026
+# Last updated: March 27, 2026 (evening)
 # Paste this at the start of every coding session.
 # Update the BUILD STATUS section at the end of every session.
+# Full project context and current state also available in Linear PageCraft docs.
 
 ---
 
@@ -41,7 +42,7 @@ project-root/
 │   ├── components/
 │   │   ├── AppSidebar.vue           ← nav: Pages + Clients only (no /folders or /settings)
 │   │   ├── AppBottomBar.vue
-│   │   ├── FrameworkPickerModal.vue  ← reads frameworks table client-side
+│   │   ├── FrameworkPickerModal.vue  ← reads frameworks table client-side; NOT used by new.vue (embedded inline there)
 │   │   └── StepContextModal.vue     ← receives clientData prop (NOT companyProfile)
 │   ├── pages/
 │   │   ├── dashboard.vue            ← pages list
@@ -56,7 +57,7 @@ project-root/
 │   │   │       └── profiles/
 │   │   │           └── new.vue      ← DEAD — redirects to /clients/[id]/edit
 │   │   └── pages/
-│   │       ├── new.vue              ← new page (framework picker → form)
+│   │       ├── new.vue              ← new page creation: 3-step flow (client → framework → project name/folder)
 │   │       └── [id].vue             ← three-panel step editor (core of the app)
 │   └── types/
 │       └── database.types.ts        ← auto-generated via npm run generate:types
@@ -97,8 +98,15 @@ created_at, updated_at
 
 ### pages table
 Fields: id, user_id, folder_id, framework_id, framework_name (snapshot),
-client_id (nullable), tax_year (nullable — belongs to the document not the company),
+client_id (REQUIRED — pages must belong to a client as of ARKADIA-89),
+tax_year (nullable — belongs to the document not the company),
 title, status (DRAFT|IN_PROGRESS|COMPLETED|ARCHIVED), created_at, updated_at
+
+### folders table
+Fields: id, user_id, client_id, program_name, created_at, updated_at
+folder_id is REQUIRED on new pages. Acts as the program/project container.
+One folder holds multiple pages (e.g. Patent Box doc + Relazione Tecnica).
+Added via ARKADIA-88 migration. Existing folders have nullable client_id/program_name.
 
 ### steps table — no user_id, owned through pages
 Fields: id, page_id, framework_step_id, order, title, system_prompt_template,
@@ -107,10 +115,24 @@ last_prompt_used, committed_output, status (PENDING|IN_PROGRESS|COMMITTED|SKIPPE
 created_at, updated_at
 
 ### frameworks + framework_steps — system owned, seeded, read-only for users
-Seeded: "Italian Patent Box" (8 steps in order):
-1. Intestazione  2. Premessa  3. Struttura Partecipativa  4. Attività Rilevanti
-5. Attività Commissionate a Terzi  6. Modello Organizzativo
-7. Relazione Tecnica  8. Funzioni, Rischi e Beni
+Two frameworks seeded (do not modify IDs):
+
+Patent Box — Allegato A (ID: a1b2c3d4-e5f6-7890-abcd-ef1234567890) — 7 steps:
+1. Intestazione (type_a)  2. Premessa (type_a)  3. Struttura Partecipativa (type_b)
+4. Attività Rilevanti (type_c)  5. Attività Commissionate a Terzi (type_c)
+6. Modello Organizzativo (type_c)  7. Funzioni, Rischi e Beni (type_c)
+
+Relazione Tecnica — Patent Box (ID: b2c3d4e5-f6a7-8901-bcde-f12345678901) — 11 steps:
+1. Trattazione del Titolo  2. Attività Rilevanti Svolte  3. Stato dell'Arte
+4. Gantt di Progetto  5. Team di Progetto  6. Materiali e Beni Strumentali
+7. Fasi di Sviluppo  8. Problematiche Tecniche e Scientifiche  9. Situazione Futura
+10. Attività di Tutela del Bene  11. Altre Attività Rilevanti
+All Relazione Tecnica steps are type_c.
+
+Step types (stored in framework_steps.step_type):
+- type_a: pre-populated from client record, user confirms, no AI generation
+- type_b: dynamic structured form reading from clients table, no AI generation
+- type_c: structured input form (form_schema fields) + AI generation
 
 ---
 
@@ -164,11 +186,11 @@ but for now both exist and produce consistent output.
 
 ### State that lives in each page
 
-- dashboard.vue: reads pages list, no cross-page state
+- dashboard.vue: reads pages list, no cross-page state. "New page" button navigates directly to /pages/new — no modal.
 - clients/index.vue: reads clients list, no cross-page state
 - clients/[id]/index.vue: reads one client + its pages, loads fresh each visit
 - clients/[id]/edit.vue: loads client, saves via mutate, redirects back
-- pages/new.vue: receives frameworkId + frameworkName via query params from dashboard
+- pages/new.vue: self-contained 3-step wizard (client → framework → project name). No query params. Navigated to via plain `to="/pages/new"` links.
 - pages/[id].vue: owns all step editor state — activeStepIndex, userContext,
   output, isGenerating, isCommitting. This state is local and NOT persisted
   until commit() is called. clientData loaded lazily after page loads.
@@ -345,6 +367,11 @@ These are the new asymmetric JWT keys (sb_publishable_ / sb_secret_), not the ol
 - Never add .eq("user_id", user.value!.id) to browser reads (RLS handles it)
 - Never query company_profiles (table deleted)
 - Never reference company_profile_id on pages (column deleted)
+- Never pass frameworkId/frameworkName as query params to /pages/new (old pattern, removed)
+- Never create a page without clientId and folderId (both required since ARKADIA-88/89)
+- Never use prisma migrate dev — apply schema changes via Supabase Studio SQL editor,
+  create migration file manually, then: npx prisma migrate resolve --applied [name]
+- Never touch server/api/pages/create.post.ts — it is production grade and complete
 - Never update dependencies with @latest — explicit version, one at a time
 
 ---
@@ -356,33 +383,38 @@ Loose (caret ok): nuxt, vue, @nuxt/ui, tailwindcss, @nuxtjs/i18n, @nuxtjs/sitema
 
 ---
 
-## BUILD STATUS
+## BUILD STATUS — last updated March 27, 2026 (evening)
 
-### Working ✅
+### Done and merged ✅
 - Auth (login, signup, confirm, session middleware)
-- Dashboard — pages list
+- Dashboard — pages list (note: will be refactored to client-centric view in ARKADIA-95)
 - Clients — list, create, detail (with pages), edit
-- Pages — create (with framework picker + client selector), view
-- Step editor — three panel layout, step navigation, generate, refine, commit, discard
 - /api/db/mutate — insert/update/delete, production grade security
-- /api/pages/create — page + step snapshot, production grade security
+- /api/pages/create — single page + step snapshot, production grade security. DO NOT TOUCH.
 - /api/generations/create — Claude streaming + save after stream, production grade security
 - RLS policies — all tables, verified working
 - Auth trigger — recreated in trigger.sql, backfills existing users
 - grants.sql — documents and fixes all post-reset breakage
+- ARKADIA-88: folders table — client_id and program_name columns added
+- ARKADIA-90: framework_steps — step_type enum added (type_a/type_b/type_c).
+  Patent Box re-seeded to 7 steps (Relazione Tecnica removed from main framework).
+- ARKADIA-91: Relazione Tecnica seeded as standalone framework (11 steps, all type_c)
 
-### In progress 🔨
-- StepContextModal — clientData prop wired, guided forms work, step 3 shareholder
-  data not yet pulling from client record (needs connecting)
-- AI generation — premessa template route (/api/generations/premessa) not yet built
+### Ready to build — approved and specced in Linear 🟡
+- ARKADIA-94: /api/pages/create-batch.post.ts — multi-framework batch page creation
+- ARKADIA-89: pages/new.vue — 3-step wizard (client → framework checkboxes → project name)
+  DEPENDS ON: ARKADIA-94 must exist before submit button can work
 
 ### Not started yet ⬜
-- Word document export
-- File upload and text extraction
-- /settings page
-- /folders page
-- Payments (Stripe) — v2
-- Framework recommender — v2
+- ARKADIA-92: step-type-aware input panel (replaces StepContextModal)
+- ARKADIA-95: client-centric navigation (dashboard → client → folder → page)
+- ARKADIA-96: /folders/[id].vue page
+- ARKADIA-93: generation pipeline update (use form_data not userContext)
+- ARKADIA-86: step 3 dynamic form (shareholders, board, pie chart)
+- ARKADIA-87: Word document export (.docx) — primary V0 deliverable
+
+### Canceled ❌
+- ARKADIA-85: /api/generations/premessa — step 2 is type_a, no AI generation needed
 
 ### Known issues / decisions
 - prisma/migrations table RLS warning in Supabase dashboard → intentional, ignore
@@ -390,3 +422,5 @@ Loose (caret ok): nuxt, vue, @nuxt/ui, tailwindcss, @nuxtjs/i18n, @nuxtjs/sitema
 - SUPABASE_SECRET_KEY and SUPABASE_SERVICE_KEY must both be set to same value
 - Column defaults (id, updated_at) not set by Prisma migrations — grants.sql fixes this
 - White screen after navigation = stale schema reference in useAsyncData — check query
+- prisma migrate dev causes drift errors — never use it. Manual migration pattern only.
+- pages/new.vue currently has 4-step implementation — being replaced by 3-step in ARKADIA-89

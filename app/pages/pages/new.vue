@@ -25,7 +25,9 @@ const clientItems = computed(() =>
 	(clients.value ?? []).map((c) => ({ label: c.name, value: c.id })),
 );
 
-// ─── Step 1: Frameworks (multi-select) ─────────────────────────────────────
+
+// ─── Step 1: Frameworks (multi-select checkboxes) ──────────────────────────
+
 const { data: frameworks, pending: frameworksPending } = await useAsyncData(
 	"frameworks-for-new-page",
 	async () => {
@@ -65,7 +67,9 @@ function toggleFramework(id: string) {
 }
 
 // ─── Step 2: Project name + document titles ────────────────────────────────
-// Existing folders for the selected client (quick-select chips)
+
+
+// Existing folders for the selected client — shown as quick-select chips
 const existingFolders = ref<{ id: string; program_name: string }[]>([]);
 const foldersLoading = ref(false);
 
@@ -85,7 +89,7 @@ watch(selectedClientId, async (clientId) => {
 	if (!error) existingFolders.value = data ?? [];
 });
 
-// Folder resolution: either pick existing or type a new name
+ giacomo/arkadia-89-page-creation-3-step
 const selectedFolderIdFromExisting = ref<string | null>(null);
 const projectName = ref("");
 
@@ -95,12 +99,10 @@ function selectExistingFolder(id: string) {
 }
 
 function onProjectNameInput() {
-	// Typing a new name deselects any existing folder chip
+
 	selectedFolderIdFromExisting.value = null;
 }
 
-// Document titles — one per selected framework, keyed by frameworkId.
-// Pre-filled with the framework name; user can edit.
 const documentTitles = ref<Record<string, string>>({});
 
 watch(
@@ -122,9 +124,11 @@ const canAdvance = computed(() => {
 	if (currentStep.value === 1) return selectedFrameworkIds.value.length > 0;
 	if (currentStep.value === 2) {
 		const folderOk =
-			!!selectedFolderIdFromExisting.value || projectName.value.trim().length > 0;
+
+			!!selectedFolderIdFromExisting.value ||
+			projectName.value.trim().length > 0;
 		const titlesOk = selectedFrameworkIds.value.every(
-			(id) => documentTitles.value[id]?.trim().length > 0,
+			(id) => (documentTitles.value[id] ?? "").trim().length > 0,
 		);
 		return folderOk && titlesOk;
 	}
@@ -155,7 +159,8 @@ async function submit() {
 					: projectName.value.trim(),
 				frameworks: selectedFrameworkIds.value.map((id) => ({
 					frameworkId: id,
-					title: documentTitles.value[id]?.trim(),
+
+					title: (documentTitles.value[id] ?? "").trim(),
 				})),
 			},
 		});
@@ -170,7 +175,8 @@ async function submit() {
 
 <template>
 	<div class="mx-auto max-w-2xl px-6 py-10">
-		<!-- Step indicator (3 steps: 0, 1, 2) -->
+
+		<!-- Step indicator (3 steps: Cliente → Framework → Progetto) -->
 		<div class="mb-8 flex items-center gap-2">
 			<template
 				v-for="(label, i) in ['Cliente', 'Framework', 'Progetto']"
@@ -239,7 +245,8 @@ async function submit() {
 				</div>
 			</template>
 
-			<!-- STEP 1: Framework (checkbox cards) -->
+
+			<!-- STEP 1: Framework selection (checkbox cards) -->
 			<template v-else-if="currentStep === 1">
 				<h2 class="text-lg font-semibold text-gray-900 dark:text-white">
 					Framework
@@ -269,7 +276,8 @@ async function submit() {
 						@click="toggleFramework(fw.id)"
 					>
 						<div class="flex items-start gap-3">
-							<!-- Checkbox indicator (top-right style, left-aligned in row) -->
+
+							<!-- Checkbox indicator -->
 							<div
 								class="mt-0.5 size-4 rounded border-2 flex items-center justify-center shrink-0"
 								:class="
@@ -307,7 +315,7 @@ async function submit() {
 				</div>
 
 				<p
-					v-if="selectedFrameworkIds.length === 0"
+					v-if="!frameworksPending && selectedFrameworkIds.length === 0"
 					class="text-xs text-red-500"
 				>
 					Seleziona almeno un framework per continuare.
@@ -338,10 +346,15 @@ async function submit() {
 						name="i-lucide-loader-circle"
 						class="size-4 animate-spin text-gray-400"
 					/>
-					<span class="text-xs text-gray-400">Caricamento programmi...</span>
+					<span class="text-xs text-gray-400"
+						>Caricamento programmi...</span
+					>
 				</div>
 
-				<div v-else-if="existingFolders.length" class="flex flex-col gap-2">
+				<div
+					v-else-if="existingFolders.length"
+					class="flex flex-col gap-2"
+				>
 					<p class="text-xs text-gray-500">
 						Aggiungi a programma esistente:
 					</p>
@@ -372,19 +385,21 @@ async function submit() {
 						@input="onProjectNameInput"
 					/>
 					<template v-if="selectedFolderIdFromExisting" #hint>
-						<span class="text-xs text-primary-600 dark:text-primary-400">
-							Documento aggiunto al programma esistente
+						<span
+							class="text-xs text-primary-600 dark:text-primary-400"
+						>
+							Documento aggiunto al programma esistente —
 							<button
-								class="underline ml-1"
+								class="underline"
 								@click="selectedFolderIdFromExisting = null"
 							>
-								(cambia)
+								cambia
 							</button>
 						</span>
 					</template>
 				</UFormField>
 
-				<!-- Document title fields — one per selected framework -->
+				<!-- One title field per selected framework -->
 				<div class="flex flex-col gap-3">
 					<UFormField
 						v-for="id in selectedFrameworkIds"
@@ -398,7 +413,10 @@ async function submit() {
 						<UInput
 							v-model="documentTitles[id]"
 							class="w-full"
-							:placeholder="frameworks?.find((f) => f.id === id)?.name"
+
+							:placeholder="
+								frameworks?.find((f) => f.id === id)?.name
+							"
 						/>
 					</UFormField>
 				</div>
