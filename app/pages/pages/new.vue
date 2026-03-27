@@ -25,7 +25,9 @@ const clientItems = computed(() =>
 	(clients.value ?? []).map((c) => ({ label: c.name, value: c.id })),
 );
 
+
 // ─── Step 1: Frameworks (multi-select checkboxes) ──────────────────────────
+
 const { data: frameworks, pending: frameworksPending } = await useAsyncData(
 	"frameworks-for-new-page",
 	async () => {
@@ -66,6 +68,7 @@ function toggleFramework(id: string) {
 
 // ─── Step 2: Project name + document titles ────────────────────────────────
 
+
 // Existing folders for the selected client — shown as quick-select chips
 const existingFolders = ref<{ id: string; program_name: string }[]>([]);
 const foldersLoading = ref(false);
@@ -86,6 +89,7 @@ watch(selectedClientId, async (clientId) => {
 	if (!error) existingFolders.value = data ?? [];
 });
 
+ giacomo/arkadia-89-page-creation-3-step
 const selectedFolderIdFromExisting = ref<string | null>(null);
 const projectName = ref("");
 
@@ -95,10 +99,10 @@ function selectExistingFolder(id: string) {
 }
 
 function onProjectNameInput() {
+
 	selectedFolderIdFromExisting.value = null;
 }
 
-// One title field per selected framework, keyed by frameworkId, pre-filled with framework name
 const documentTitles = ref<Record<string, string>>({});
 
 watch(
@@ -120,6 +124,7 @@ const canAdvance = computed(() => {
 	if (currentStep.value === 1) return selectedFrameworkIds.value.length > 0;
 	if (currentStep.value === 2) {
 		const folderOk =
+
 			!!selectedFolderIdFromExisting.value ||
 			projectName.value.trim().length > 0;
 		const titlesOk = selectedFrameworkIds.value.every(
@@ -154,6 +159,7 @@ async function submit() {
 					: projectName.value.trim(),
 				frameworks: selectedFrameworkIds.value.map((id) => ({
 					frameworkId: id,
+
 					title: (documentTitles.value[id] ?? "").trim(),
 				})),
 			},
@@ -169,6 +175,7 @@ async function submit() {
 
 <template>
 	<div class="mx-auto max-w-2xl px-6 py-10">
+
 		<!-- Step indicator (3 steps: Cliente → Framework → Progetto) -->
 		<div class="mb-8 flex items-center gap-2">
 			<template
@@ -238,6 +245,7 @@ async function submit() {
 				</div>
 			</template>
 
+
 			<!-- STEP 1: Framework selection (checkbox cards) -->
 			<template v-else-if="currentStep === 1">
 				<h2 class="text-lg font-semibold text-gray-900 dark:text-white">
@@ -268,6 +276,7 @@ async function submit() {
 						@click="toggleFramework(fw.id)"
 					>
 						<div class="flex items-start gap-3">
+
 							<!-- Checkbox indicator -->
 							<div
 								class="mt-0.5 size-4 rounded border-2 flex items-center justify-center shrink-0"
@@ -404,6 +413,7 @@ async function submit() {
 						<UInput
 							v-model="documentTitles[id]"
 							class="w-full"
+
 							:placeholder="
 								frameworks?.find((f) => f.id === id)?.name
 							"
