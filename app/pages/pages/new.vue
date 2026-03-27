@@ -153,7 +153,7 @@ async function submit() {
 				newFolderName: selectedFolderIdFromExisting.value
 					? undefined
 					: projectName.value.trim(),
-				frameworks: selectedFrameworkIds.value.map((id) => ({
+				pages: selectedFrameworkIds.value.map((id) => ({
 					frameworkId: id,
 					title: documentTitles.value[id]?.trim(),
 				})),
