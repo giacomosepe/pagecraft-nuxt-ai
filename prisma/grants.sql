@@ -60,3 +60,7 @@ WHERE table_schema = 'public'
 AND column_name IN ('id', 'updated_at')
 AND column_default IS NOT NULL
 ORDER BY table_name, column_name;
+
+
+-- folders: client_id and program_name added March 2026
+-- nullable, no default needed, covered by existing RLS user_id check
