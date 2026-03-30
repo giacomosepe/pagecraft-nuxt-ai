@@ -20,7 +20,13 @@ const { data: clients } = await useAsyncData(
 	{ server: false },
 );
 
-const selectedClientId = ref<string | null>(null);
+const route = useRoute();
+const selectedClientId = ref<string | null>(
+	(route.query.clientId as string) || null,
+);
+// If clientId was pre-selected via query param, skip the client step
+if (selectedClientId.value) currentStep.value = 1;
+
 const clientItems = computed(() =>
 	(clients.value ?? []).map((c) => ({ label: c.name, value: c.id })),
 );

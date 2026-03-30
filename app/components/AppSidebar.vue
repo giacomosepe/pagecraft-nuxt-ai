@@ -2,8 +2,7 @@
 const supabase = useSupabaseClient();
 
 const navMain = [
-	{ label: "Pages", to: "/dashboard", icon: "i-lucide-file-text" },
-	{ label: "Clients", to: "/clients", icon: "i-lucide-building-2" },
+	{ label: "Clienti", to: "/dashboard", icon: "i-lucide-building-2" },
 ];
 
 const navBottom: { label: string; to: string; icon: string }[] = [];

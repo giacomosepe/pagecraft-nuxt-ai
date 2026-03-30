@@ -1,103 +1,81 @@
 <script setup lang="ts">
 definePageMeta({ middleware: "auth" });
 
-const client = useSupabaseClient();
+const supabase = useSupabaseClient();
 
-const { data: pages, pending } = await useAsyncData(
-	"pages-list",
+const { data: clients, pending } = await useAsyncData(
+	"clients-list-dashboard",
 	async () => {
-		const { data, error } = await client
-			.from("pages")
-			.select("id, title, status, framework_name, updated_at, client_id")
-			.order("updated_at", { ascending: false });
+		const { data, error } = await supabase
+			.from("clients")
+			.select("id, name, created_at")
+			.order("name");
 		if (error) throw error;
 		return data ?? [];
 	},
 	{ server: false },
 );
-const statusColor: Record<string, string> = {
-	DRAFT: "neutral",
-	IN_PROGRESS: "info",
-	COMPLETED: "success",
-	ARCHIVED: "neutral",
-};
 </script>
 
 <template>
-	<div class="mx-auto max-w-5xl px-6 py-8">
-		<!-- Header row -->
+	<div class="mx-auto max-w-4xl px-6 py-8">
 		<div class="mb-6 flex items-center justify-between">
 			<h1 class="text-xl font-semibold text-gray-900 dark:text-white">
-				Pages
+				Clienti
 			</h1>
-			<UButton icon="i-lucide-plus" size="sm" to="/pages/new">
-				New page
+			<UButton icon="i-lucide-plus" size="sm" to="/clients/new">
+				Nuovo cliente
 			</UButton>
 		</div>
-		<!-- ← this was missing -->
 
-		<!-- Loading -->
-		<div v-if="pending" class="flex items-center justify-center py-24">
+		<div v-if="pending" class="flex justify-center py-24">
 			<UIcon
 				name="i-lucide-loader-circle"
 				class="size-6 animate-spin text-gray-400"
 			/>
 		</div>
 
-		<!-- Empty state -->
 		<div
-			v-else-if="!pages?.length"
+			v-else-if="!clients?.length"
 			class="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 py-24 text-center dark:border-gray-700"
 		>
 			<UIcon
-				name="i-lucide-file-text"
+				name="i-lucide-building-2"
 				class="mb-3 size-10 text-gray-300 dark:text-gray-600"
 			/>
 			<p class="text-sm font-medium text-gray-900 dark:text-white">
-				No pages yet
+				Nessun cliente
 			</p>
 			<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-				Create your first Patent Box document to get started
+				Aggiungi il tuo primo cliente per iniziare
 			</p>
-			<UButton class="mt-5" icon="i-lucide-plus" size="sm" to="/pages/new">
-				Create your first page
+			<UButton class="mt-5" icon="i-lucide-plus" size="sm" to="/clients/new">
+				Nuovo cliente
 			</UButton>
 		</div>
 
-		<!-- Pages list -->
 		<div v-else class="flex flex-col gap-2">
 			<NuxtLink
-				v-for="page in pages"
-				:key="page.id"
-				:to="`/pages/${page.id}`"
+				v-for="c in clients"
+				:key="c.id"
+				:to="`/clients/${c.id}`"
 				class="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700"
 			>
-				<div class="min-w-0">
-					<p
-						class="truncate text-sm font-medium text-gray-900 dark:text-white"
+				<div class="flex items-center gap-3">
+					<div
+						class="flex size-8 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900"
 					>
-						{{ page.title }}
-					</p>
-					<p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-						{{ page.framework_name }}
+						<span
+							class="text-xs font-semibold text-primary-700 dark:text-primary-300"
+						>
+							{{ c.name.charAt(0).toUpperCase() }}
+						</span>
+					</div>
+					<p class="text-sm font-medium text-gray-900 dark:text-white">
+						{{ c.name }}
 					</p>
 				</div>
-				<div class="ml-4 flex shrink-0 items-center gap-3">
-					<UBadge
-						:color="statusColor[page.status]"
-						variant="soft"
-						size="sm"
-					>
-						{{ page.status.replace("_", " ") }}
-					</UBadge>
-					<span class="text-xs text-gray-400 dark:text-gray-500">
-						{{
-							new Date(page.updated_at).toLocaleDateString(
-								"it-IT",
-							)
-						}}
-					</span>
-				</div>
+				<UIcon name="i-lucide-chevron-right" class="size-4 text-gray-400" />
 			</NuxtLink>
 		</div>
 	</div>
