@@ -384,13 +384,18 @@ Loose (caret ok): nuxt, vue, @nuxt/ui, tailwindcss, @nuxtjs/i18n, @nuxtjs/sitema
 ### Not started yet ⬜
 - ARKADIA-92: step-type-aware input panel (replaces StepContextModal)
 - ARKADIA-95: client-centric navigation (dashboard → client → folder → page)
-- ARKADIA-96: /folders/[id].vue page
+- ARKADIA-96: /folders/[id].vue page (file exists on disk, untracked — implementation complete, needs commit)
 - ARKADIA-93: generation pipeline update (use form_data not userContext)
 - ARKADIA-86: step 3 dynamic form (shareholders, board, pie chart)
 - ARKADIA-87: Word document export (.docx) — primary V0 deliverable
 
 ### Canceled ❌
 - ARKADIA-85: /api/generations/premessa — step 2 is type_a, no AI generation needed
+
+### Fixed ✅ (March 30, 2026)
+- ENGNEER-102: pages/new.vue framework step showed radio buttons instead of checkboxes.
+  Root cause: create-batch.post.ts Zod schema expected `frameworks:` but new.vue sent `pages:`.
+  Fix: renamed schema key to `pages` in create-batch.post.ts. Template was already correct (checkbox cards).
 
 ### Known issues / decisions
 - prisma/migrations table RLS warning in Supabase dashboard → intentional, ignore
