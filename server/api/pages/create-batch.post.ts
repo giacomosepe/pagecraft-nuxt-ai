@@ -19,7 +19,7 @@ const FrameworkEntrySchema = z.object({
 
 const CreateBatchSchema = z
   .object({
-    frameworks: z
+    pages: z
       .array(FrameworkEntrySchema)
       .min(1, "Select at least one framework")
       .max(10, "Too many frameworks selected"),
@@ -55,7 +55,7 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const { frameworks, clientId, folderId, newFolderName } = parsed.data;
+  const { pages: frameworks, clientId, folderId, newFolderName } = parsed.data;
 
   // ─── Step 3: Get service role client ─────────────────────────────────────
   // Needed to read system-owned framework_steps (not user-scoped).

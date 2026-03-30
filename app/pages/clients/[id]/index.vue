@@ -5,11 +5,10 @@ const supabase = useSupabaseClient();
 const route = useRoute();
 const clientId = route.params.id as string;
 
-// ─── Load client + pages in parallel ─────────────────────────────────────────
 const { data, pending } = await useAsyncData(
 	`client-${clientId}`,
 	async () => {
-		const [clientRes, pagesRes] = await Promise.all([
+		const [clientRes, foldersRes] = await Promise.all([
 			supabase
 				.from("clients")
 				.select(`
@@ -21,24 +20,21 @@ const { data, pending } = await useAsyncData(
 				.eq("id", clientId)
 				.single(),
 			supabase
-				.from("pages")
-				.select("id, title, status, framework_name, tax_year, updated_at")
+				.from("folders")
+				.select("id, program_name, created_at, pages(count)")
 				.eq("client_id", clientId)
-				.order("updated_at", { ascending: false }),
+				.order("created_at", { ascending: false }),
 		]);
 		if (clientRes.error) throw clientRes.error;
-		if (pagesRes.error) throw pagesRes.error;
-		return { client: clientRes.data, pages: pagesRes.data ?? [] };
+		if (foldersRes.error) throw foldersRes.error;
+		return { client: clientRes.data, folders: foldersRes.data ?? [] };
 	},
 	{ server: false },
 );
 
-const statusColor: Record<string, string> = {
-	DRAFT:       "neutral",
-	IN_PROGRESS: "info",
-	COMPLETED:   "success",
-	ARCHIVED:    "neutral",
-};
+function pageCount(folder: { pages: { count: number }[] | null }): number {
+	return folder.pages?.[0]?.count ?? 0;
+}
 </script>
 
 <template>
@@ -54,7 +50,7 @@ const statusColor: Record<string, string> = {
 			<div class="mb-8 flex items-start justify-between">
 				<div>
 					<NuxtLink
-						to="/clients"
+						to="/dashboard"
 						class="mb-2 flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
 					>
 						<UIcon name="i-lucide-arrow-left" class="size-4" />
@@ -119,50 +115,60 @@ const statusColor: Record<string, string> = {
 				</div>
 			</div>
 
-			<!-- Pages section -->
+			<!-- Folders section -->
 			<div class="mb-4 flex items-center justify-between">
 				<h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">
-					Documenti
+					Programmi
 				</h2>
+				<UButton
+					icon="i-lucide-plus"
+					size="xs"
+					variant="outline"
+					color="neutral"
+					:to="`/pages/new?clientId=${clientId}`"
+				>
+					Nuovo programma
+				</UButton>
 			</div>
 
 			<div
-				v-if="!data.pages.length"
+				v-if="!data.folders.length"
 				class="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 py-16 text-center dark:border-gray-700"
 			>
-				<UIcon name="i-lucide-file-text" class="mb-3 size-9 text-gray-300 dark:text-gray-600" />
-				<p class="text-sm font-medium text-gray-900 dark:text-white">Nessun documento</p>
+				<UIcon name="i-lucide-folder" class="mb-3 size-9 text-gray-300 dark:text-gray-600" />
+				<p class="text-sm font-medium text-gray-900 dark:text-white">Nessun programma</p>
 				<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-					Crea un documento dal dashboard e collegalo a questo cliente
+					Crea il primo programma per questo cliente
 				</p>
-				<UButton class="mt-5" icon="i-lucide-plus" size="sm" to="/dashboard">
-					Vai al dashboard
+				<UButton
+					class="mt-5"
+					icon="i-lucide-plus"
+					size="sm"
+					:to="`/pages/new?clientId=${clientId}`"
+				>
+					Nuovo programma
 				</UButton>
 			</div>
 
 			<div v-else class="flex flex-col gap-2">
 				<NuxtLink
-					v-for="page in data.pages"
-					:key="page.id"
-					:to="`/pages/${page.id}`"
+					v-for="folder in data.folders"
+					:key="folder.id"
+					:to="`/folders/${folder.id}`"
 					class="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700"
 				>
-					<div class="min-w-0">
-						<p class="truncate text-sm font-medium text-gray-900 dark:text-white">
-							{{ page.title }}
-						</p>
-						<p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-							{{ page.framework_name }}
-							<span v-if="page.tax_year"> · {{ page.tax_year }}</span>
+					<div class="flex items-center gap-3">
+						<UIcon name="i-lucide-folder" class="size-4 shrink-0 text-gray-400" />
+						<p class="text-sm font-medium text-gray-900 dark:text-white">
+							{{ folder.program_name ?? "Programma senza nome" }}
 						</p>
 					</div>
-					<div class="ml-4 flex shrink-0 items-center gap-3">
-						<UBadge :color="statusColor[page.status]" variant="soft" size="sm">
-							{{ page.status.replace("_", " ") }}
+					<div class="flex items-center gap-3">
+						<UBadge color="neutral" variant="soft" size="sm">
+							{{ pageCount(folder) }}
+							{{ pageCount(folder) === 1 ? "doc" : "doc" }}
 						</UBadge>
-						<span class="text-xs text-gray-400">
-							{{ new Date(page.updated_at).toLocaleDateString("it-IT") }}
-						</span>
+						<UIcon name="i-lucide-chevron-right" class="size-4 text-gray-400" />
 					</div>
 				</NuxtLink>
 			</div>
@@ -172,7 +178,7 @@ const statusColor: Record<string, string> = {
 		<div v-else class="flex flex-col items-center justify-center py-24 text-center">
 			<UIcon name="i-lucide-circle-alert" class="mb-3 size-9 text-gray-300 dark:text-gray-600" />
 			<p class="text-sm font-medium text-gray-900 dark:text-white">Cliente non trovato</p>
-			<NuxtLink to="/clients" class="mt-3 text-sm text-primary-600 hover:underline dark:text-primary-400">
+			<NuxtLink to="/dashboard" class="mt-3 text-sm text-primary-600 hover:underline dark:text-primary-400">
 				Torna ai clienti
 			</NuxtLink>
 		</div>
