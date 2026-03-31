@@ -34,17 +34,17 @@ const clientName = computed(() => {
 });
 
 const statusColor: Record<string, string> = {
-	DRAFT: "neutral",
-	IN_PROGRESS: "info",
-	COMPLETED: "success",
-	ARCHIVED: "neutral",
+	in_attesa: "amber",
+	in_lavorazione: "blue",
+	completato: "green",
+	archiviato: "gray",
 };
 
 const statusLabel: Record<string, string> = {
-	DRAFT: "Bozza",
-	IN_PROGRESS: "In corso",
-	COMPLETED: "Completato",
-	ARCHIVED: "Archiviato",
+	in_attesa: "In attesa",
+	in_lavorazione: "In lavorazione",
+	completato: "Completato",
+	archiviato: "Archiviato",
 };
 </script>
 

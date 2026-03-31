@@ -111,7 +111,7 @@ export default defineEventHandler(async (event) => {
     framework_id: frameworkId,
     framework_name: framework.name,
     title,
-    status: "DRAFT",
+    status: "in_lavorazione",
     client_id: clientId ?? null,
     folder_id: null,
     created_at: now,
