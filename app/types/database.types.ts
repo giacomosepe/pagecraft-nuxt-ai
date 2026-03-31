@@ -61,6 +61,7 @@ export type Database = {
           name: string
           registered_address: string | null
           shareholders: Json | null
+          status: string
           subsidiaries: Json | null
           updated_at: string
           user_id: string
@@ -79,6 +80,7 @@ export type Database = {
           name: string
           registered_address?: string | null
           shareholders?: Json | null
+          status?: string
           subsidiaries?: Json | null
           updated_at?: string
           user_id: string
@@ -97,6 +99,7 @@ export type Database = {
           name?: string
           registered_address?: string | null
           shareholders?: Json | null
+          status?: string
           subsidiaries?: Json | null
           updated_at?: string
           user_id?: string

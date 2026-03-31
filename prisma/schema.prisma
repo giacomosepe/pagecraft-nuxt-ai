@@ -58,6 +58,9 @@ model Client {
   shareholders Json? @db.JsonB
   subsidiaries Json? @db.JsonB
 
+  // Set manually by operator — never derived
+  status String @default("aperto")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
