@@ -184,7 +184,7 @@ export type Database = {
           client_id: string | null
           created_at: string
           id: string
-          name: string
+          name: string | null
           program_name: string | null
           updated_at: string
           user_id: string
@@ -193,7 +193,7 @@ export type Database = {
           client_id?: string | null
           created_at?: string
           id?: string
-          name: string
+          name?: string | null
           program_name?: string | null
           updated_at?: string
           user_id: string
@@ -202,7 +202,7 @@ export type Database = {
           client_id?: string | null
           created_at?: string
           id?: string
-          name?: string
+          name?: string | null
           program_name?: string | null
           updated_at?: string
           user_id?: string
@@ -392,7 +392,7 @@ export type Database = {
           framework_id: string | null
           framework_name: string
           id: string
-          status: Database["public"]["Enums"]["page_status"]
+          status: string
           tax_year: number | null
           title: string
           updated_at: string
@@ -405,7 +405,7 @@ export type Database = {
           framework_id?: string | null
           framework_name: string
           id?: string
-          status?: Database["public"]["Enums"]["page_status"]
+          status?: string
           tax_year?: number | null
           title: string
           updated_at?: string
@@ -418,7 +418,7 @@ export type Database = {
           framework_id?: string | null
           framework_name?: string
           id?: string
-          status?: Database["public"]["Enums"]["page_status"]
+          status?: string
           tax_year?: number | null
           title?: string
           updated_at?: string
@@ -560,7 +560,6 @@ export type Database = {
       file_scope: "PAGE" | "STEP"
       file_type: "PDF" | "DOCX" | "XLSX" | "CSV" | "PPTX" | "IMAGE" | "TXT"
       generation_source: "AI_GENERATED" | "MANUAL_EDIT" | "AI_REFINED"
-      page_status: "DRAFT" | "IN_PROGRESS" | "COMPLETED" | "ARCHIVED"
       step_status: "PENDING" | "IN_PROGRESS" | "COMMITTED" | "SKIPPED"
       step_type: "type_a" | "type_b" | "type_c"
     }
@@ -694,7 +693,6 @@ export const Constants = {
       file_scope: ["PAGE", "STEP"],
       file_type: ["PDF", "DOCX", "XLSX", "CSV", "PPTX", "IMAGE", "TXT"],
       generation_source: ["AI_GENERATED", "MANUAL_EDIT", "AI_REFINED"],
-      page_status: ["DRAFT", "IN_PROGRESS", "COMPLETED", "ARCHIVED"],
       step_status: ["PENDING", "IN_PROGRESS", "COMMITTED", "SKIPPED"],
       step_type: ["type_a", "type_b", "type_c"],
     },

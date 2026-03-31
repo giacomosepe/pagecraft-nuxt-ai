@@ -157,7 +157,7 @@ model Page {
   clientId      String?    @map("client_id") @db.Uuid
   taxYear       Int?       @map("tax_year")
   title         String
-  status        PageStatus @default(DRAFT)
+  status        String     @default("in_lavorazione")
   createdAt     DateTime   @default(now()) @map("created_at")
   updatedAt     DateTime   @updatedAt @map("updated_at")
 
@@ -271,15 +271,6 @@ model GenerationFile {
 }
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
-
-enum PageStatus {
-  DRAFT
-  IN_PROGRESS
-  COMPLETED
-  ARCHIVED
-
-  @@map("page_status")
-}
 
 enum StepStatus {
   PENDING

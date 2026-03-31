@@ -1,7 +1,22 @@
 # PageCraft — Project Context for AI Assistants
-# Last updated: March 21, 2026
+# Last updated: March 31, 2026
 # Paste this at the start of every coding session.
 # Update the BUILD STATUS section at the end of every session.
+
+---
+
+## Project documents — read when relevant
+
+These live in Linear. Fetch them when the task requires strategic or design context.
+For technical rules, patterns, and schema — everything you need is in this file.
+
+| Document | URL | When to read |
+|----------|-----|--------------|
+| Visione del Prodotto | https://linear.app/giacomosepe/document/pagecraft-visione-del-prodotto-32a376530d4b | Product purpose and user context |
+| Design e Architettura Informativa | https://linear.app/giacomosepe/document/pagecraft-design-e-architettura-informativa-f8f53724c517 | Before building any UI, navigation, or list view |
+| Scelte Tecnologiche | https://linear.app/giacomosepe/document/pagecraft-scelte-tecnologiche-c4f677d62d4a | Why the stack was chosen |
+| Struttura Dati | https://linear.app/giacomosepe/document/pagecraft-struttura-dati-317a4c9f38f8 | Entity relationships in plain language |
+| Linee Guida AI e Prompt | https://linear.app/giacomosepe/document/pagecraft-linee-guida-ai-e-prompt-038aadb57d62 | Before writing or modifying system prompts |
 
 ---
 
@@ -39,20 +54,26 @@ project-root/
 ├── app/
 │   ├── assets/css/main.css
 │   ├── components/
-│   │   ├── AppSidebar.vue           ← nav: Pages + Clients only (no /folders or /settings)
+│   │   ├── AppSidebar.vue           ← nav: to be rebuilt in ENGNEER-109
 │   │   ├── AppBottomBar.vue
 │   │   ├── FrameworkPickerModal.vue  ← reads frameworks table client-side
 │   │   └── StepContextModal.vue     ← receives clientData prop (NOT companyProfile)
 │   ├── pages/
-│   │   ├── dashboard.vue            ← pages list
+│   │   ├── dashboard.vue            ← will redirect to /clienti after ENGNEER-110
 │   │   ├── login.vue
 │   │   ├── confirm.vue              ← Supabase auth callback
+│   │   ├── clienti/
+│   │   │   └── index.vue            ← NEW in ENGNEER-110 — primary client list
+│   │   ├── progetti/
+│   │   │   └── index.vue            ← NEW in ENGNEER-111 — primary projects list
+│   │   ├── impostazioni/
+│   │   │   └── index.vue            ← NEW stub in ENGNEER-109
 │   │   ├── clients/
-│   │   │   ├── index.vue            ← clients list
+│   │   │   ├── index.vue            ← old client list, leave untouched
 │   │   │   ├── new.vue              ← new client (name only, insert via mutate)
 │   │   │   └── [id]/
-│   │   │       ├── index.vue        ← client detail + pages list for that client
-│   │   │       ├── edit.vue         ← edit all client fields (update via mutate)
+│   │   │       ├── index.vue        ← to be rebuilt in ENGNEER-112
+│   │   │       ├── edit.vue         ← edit all client fields — DO NOT TOUCH
 │   │   │       └── profiles/
 │   │   │           └── new.vue      ← DEAD — redirects to /clients/[id]/edit
 │   │   └── pages/
@@ -95,10 +116,25 @@ legal_representative, vat_number, codice_fiscale, registered_address,
 company_form, board_members (TEXT[]), shareholders (JSONB), subsidiaries (JSONB),
 created_at, updated_at
 
+PENDING MIGRATION (ENGNEER-108): status column — values: aperto | completato (manual, set by operator)
+
 ### pages table
 Fields: id, user_id, folder_id, framework_id, framework_name (snapshot),
-client_id (nullable), tax_year (nullable — belongs to the document not the company),
-title, status (DRAFT|IN_PROGRESS|COMPLETED|ARCHIVED), created_at, updated_at
+client_id (nullable), tax_year (nullable), title, status (TEXT), created_at, updated_at
+
+STATUS VALUES (migrated March 31, 2026 — ENGNEER-107):
+  in_attesa      — client has not provided documentation
+  in_lavorazione — default on creation, active work
+  completato     — operator marks done
+  archiviato     — dormant, kept for reference
+
+pages.status is a TEXT column with CHECK constraint — NOT a Postgres enum.
+Old enum (page_status) has been dropped.
+
+### folders table — Programmi
+Fields: id, user_id, client_id, program_name, created_at, updated_at
+NO status column — status is DERIVED from pages in the frontend. Never add status to folders.
+Legacy column `name` still exists, NOT NULL constraint dropped. Remove in ENGNEER-103.
 
 ### steps table — no user_id, owned through pages
 Fields: id, page_id, framework_step_id, order, title, system_prompt_template,
@@ -107,17 +143,12 @@ last_prompt_used, committed_output, status (PENDING|IN_PROGRESS|COMMITTED|SKIPPE
 created_at, updated_at
 
 ### frameworks + framework_steps — system owned, seeded, read-only for users
-Seeded: "Italian Patent Box" (8 steps in order):
-1. Intestazione  2. Premessa  3. Struttura Partecipativa  4. Attività Rilevanti
-5. Attività Commissionate a Terzi  6. Modello Organizzativo
-7. Relazione Tecnica  8. Funzioni, Rischi e Beni
+Seeded: "Italian Patent Box" (7 steps) + "Relazione Tecnica — Patent Box" (11 steps)
+Step types: type_a (form, no AI) | type_b (dynamic form, no AI) | type_c (AI generation)
 
 ---
 
 ## Information flow — how data moves through the app
-
-This section is critical for UI work. Understanding the data flow prevents
-rebuilding things that already exist.
 
 ### Client data → AI generation pipeline
 
@@ -125,20 +156,13 @@ rebuilding things that already exist.
 client record (DB)
   ↓
 useClientFields(client, taxYear)        ← app/composables/useClientFields.ts
-  ↓ produces two things:
-  variableMap   { "legal_representative": "Mario Rossi", "shareholders.0.full_name": "..." }
+  ↓ produces:
   companyContext  Italian prose block for Claude's user message
-  substitute()    {{variable}} template replacement function
   ↓
-StepContextModal receives clientData prop
-  ↓ user fills in step-specific fields
-  assembles userContext string
+step input panel — user fills form_data fields
   ↓
-/api/generations/create receives { stepId, pageId, userContext, mode }
-  ↓ server builds full prompt:
-  systemPrompt (from step.system_prompt_template)
-  + companyContext (built inline from client join)
-  + userContext (from the modal or typed by user)
+/api/generations/create receives { stepId, pageId, mode }
+  ↓ server reads form_data from DB, builds full prompt
   ↓
 Claude API → streams back → saved to generations table
 ```
@@ -146,124 +170,48 @@ Claude API → streams back → saved to generations table
 ### useClientFields composable — use this everywhere client data is needed
 
 ```ts
-// In any Vue component that needs client data formatted:
 import { useClientFields } from '~/composables/useClientFields'
-
 const { variableMap, companyContext, substitute } = useClientFields(clientData, taxYear)
-
-// variableMap: flat key→value map, e.g. variableMap.value['legal_representative']
-// companyContext: formatted Italian prose for Claude
-// substitute: replace {{placeholders}} in template strings
 ```
 
-This composable is the single source of truth for formatting client data.
-Do NOT inline client data formatting in components or server routes.
-The server route (generations/create.post.ts) currently has its own inline
-formatting — this should eventually be migrated to use the composable logic,
-but for now both exist and produce consistent output.
-
-### State that lives in each page
-
-- dashboard.vue: reads pages list, no cross-page state
-- clients/index.vue: reads clients list, no cross-page state
-- clients/[id]/index.vue: reads one client + its pages, loads fresh each visit
-- clients/[id]/edit.vue: loads client, saves via mutate, redirects back
-- pages/new.vue: receives frameworkId + frameworkName via query params from dashboard
-- pages/[id].vue: owns all step editor state — activeStepIndex, userContext,
-  output, isGenerating, isCommitting. This state is local and NOT persisted
-  until commit() is called. clientData loaded lazily after page loads.
-
-### How pages/[id].vue gets client data
-
-```ts
-// page record has client_id
-// clientData loaded lazily via watch after page loads
-const clientData = ref(null)
-watch(data, async (val) => {
-  if (!val?.page?.client_id) return
-  const { data: c } = await supabase.from('clients').select('...').eq('id', clientId).single()
-  clientData.value = c
-}, { once: true })
-// clientData then passed to StepContextModal as :client-data="clientData"
-```
-
-### StepContextModal prop contract
-
-```ts
-// Receives:
-props: {
-  stepOrder: number          // 1–8, determines which form fields to show
-  stepTitle: string          // display only
-  clientData: ClientRecord | null  // from clients table — NOT companyProfile
-}
-// Emits:
-emit('confirm', assembledContext: string)   // all steps except step 2
-emit('confirmPremessa', { taxYearStart, taxYearEnd })  // step 2 only
-emit('cancel')
-```
-
-### form_schema + form_data on steps (not yet fully wired)
-
-Each step has form_schema (JSONB from framework_steps snapshot) that defines
-guided form fields, and form_data (JSONB) that stores what the user entered.
-These drive the StepContextModal fields. Currently the modal has hardcoded
-fields per step order — migrating to dynamic form_schema rendering is future work.
+Single source of truth for formatting client data. Do NOT inline client data formatting.
 
 ---
 
 ## CRITICAL: reset procedure after prisma migrate reset
 
-prisma migrate reset destroys triggers, grants, and seeded data. Full sequence:
-
 ```
 1. npx prisma migrate reset --force
 2. npx prisma migrate dev --name init_v2
 3. npm run generate:types
-4. Run prisma/grants.sql        ← schema permissions + column defaults
-5. Run prisma/seed.sql          ← framework data
-6. Run prisma/rls_policies.sql  ← all RLS policies (drop + recreate)
-7. Run prisma/trigger.sql       ← auth trigger + backfill existing users
+4. Run prisma/grants.sql
+5. Run prisma/seed.sql
+6. Run prisma/rls_policies.sql
+7. Run prisma/trigger.sql
 ```
 
-grants.sql is the most critical step. Without it every insert fails with:
-- "permission denied for schema public" (code 42501)
-- "null value in column id" (code 23502)
-- "null value in column updated_at" (code 23502)
-
-These errors appear even though RLS policies look correct. The fix is always grants.sql.
+grants.sql is the most critical step. Without it every insert fails.
 
 ---
 
 ## CRITICAL: data query patterns
 
-ALL runtime data access uses Supabase JS client. Prisma is NEVER used at runtime.
-
-### Browser reads — user client, RLS handles scoping automatically
+### Browser reads
 ```ts
-// No .eq("user_id", user.value!.id) needed — RLS filters automatically
-// Always use { server: false } for reads that need the user session
 const supabase = useSupabaseClient();
 const { data } = await useAsyncData("key", async () => {
-  const { data, error } = await supabase
-    .from("clients")
-    .select("id, name")
-    .order("name");
+  const { data, error } = await supabase.from("clients").select("id, name").order("name");
   if (error) throw error;
   return data;
 }, { server: false });
 ```
+No .eq("user_id", ...) needed — RLS handles it automatically.
 
-### Server writes — mutate route
+### Server writes
 ```ts
-// All inserts, updates, deletes go through /api/db/mutate
 await $fetch("/api/db/mutate", {
   method: "POST",
-  body: {
-    table: "clients",         // must be in Zod enum
-    operation: "insert",      // insert | update | delete
-    data: { name: "Acme" },   // user_id injected server-side on insert
-    where: { id: clientId },  // only for update/delete
-  },
+  body: { table: "clients", operation: "insert", data: { name: "Acme" } },
 });
 ```
 
@@ -272,29 +220,7 @@ await $fetch("/api/db/mutate", {
 const client = await serverSupabaseClient(event);
 const { data: { user } } = await client.auth.getUser();
 if (!user) throw createError({ statusCode: 401, message: "Unauthorized" });
-// user.id is now verified — safe to use
 ```
-
----
-
-## CRITICAL: security architecture (production grade as of March 21, 2026)
-
-Three layers of protection on every write:
-
-1. Authentication: serverSupabaseClient + auth.getUser() — 401 if no valid session
-2. Input validation: Zod schema — table whitelist, operation whitelist, WHERE key whitelist
-3. Ownership: user_id injected server-side on insert; .eq("user_id") on update/delete
-   for tables with user_id directly; RLS through parent chain for steps/generations
-
-Tables with user_id directly: clients, folders, pages, files
-Tables protected via parent chain: steps (via page_id), generations (via step_id)
-
-Service role (serverSupabaseServiceRole) used ONLY in server routes, ONLY after
-ownership is verified via the user client first.
-
-White-screen symptom = uncaught async error in useAsyncData. Always check:
-- Is a deleted table being queried?
-- Is a deleted column being selected?
 
 ---
 
@@ -312,16 +238,12 @@ import { z } from 'zod'             // ✅ correct — not 'zod/v4'
 
 ```
 SUPABASE_URL           ← read by @nuxtjs/supabase module directly
-SUPABASE_KEY           ← publishable key (sb_publishable_...) — safe in browser
-SUPABASE_SECRET_KEY    ← secret key (sb_secret_...) — server only, never expose
+SUPABASE_KEY           ← publishable key — safe in browser
+SUPABASE_SECRET_KEY    ← secret key — server only
 NUXT_ANTHROPIC_API_KEY ← Claude API — server only
-DATABASE_URL           ← Prisma pooled connection (port 6543, pgbouncer=true)
-DIRECT_URL             ← Prisma direct connection for migrations (port 5432)
+DATABASE_URL           ← Prisma pooled (port 6543, pgbouncer=true)
+DIRECT_URL             ← Prisma direct for migrations (port 5432)
 ```
-
-Do NOT add NUXT_PUBLIC_ prefix to Supabase vars — breaks auth.
-Do NOT add SUPABASE_SERVICE_KEY — SUPABASE_SECRET_KEY is sufficient and correct.
-These are the new asymmetric JWT keys (sb_publishable_ / sb_secret_), not the old anon/service_role keys.
 
 ---
 
@@ -346,6 +268,9 @@ These are the new asymmetric JWT keys (sb_publishable_ / sb_secret_), not the ol
 - Never query company_profiles (table deleted)
 - Never reference company_profile_id on pages (column deleted)
 - Never update dependencies with @latest — explicit version, one at a time
+- Never add status column to folders — status is derived from pages in the frontend
+- Never use old page status values (DRAFT/IN_PROGRESS/COMPLETED/ARCHIVED) — use new values
+- Never treat pages.status as an enum — it is a TEXT column with CHECK constraint
 
 ---
 
@@ -360,7 +285,6 @@ Loose (caret ok): nuxt, vue, @nuxt/ui, tailwindcss, @nuxtjs/i18n, @nuxtjs/sitema
 
 ### Working ✅
 - Auth (login, signup, confirm, session middleware)
-- Dashboard — pages list
 - Clients — list, create, detail (with pages), edit
 - Pages — create (with framework picker + client selector), view
 - Step editor — three panel layout, step navigation, generate, refine, commit, discard
@@ -368,40 +292,37 @@ Loose (caret ok): nuxt, vue, @nuxt/ui, tailwindcss, @nuxtjs/i18n, @nuxtjs/sitema
 - /api/pages/create — page + step snapshot, production grade security
 - /api/generations/create — Claude streaming + save after stream, production grade security
 - RLS policies — all tables, verified working
-- Auth trigger — recreated in trigger.sql, backfills existing users
-- grants.sql — documents and fixes all post-reset breakage
 
-### Done and merged ✅ (March 27, 2026)
-- ARKADIA-88: folders table — client_id and program_name columns added
-- ARKADIA-90: framework_steps — step_type enum (type_a/type_b/type_c) added.
-  Patent Box re-seeded to 7 steps. Relazione Tecnica removed from main framework.
-- ARKADIA-91: Relazione Tecnica seeded as standalone framework (11 steps, all type_c)
-- ARKADIA-94: /api/pages/create-batch.post.ts — multi-framework batch page creation
-  Request body uses `pages` array (not `frameworks`) — both files aligned on this name
-- ARKADIA-89: pages/new.vue — 3-step wizard (client → framework checkboxes → project name)
-  Calls /api/pages/create-batch, navigates to /folders/[folderId] on success
+### Done and merged ✅ (March 31, 2026)
+- ENGNEER-107: page status migration complete
+  pages.status is now TEXT with CHECK constraint: in_attesa | in_lavorazione | completato | archiviato
+  PageStatus enum dropped from Postgres and schema.prisma
+  All frontend badges updated to Italian labels and NuxtUI colours
 
-### Not started yet ⬜
-- ARKADIA-92: step-type-aware input panel (replaces StepContextModal)
-- ARKADIA-95: client-centric navigation (dashboard → client → folder → page)
-- ARKADIA-96: /folders/[id].vue page (file exists on disk, untracked — implementation complete, needs commit)
-- ARKADIA-93: generation pipeline update (use form_data not userContext)
-- ARKADIA-86: step 3 dynamic form (shareholders, board, pie chart)
-- ARKADIA-87: Word document export (.docx) — primary V0 deliverable
+### Navigation redesign in progress ⚙️ (ENGNEER-106)
+Parent: ENGNEER-106. Read Design e Architettura Informativa before touching any nav or list view.
 
-### Canceled ❌
-- ARKADIA-85: /api/generations/premessa — step 2 is type_a, no AI generation needed
+| Issue | What | Status |
+|-------|------|--------|
+| ENGNEER-108 | clients.status column | Ready — do next |
+| ENGNEER-109 | Sidebar rebuild | Blocked by 108 |
+| ENGNEER-110 | /clienti list views | Blocked by 109 |
+| ENGNEER-111 | /progetti list views | Blocked by 109 |
+| ENGNEER-112 | Client page rebuild | Blocked by 110+111 |
+| ENGNEER-105 | Page card improvements | Blocked by 112 |
 
-### Fixed ✅ (March 30, 2026)
-- ENGNEER-102: pages/new.vue framework step showed radio buttons instead of checkboxes.
-  Root cause: create-batch.post.ts Zod schema expected `frameworks:` but new.vue sent `pages:`.
-  Fix: renamed schema key to `pages` in create-batch.post.ts. Template was already correct (checkbox cards).
+### Post-navigation V0 blockers ⬜
+- ENGNEER-92: step-type-aware input panel
+- ENGNEER-93: generation pipeline — use form_data not userContext
+- ENGNEER-87: Word export (.docx) — primary V0 deliverable
+- ENGNEER-86: step 3 dynamic form (Struttura Partecipativa)
+- ENGNEER-98: V0 exit test — gate issue
 
 ### Known issues / decisions
 - prisma/migrations table RLS warning in Supabase dashboard → intentional, ignore
 - app/pages/clients/[id]/profiles/ → dead route, redirects to edit, can be deleted
 - SUPABASE_SECRET_KEY and SUPABASE_SERVICE_KEY must both be set to same value
-- Column defaults (id, updated_at) not set by Prisma migrations — grants.sql fixes this
-- White screen after navigation = stale schema reference in useAsyncData — check query
+- White screen / 504 after branch switch → run: rm -rf .nuxt && npm run dev
 - prisma migrate dev causes drift errors — never use it. Manual migration pattern only.
-- pages/new.vue 3-step flow live. /folders/[id] page not yet built (ARKADIA-96).
+- folders.name column still exists, NOT NULL dropped — remove in ENGNEER-103
+- dashboard.vue will redirect to /clienti after ENGNEER-110 is merged
