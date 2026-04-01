@@ -302,6 +302,7 @@ Loose (caret ok): nuxt, vue, @nuxt/ui, tailwindcss, @nuxtjs/i18n, @nuxtjs/sitema
 ### Done ✅ (April 1, 2026)
 - ENGNEER-108: clients.status column added (aperto | completato)
 - ENGNEER-109: AppSidebar rebuilt — three sections: Clienti (/clienti), Progetti (/progetti), Impostazioni (/impostazioni, bottom). NuxtUI UButton ghost/neutral, active state via route prefix match, sign-out button retained.
+- ENGNEER-113: AppSidebar sub-navigation — Clienti/Progetti are now non-interactive section labels; 7 sub-links with route+query active state (isSubActive). Clienti: Aperti/Completati/Tutti. Progetti: In attesa/In lavorazione/Completati/Archiviati.
 - ENGNEER-110: /clienti/index.vue — rebuilt as UTable with columns: Cliente, Programmi (folder count), Documenti, Ultima modifica, Stato. Status filtering via ?status query param, client-side search, filter chips (Tutti view), + Nuovo cliente button (hidden on completato). dashboard.vue redirects to /clienti.
 - ENGNEER-111: /progetti/index.vue — UTable of all folders with columns: Progetto, Cliente, Documenti (X/Y completed), Ultima modifica, Stato (derived from pages). Derived status logic: in_attesa|in_lavorazione|completato|archiviato. Search by program_name and client name.
 - ENGNEER-112: /clients/[id]/index.vue rebuilt — flat Programmi UTable (Programma, Documenti, Ultima modifica, Stato, Apri →), client status USelect (updates via /api/db/mutate), header with meta line and action buttons.
