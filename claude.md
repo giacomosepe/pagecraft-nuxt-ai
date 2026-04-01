@@ -304,6 +304,7 @@ Loose (caret ok): nuxt, vue, @nuxt/ui, tailwindcss, @nuxtjs/i18n, @nuxtjs/sitema
 - ENGNEER-109: AppSidebar rebuilt — three sections: Clienti (/clienti), Progetti (/progetti), Impostazioni (/impostazioni, bottom). NuxtUI UButton ghost/neutral, active state via route prefix match, sign-out button retained.
 - ENGNEER-110: /clienti/index.vue — rebuilt as UTable with columns: Cliente, Programmi (folder count), Documenti, Ultima modifica, Stato. Status filtering via ?status query param, client-side search, filter chips (Tutti view), + Nuovo cliente button (hidden on completato). dashboard.vue redirects to /clienti.
 - ENGNEER-111: /progetti/index.vue — UTable of all folders with columns: Progetto, Cliente, Documenti (X/Y completed), Ultima modifica, Stato (derived from pages). Derived status logic: in_attesa|in_lavorazione|completato|archiviato. Search by program_name and client name.
+- ENGNEER-112: /clients/[id]/index.vue rebuilt — flat Programmi UTable (Programma, Documenti, Ultima modifica, Stato, Apri →), client status USelect (updates via /api/db/mutate), header with meta line and action buttons.
 
 ### Navigation redesign in progress ⚙️ (ENGNEER-106)
 Parent: ENGNEER-106. Read Design e Architettura Informativa before touching any nav or list view.
@@ -314,7 +315,7 @@ Parent: ENGNEER-106. Read Design e Architettura Informativa before touching any 
 | ENGNEER-109 | Sidebar rebuild | ✅ Done |
 | ENGNEER-110 | /clienti list views | ✅ Done |
 | ENGNEER-111 | /progetti list views | ✅ Done |
-| ENGNEER-112 | Client page rebuild | Blocked by 110+111 |
+| ENGNEER-112 | Client page rebuild | ✅ Done |
 | ENGNEER-105 | Page card improvements | Blocked by 112 |
 
 ### Post-navigation V0 blockers ⬜
