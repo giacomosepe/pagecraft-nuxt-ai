@@ -299,13 +299,17 @@ Loose (caret ok): nuxt, vue, @nuxt/ui, tailwindcss, @nuxtjs/i18n, @nuxtjs/sitema
   PageStatus enum dropped from Postgres and schema.prisma
   All frontend badges updated to Italian labels and NuxtUI colours
 
+### Done ✅ (April 1, 2026)
+- ENGNEER-108: clients.status column added (aperto | completato)
+- ENGNEER-109: AppSidebar rebuilt — three sections: Clienti (/clienti), Progetti (/progetti), Impostazioni (/impostazioni, bottom). NuxtUI UButton ghost/neutral, active state via route prefix match, sign-out button retained.
+
 ### Navigation redesign in progress ⚙️ (ENGNEER-106)
 Parent: ENGNEER-106. Read Design e Architettura Informativa before touching any nav or list view.
 
 | Issue | What | Status |
 |-------|------|--------|
-| ENGNEER-108 | clients.status column | Ready — do next |
-| ENGNEER-109 | Sidebar rebuild | Blocked by 108 |
+| ENGNEER-108 | clients.status column | ✅ Done |
+| ENGNEER-109 | Sidebar rebuild | ✅ Done |
 | ENGNEER-110 | /clienti list views | Blocked by 109 |
 | ENGNEER-111 | /progetti list views | Blocked by 109 |
 | ENGNEER-112 | Client page rebuild | Blocked by 110+111 |
