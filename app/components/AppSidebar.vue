@@ -2,7 +2,11 @@
 const supabase = useSupabaseClient();
 const route = useRoute();
 
-const isActive = (path: string): boolean => route.path.startsWith(path);
+function isSubActive(path: string, status?: string): boolean {
+	if (!route.path.startsWith(path)) return false;
+	if (status) return route.query.status === status;
+	return !route.query.status;
+}
 
 async function signOut(): Promise<void> {
 	await supabase.auth.signOut();
@@ -23,27 +27,121 @@ async function signOut(): Promise<void> {
 
 		<!-- Main nav -->
 		<nav class="flex flex-col gap-0.5">
+			<!-- Clienti section -->
+			<p
+				class="px-2 pb-1 pt-1 text-xs font-semibold uppercase tracking-wide text-(--ui-text-muted)"
+			>
+				Clienti
+			</p>
+			<UButton
+				to="/clienti?status=aperto"
+				variant="ghost"
+				color="neutral"
+				size="sm"
+				block
+				class="justify-start pl-4"
+				:class="
+					isSubActive('/clienti', 'aperto')
+						? 'bg-(--ui-bg-elevated) font-medium'
+						: ''
+				"
+			>
+				Aperti
+			</UButton>
+			<UButton
+				to="/clienti?status=completato"
+				variant="ghost"
+				color="neutral"
+				size="sm"
+				block
+				class="justify-start pl-4"
+				:class="
+					isSubActive('/clienti', 'completato')
+						? 'bg-(--ui-bg-elevated) font-medium'
+						: ''
+				"
+			>
+				Completati
+			</UButton>
 			<UButton
 				to="/clienti"
 				variant="ghost"
 				color="neutral"
-				icon="i-lucide-building-2"
+				size="sm"
 				block
-				class="justify-start"
-				:class="isActive('/clienti') ? 'bg-(--ui-bg-elevated) font-medium' : ''"
+				class="justify-start pl-4"
+				:class="
+					isSubActive('/clienti') ? 'bg-(--ui-bg-elevated) font-medium' : ''
+				"
 			>
-				Clienti
+				Tutti
 			</UButton>
-			<UButton
-				to="/progetti"
-				variant="ghost"
-				color="neutral"
-				icon="i-lucide-folder-open"
-				block
-				class="justify-start"
-				:class="isActive('/progetti') ? 'bg-(--ui-bg-elevated) font-medium' : ''"
+
+			<!-- Progetti section -->
+			<p
+				class="px-2 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-(--ui-text-muted)"
 			>
 				Progetti
+			</p>
+			<UButton
+				to="/progetti?status=in_attesa"
+				variant="ghost"
+				color="neutral"
+				size="sm"
+				block
+				class="justify-start pl-4"
+				:class="
+					isSubActive('/progetti', 'in_attesa')
+						? 'bg-(--ui-bg-elevated) font-medium'
+						: ''
+				"
+			>
+				In attesa
+			</UButton>
+			<UButton
+				to="/progetti?status=in_lavorazione"
+				variant="ghost"
+				color="neutral"
+				size="sm"
+				block
+				class="justify-start pl-4"
+				:class="
+					isSubActive('/progetti', 'in_lavorazione')
+						? 'bg-(--ui-bg-elevated) font-medium'
+						: ''
+				"
+			>
+				In lavorazione
+			</UButton>
+			<UButton
+				to="/progetti?status=completato"
+				variant="ghost"
+				color="neutral"
+				size="sm"
+				block
+				class="justify-start pl-4"
+				:class="
+					isSubActive('/progetti', 'completato')
+						? 'bg-(--ui-bg-elevated) font-medium'
+						: ''
+				"
+			>
+				Completati
+			</UButton>
+			<UButton
+				to="/progetti?status=archiviato"
+				variant="ghost"
+				color="neutral"
+				size="sm"
+				block
+				class="justify-start pl-4"
+				:class="
+					isSubActive('/progetti', 'archiviato')
+						? 'bg-(--ui-bg-elevated) font-medium'
+						: ''
+				"
+			>
+				Archiviati
 			</UButton>
 		</nav>
 
@@ -60,7 +158,9 @@ async function signOut(): Promise<void> {
 				block
 				class="justify-start"
 				:class="
-					isActive('/impostazioni') ? 'bg-(--ui-bg-elevated) font-medium' : ''
+					route.path.startsWith('/impostazioni')
+						? 'bg-(--ui-bg-elevated) font-medium'
+						: ''
 				"
 			>
 				Impostazioni
