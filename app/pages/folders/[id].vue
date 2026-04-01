@@ -46,6 +46,25 @@ const statusLabel: Record<string, string> = {
 	completato: "Completato",
 	archiviato: "Archiviato",
 };
+
+function formatDate(iso: string): string {
+	const months = [
+		"Gen",
+		"Feb",
+		"Mar",
+		"Apr",
+		"Mag",
+		"Giu",
+		"Lug",
+		"Ago",
+		"Set",
+		"Ott",
+		"Nov",
+		"Dic",
+	];
+	const d = new Date(iso);
+	return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
 </script>
 
 <template>
@@ -117,32 +136,24 @@ const statusLabel: Record<string, string> = {
 					v-for="page in data.pages"
 					:key="page.id"
 					:to="`/pages/${page.id}`"
-					class="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700"
+					class="block rounded-lg border border-(--ui-border) bg-(--ui-bg) px-4 py-3 transition-colors hover:bg-(--ui-bg-elevated)"
 				>
-					<div class="min-w-0">
-						<p class="truncate text-sm font-medium text-gray-900 dark:text-white">
-							{{ page.title }}
-						</p>
-						<p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+					<div class="flex items-start justify-between gap-3">
+						<p class="text-sm font-medium text-(--ui-text-highlighted)">
 							{{ page.framework_name ?? "—" }}
 						</p>
-					</div>
-					<div class="ml-4 flex shrink-0 items-center gap-3">
 						<UBadge
 							:color="statusColor[page.status] ?? 'neutral'"
 							variant="soft"
 							size="sm"
+							class="shrink-0"
 						>
 							{{ statusLabel[page.status] ?? page.status }}
 						</UBadge>
-						<span class="text-xs text-gray-400">
-							{{ new Date(page.updated_at).toLocaleDateString("it-IT") }}
-						</span>
-						<UIcon
-							name="i-lucide-chevron-right"
-							class="size-4 text-gray-400"
-						/>
 					</div>
+					<p class="mt-1 text-xs text-(--ui-text-muted)">
+						Ultima modifica: {{ formatDate(page.updated_at) }}
+					</p>
 				</NuxtLink>
 			</div>
 		</template>

@@ -316,7 +316,7 @@ Parent: ENGNEER-106. Read Design e Architettura Informativa before touching any 
 | ENGNEER-110 | /clienti list views | ✅ Done |
 | ENGNEER-111 | /progetti list views | ✅ Done |
 | ENGNEER-112 | Client page rebuild | ✅ Done |
-| ENGNEER-105 | Page card improvements | Blocked by 112 |
+| ENGNEER-105 | Page card improvements | ✅ Done |
 
 ### Post-navigation V0 blockers ⬜
 - ENGNEER-92: step-type-aware input panel
