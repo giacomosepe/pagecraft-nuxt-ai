@@ -1,116 +1,207 @@
 <script setup lang="ts">
+import type { TableColumn, TableRow } from "@nuxt/ui";
+
 definePageMeta({ middleware: "auth" });
 
 const supabase = useSupabaseClient();
+const route = useRoute();
+const router = useRouter();
 
-type ClientRow = {
+type PageItem = { id: string; updated_at: string };
+type FolderItem = {
+	id: string;
+	updated_at: string;
+	pages: PageItem[] | null;
+};
+type ClientItem = {
 	id: string;
 	name: string;
-	company_name: string | null;
 	status: string;
-	created_at: string;
+	updated_at: string;
+	folders: FolderItem[] | null;
 };
 
-const { data: clients, pending } = await useAsyncData(
-	"clienti-list",
+type RowItem = {
+	id: string;
+	name: string;
+	status: string;
+	programCount: number;
+	documentCount: number;
+	lastModified: string;
+};
+
+const { data } = await useAsyncData(
+	"clienti",
 	async () => {
 		const { data, error } = await supabase
 			.from("clients")
-			.select("id, name, company_name, status, created_at")
-			.order("name");
+			.select(
+				"id, name, status, updated_at, folders(id, updated_at, pages(id, updated_at))",
+			)
+			.order("updated_at", { ascending: false });
 		if (error) throw error;
-		return (data ?? []) as ClientRow[];
+		return data as ClientItem[];
 	},
 	{ server: false },
 );
 
-const statusColor: Record<string, string> = {
-	aperto: "primary",
-	completato: "success",
-};
+const statusFilter = computed(() => (route.query.status as string) || "");
+const search = ref("");
 
-const statusLabel: Record<string, string> = {
-	aperto: "Aperto",
-	completato: "Completato",
-};
+const pageTitle = computed(() => {
+	if (statusFilter.value === "aperto") return "Clienti aperti";
+	if (statusFilter.value === "completato") return "Clienti completati";
+	return "Tutti i clienti";
+});
+
+const showNewButton = computed(() => statusFilter.value !== "completato");
+const showFilterChips = computed(() => !statusFilter.value);
+
+function programCount(client: ClientItem): number {
+	return client.folders?.length ?? 0;
+}
+
+function documentCount(client: ClientItem): number {
+	return (
+		client.folders?.reduce((sum, f) => sum + (f.pages?.length ?? 0), 0) ?? 0
+	);
+}
+
+function formatDate(iso: string): string {
+	const months = [
+		"Gen",
+		"Feb",
+		"Mar",
+		"Apr",
+		"Mag",
+		"Giu",
+		"Lug",
+		"Ago",
+		"Set",
+		"Ott",
+		"Nov",
+		"Dic",
+	];
+	const d = new Date(iso);
+	return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function lastModified(client: ClientItem): string {
+	const allPages = client.folders?.flatMap((f) => f.pages ?? []) ?? [];
+	if (!allPages.length) return formatDate(client.updated_at);
+	const latest = allPages.reduce(
+		(max, p) =>
+			new Date(p.updated_at) > new Date(max) ? p.updated_at : max,
+		allPages[0].updated_at,
+	);
+	return formatDate(latest);
+}
+
+const filtered = computed(() => {
+	let list = data.value ?? [];
+	if (statusFilter.value)
+		list = list.filter((c) => c.status === statusFilter.value);
+	if (search.value)
+		list = list.filter((c) =>
+			c.name.toLowerCase().includes(search.value.toLowerCase()),
+		);
+	return list;
+});
+
+const tableData = computed<RowItem[]>(() =>
+	filtered.value.map((c) => ({
+		id: c.id,
+		name: c.name,
+		status: c.status,
+		programCount: programCount(c),
+		documentCount: documentCount(c),
+		lastModified: lastModified(c),
+	})),
+);
+
+const columns: TableColumn<RowItem>[] = [
+	{ accessorKey: "name", header: "Cliente" },
+	{ accessorKey: "programCount", header: "Programmi" },
+	{ accessorKey: "documentCount", header: "Documenti" },
+	{ accessorKey: "lastModified", header: "Ultima modifica" },
+	{ accessorKey: "status", header: "Stato" },
+];
+
+const tableMeta = { class: { tr: "cursor-pointer" } };
+
+function onSelect(_e: Event, row: TableRow<RowItem>): void {
+	navigateTo(`/clients/${row.original.id}`);
+}
 </script>
 
 <template>
-	<div class="mx-auto max-w-4xl px-6 py-8">
+	<div class="mx-auto max-w-5xl px-6 py-8">
 		<!-- Header -->
-		<div class="mb-6 flex items-center justify-between">
+		<div class="mb-4 flex items-center justify-between gap-4">
 			<h1 class="text-xl font-semibold text-(--ui-text-highlighted)">
-				Clienti
+				{{ pageTitle }}
 			</h1>
-			<UButton icon="i-lucide-plus" size="sm" to="/clients/new">
-				Nuovo cliente
-			</UButton>
+			<div class="flex items-center gap-3">
+				<UInput
+					v-model="search"
+					placeholder="Cerca cliente..."
+					icon="i-lucide-search"
+				/>
+				<UButton
+					v-if="showNewButton"
+					icon="i-lucide-plus"
+					size="sm"
+					to="/clients/new"
+				>
+					Nuovo cliente
+				</UButton>
+			</div>
 		</div>
 
-		<!-- Loading -->
-		<div v-if="pending" class="flex justify-center py-24">
-			<UIcon
-				name="i-lucide-loader-circle"
-				class="size-6 animate-spin text-(--ui-text-muted)"
-			/>
-		</div>
-
-		<!-- Empty state -->
-		<div
-			v-else-if="!clients?.length"
-			class="flex flex-col items-center justify-center rounded-xl border border-dashed border-(--ui-border) py-24 text-center"
-		>
-			<UIcon
-				name="i-lucide-building-2"
-				class="mb-3 size-10 text-(--ui-text-muted)"
-			/>
-			<p class="text-sm font-medium text-(--ui-text-highlighted)">
-				Nessun cliente
-			</p>
-			<p class="mt-1 text-sm text-(--ui-text-muted)">
-				Aggiungi il tuo primo cliente per iniziare
-			</p>
-			<UButton class="mt-5" icon="i-lucide-plus" size="sm" to="/clients/new">
-				Nuovo cliente
-			</UButton>
-		</div>
-
-		<!-- Client list -->
-		<div v-else class="flex flex-col gap-2">
-			<NuxtLink
-				v-for="c in clients"
-				:key="c.id"
-				:to="`/clients/${c.id}`"
-				class="flex items-center justify-between rounded-lg border border-(--ui-border) bg-(--ui-bg) px-4 py-3 transition-colors hover:bg-(--ui-bg-elevated)"
+		<!-- Filter chips — Tutti view only -->
+		<div v-if="showFilterChips" class="mb-4 flex gap-2">
+			<UButton
+				variant="soft"
+				color="neutral"
+				size="sm"
+				@click="router.push('/clienti')"
 			>
-				<div class="flex items-center gap-3">
-					<UAvatar :alt="c.name" size="sm" />
-					<div>
-						<p class="text-sm font-medium text-(--ui-text-highlighted)">
-							{{ c.name }}
-						</p>
-						<p
-							v-if="c.company_name"
-							class="text-xs text-(--ui-text-muted)"
-						>
-							{{ c.company_name }}
-						</p>
-					</div>
-				</div>
-				<div class="flex items-center gap-3">
-					<UBadge
-						:color="statusColor[c.status] ?? 'neutral'"
-						variant="soft"
-						size="sm"
-					>
-						{{ statusLabel[c.status] ?? c.status }}
-					</UBadge>
-					<UIcon
-						name="i-lucide-chevron-right"
-						class="size-4 text-(--ui-text-muted)"
-					/>
-				</div>
-			</NuxtLink>
+				Tutti
+			</UButton>
+			<UButton
+				variant="soft"
+				color="neutral"
+				size="sm"
+				@click="router.push('/clienti?status=aperto')"
+			>
+				Aperti
+			</UButton>
+			<UButton
+				variant="soft"
+				color="neutral"
+				size="sm"
+				@click="router.push('/clienti?status=completato')"
+			>
+				Completati
+			</UButton>
 		</div>
+
+		<!-- Table -->
+		<UTable
+			:data="tableData"
+			:columns="columns"
+			:meta="tableMeta"
+			:on-select="onSelect"
+		>
+			<template #status-cell="{ row }">
+				<UBadge
+					:color="row.original.status === 'completato' ? 'success' : 'primary'"
+					variant="soft"
+					size="sm"
+				>
+					{{ row.original.status === "completato" ? "Completato" : "Aperto" }}
+				</UBadge>
+			</template>
+		</UTable>
 	</div>
 </template>
