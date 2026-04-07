@@ -3,29 +3,14 @@ import type { TableColumn, TableRow } from "@nuxt/ui";
 import { formatDate } from "~/utils/date";
 import { deriveFolderStatus } from "~/utils/folderStatus";
 import { statusColor, statusLabel } from "~/utils/status";
-import type { ClientDetail, FolderItem, FolderTableRow } from "~/types/app.types";
+import type { FolderItem, FolderTableRow } from "~/types/app.types";
 
 definePageMeta({ middleware: "auth" });
 
-const supabase = useSupabaseClient();
 const route = useRoute();
 const clientId = route.params.id as string;
 
-const { data, pending } = await useAsyncData(
-	`client-${clientId}`,
-	async () => {
-		const { data, error } = await supabase
-			.from("clients")
-			.select(
-				"id, name, status, updated_at, folders(id, program_name, updated_at, pages(id, status, updated_at))",
-			)
-			.eq("id", clientId)
-			.single();
-		if (error) throw error;
-		return data as ClientDetail;
-	},
-	{ server: false },
-);
+const { data, pending, updateStatus } = await useClient(clientId);
 
 // --- Status control ---
 
@@ -40,17 +25,7 @@ watchEffect(() => {
 });
 
 async function onStatusChange(val: unknown): Promise<void> {
-	const newStatus = val as string;
-	clientStatus.value = newStatus;
-	await $fetch("/api/db/mutate", {
-		method: "POST",
-		body: {
-			table: "clients",
-			operation: "update",
-			data: { status: newStatus },
-			where: { id: clientId },
-		},
-	});
+	await updateStatus(val as string);
 }
 
 // --- Derived folder helpers ---

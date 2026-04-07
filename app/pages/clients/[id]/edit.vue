@@ -1,28 +1,11 @@
 <script setup lang="ts">
 definePageMeta({ middleware: "auth" });
 
-const supabase = useSupabaseClient();
 const route = useRoute();
 const clientId = route.params.id as string;
 
 // ─── Load existing client data ────────────────────────────────────────────────
-const { data: clientData, pending } = await useAsyncData(
-	`client-edit-${clientId}`,
-	async () => {
-		const { data, error } = await supabase
-			.from("clients")
-			.select(`
-				id, name, company_name, industry_sector, employee_count,
-				legal_representative, vat_number, codice_fiscale,
-				registered_address, company_form
-			`)
-			.eq("id", clientId)
-			.single();
-		if (error) throw error;
-		return data;
-	},
-	{ server: false },
-);
+const { data: clientData, pending } = await useClient(clientId);
 
 // ─── Form state — populated once data loads ───────────────────────────────────
 const form = reactive({
