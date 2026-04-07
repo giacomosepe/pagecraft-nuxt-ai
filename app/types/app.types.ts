@@ -21,6 +21,15 @@ export interface ClientDetail {
   status: string;
   updated_at: string;
   folders: FolderItem[] | null;
+  // edit fields — fetched by useClient so edit.vue can use the same composable
+  company_name: string | null;
+  industry_sector: string | null;
+  employee_count: number | null;
+  legal_representative: string | null;
+  vat_number: string | null;
+  codice_fiscale: string | null;
+  registered_address: string | null;
+  company_form: string | null;
 }
 
 // ─── Folder ───────────────────────────────────────────────────────────────────
