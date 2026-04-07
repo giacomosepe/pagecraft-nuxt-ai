@@ -341,3 +341,10 @@ Parent: ENGNEER-106. Read Design e Architettura Informativa before touching any 
 - `~/utils/folderStatus.ts` — `deriveFolderStatus()`. Never inline this logic.
 - `~/types/app.types.ts` — all shared TypeScript types. Never define shared types inline in pages.
 - Rule: if two files could ever need the same function or map, it lives in utils. Not in the component.
+
+### Language
+- PageCraft is an Italian-only product. pagecraft.it is the domain. Users are Italian professionals.
+- All UI strings are written directly in Italian in templates. No i18n module. No `$t()`. No translation keys.
+- Code stays in English: variable names, function names, file names, DB tables, routes, comments.
+- Status labels in `~/utils/status.ts` are already in Italian — keep them that way.
+- If an international version is ever built, it will be a separate product fork, not a translation layer added to this codebase.

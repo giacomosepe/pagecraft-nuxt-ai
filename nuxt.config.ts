@@ -7,7 +7,6 @@ export default defineNuxtConfig({
   },
   modules: [
     "@nuxt/icon",
-    "@nuxtjs/i18n",
     "@nuxtjs/sitemap",
     "@nuxtjs/supabase",
     "@nuxt/ui",
@@ -48,13 +47,5 @@ export default defineNuxtConfig({
 
   typescript: {
     strict: true,
-  },
-  i18n: {
-    defaultLocale: "en",
-    locales: [
-      { code: "en", name: "English", file: "en.json" },
-      { code: "it", name: "Italiano", file: "it.json" },
-    ],
-    strategy: "prefix_except_default",
   },
 });

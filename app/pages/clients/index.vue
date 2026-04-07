@@ -1,20 +1,7 @@
 <script setup lang="ts">
 definePageMeta({ middleware: "auth" });
 
-const client = useSupabaseClient();
-
-const { data: clients, pending } = await useAsyncData(
-	"clients-list",
-	async () => {
-		const { data, error } = await client
-			.from("clients")
-			.select("id, name, created_at")
-			.order("name");
-		if (error) throw error;
-		return data ?? [];
-	},
-	{ server: false },
-);
+const { clients, pending } = await useClients();
 </script>
 
 <template>
