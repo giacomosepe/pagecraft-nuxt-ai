@@ -15,6 +15,7 @@
 //   - Future Word export: to substitute {{variables}} in document templates
 
 import type { Shareholder, Subsidiary } from "~/types/company.types";
+import { formatISODate } from "~/utils/date";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -203,7 +204,7 @@ function buildPersonDescription(s: Extract<Shareholder, { type: "persona_fisica"
   const name = `${s.first_name ?? ""} ${s.last_name ?? ""}`.trim();
   if (name) parts.push(name);
   if (s.place_of_birth && s.date_of_birth) {
-    parts.push(`nato/a a ${s.place_of_birth} il ${formatDate(s.date_of_birth)}`);
+    parts.push(`nato/a a ${s.place_of_birth} il ${formatISODate(s.date_of_birth)}`);
   } else if (s.place_of_birth) {
     parts.push(`nato/a a ${s.place_of_birth}`);
   }
@@ -227,9 +228,4 @@ function buildCompanyDescription(
   return parts.join(", ");
 }
 
-function formatDate(isoDate: string): string {
-  // "1970-01-01" → "01/01/1970"
-  const parts = isoDate.split("-");
-  if (parts.length !== 3) return isoDate;
-  return `${parts[2]}/${parts[1]}/${parts[0]}`;
-}
+// formatISODate is now imported from ~/utils/date

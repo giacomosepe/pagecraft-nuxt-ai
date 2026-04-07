@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { statusColor, statusLabel } from "~/utils/status";
+
 definePageMeta({ middleware: "auth" });
 
 const supabase = useSupabaseClient();
@@ -32,20 +34,6 @@ const clientName = computed(() => {
 	if (!c) return null;
 	return (c as { name: string } | null)?.name ?? null;
 });
-
-const statusColor: Record<string, string> = {
-	in_attesa: "amber",
-	in_lavorazione: "blue",
-	completato: "green",
-	archiviato: "gray",
-};
-
-const statusLabel: Record<string, string> = {
-	in_attesa: "In attesa",
-	in_lavorazione: "In lavorazione",
-	completato: "Completato",
-	archiviato: "Archiviato",
-};
 
 function formatDate(iso: string): string {
 	const months = [

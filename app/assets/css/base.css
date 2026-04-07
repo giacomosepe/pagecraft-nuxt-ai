@@ -1,0 +1,87 @@
+/* ─── base.css ────────────────────────────────────────────────────────────────
+   Job: define how raw HTML elements look before any component touches them.
+   Rule: only element selectors here (html, body, h1–h6, a, p, etc.).
+   No class names. No component styles. No tokens defined here — only consumed. */
+
+/* ─── Font loading ───────────────────────────────────────────────────────────
+   Self-hosted Inter Variable from /public/fonts/inter/
+   Single file covers the full weight axis (100–900).
+   font-display: swap — text renders in fallback font immediately,
+   swaps to Inter once loaded. No invisible text flash.                        */
+@font-face {
+    font-family: "Inter";
+    src: url("/fonts/inter/InterVariable.woff2") format("woff2-variations");
+    font-weight: 100 900;
+    font-display: swap;
+    font-style: normal;
+}
+
+@layer base {
+
+    html {
+        font-family: var(--font-sans);
+        font-size: 16px;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background-color: var(--color-page-bg);
+    }
+
+    body {
+        color: var(--color-text-primary);
+        background-color: var(--color-page-bg);
+        line-height: 1.5;
+    }
+
+    /* ─── Headings ─────────────────────────────────────────────────────────────
+       Matches Figma heading hierarchy: Semi Bold weight throughout.            */
+    h1 {
+        font-size: var(--text-xl);
+        font-weight: 600;
+        color: var(--color-text-primary);
+        line-height: 1.3;
+    }
+
+    h2 {
+        font-size: var(--text-lg);
+        font-weight: 600;
+        color: var(--color-text-primary);
+        line-height: 1.4;
+    }
+
+    h3 {
+        font-size: var(--text-base);
+        font-weight: 600;
+        color: var(--color-text-primary);
+        line-height: 1.4;
+    }
+
+    /* ─── Body text ─────────────────────────────────────────────────────────────
+       Figma uses Inter Regular at 14px for most body content.                  */
+    p {
+        font-size: var(--text-base);
+        color: var(--color-text-secondary);
+        line-height: 1.6;
+    }
+
+    /* ─── Links ─────────────────────────────────────────────────────────────────
+       Unstyled by default — NuxtUI and component styles handle link appearance. */
+    a {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    /* ─── Focus ring ────────────────────────────────────────────────────────────
+       Consistent focus visible style across all interactive elements.           */
+    :focus-visible {
+        outline: 2px solid var(--color-brand);
+        outline-offset: 2px;
+        border-radius: var(--radius-md);
+    }
+
+    /* ─── Selection ─────────────────────────────────────────────────────────────
+       Brand-tinted text selection.                                              */
+    ::selection {
+        background-color: var(--color-brand-200);
+        color: var(--color-brand-900);
+    }
+}
