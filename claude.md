@@ -334,3 +334,10 @@ Parent: ENGNEER-106. Read Design e Architettura Informativa before touching any 
 - prisma migrate dev causes drift errors — never use it. Manual migration pattern only.
 - folders.name column still exists, NOT NULL dropped — remove in ENGNEER-103
 - dashboard.vue now redirects to /clienti (done in ENGNEER-110)
+
+### Shared utilities — always use, never inline
+- `~/utils/status.ts` — all status→colour and status→label maps. Never define `statusColor` or `statusLabel` inline in a component or page.
+- `~/utils/date.ts` — all date formatting. Never inline `formatDate` or `formatISODate`.
+- `~/utils/folderStatus.ts` — `deriveFolderStatus()`. Never inline this logic.
+- `~/types/app.types.ts` — all shared TypeScript types. Never define shared types inline in pages.
+- Rule: if two files could ever need the same function or map, it lives in utils. Not in the component.

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { TableColumn, TableRow } from "@nuxt/ui";
+import { statusColor, statusLabel } from "~/utils/status";
+import { deriveFolderStatus } from "~/utils/folderStatus";
 
 definePageMeta({ middleware: "auth" });
 
@@ -58,15 +60,6 @@ const pageTitle = computed(() => {
 			return "Tutti i progetti";
 	}
 });
-
-function deriveFolderStatus(pages: { status: string }[]): string {
-	if (!pages || pages.length === 0) return "in_attesa";
-	if (pages.some((p) => p.status === "in_lavorazione")) return "in_lavorazione";
-	if (pages.every((p) => p.status === "in_attesa")) return "in_attesa";
-	if (pages.every((p) => ["completato", "archiviato"].includes(p.status)))
-		return "completato";
-	return "in_lavorazione";
-}
 
 function formatDate(iso: string): string {
 	const months = [
@@ -140,20 +133,6 @@ const columns: TableColumn<RowItem>[] = [
 	{ accessorKey: "lastModified", header: "Ultima modifica" },
 	{ accessorKey: "status", header: "Stato" },
 ];
-
-const statusColor: Record<string, string> = {
-	in_attesa: "amber",
-	in_lavorazione: "blue",
-	completato: "green",
-	archiviato: "gray",
-};
-
-const statusLabel: Record<string, string> = {
-	in_attesa: "In attesa",
-	in_lavorazione: "In lavorazione",
-	completato: "Completato",
-	archiviato: "Archiviato",
-};
 
 const tableMeta = { class: { tr: "cursor-pointer" } };
 

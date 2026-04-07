@@ -1,0 +1,107 @@
+/* ─── tokens.css ──────────────────────────────────────────────────────────────
+   Job: define every design value in the system.
+   Source of truth: Figma file cyyTo3teV9NiScXR1b2uHY (PageCraft-design-MagicPatterns)
+   Rule: components reference these tokens, never raw hex values.
+   To rebrand or retheme: change values here only.                             */
+
+
+/* ─── Brand color ramp ────────────────────────────────────────────────────────
+   Violet — anchored to Figma value #7c3aed (= Tailwind violet-600)
+   Full ramp derived from Tailwind violet scale for consistency.               */
+@theme static {
+    --color-brand-50:  #f5f3ff;
+    --color-brand-100: #ede9fe;
+    --color-brand-200: #ddd6fe;
+    --color-brand-300: #c4b5fd;
+    --color-brand-400: #a78bfa;
+    --color-brand-500: #8b5cf6;
+    --color-brand-600: #7c3aed;
+    --color-brand-700: #6d28d9;
+    --color-brand-800: #5b21b6;
+    --color-brand-900: #4c1d95;
+    --color-brand-950: #2e1065;
+
+    /* ─── Typography ────────────────────────────────────────────────────────────
+       Font: Inter — matching Figma design file
+       Note: Inter must be loaded via nuxt.config.ts (Google Fonts or local)    */
+    --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "Inter Mono", ui-monospace, monospace;
+
+    /* ─── Font size scale (derived from Figma measurements) ────────────────────
+       Figma renders at ~0.85× browser px — values converted to rem.
+       10px → xs, 12px → sm, 14px → base (body), 17px → lg, 20px → xl         */
+    --text-xs:   0.625rem;   /* 10px — labels, badge text, sidebar counts   */
+    --text-sm:   0.75rem;    /* 12px — sidebar nav, table headers           */
+    --text-base: 0.875rem;   /* 14px — body text, table row content         */
+    --text-lg:   1.0625rem;  /* 17px — section headings, subtitles          */
+    --text-xl:   1.275rem;   /* ~20px — page headings                       */
+    --text-2xl:  1.5rem;     /* 24px — large headings                       */
+    --text-3xl:  1.875rem;   /* 30px — display / hero                       */
+
+    /* ─── Border radius ─────────────────────────────────────────────────────────
+       From Figma: buttons/inputs = 6px, cards = 12px, badges = pill           */
+    --radius-sm:   0.25rem;   /* 4px  — tight chips, small tags              */
+    --radius-md:   0.375rem;  /* 6px  — buttons, inputs, nav items           */
+    --radius-lg:   0.75rem;   /* 12px — cards, panels                        */
+    --radius-xl:   0.75rem;   /* 12px — large cards (same as lg for now)     */
+    --radius-full: 9999px;    /* pill — status badges                        */
+}
+
+
+/* ─── Semantic color tokens ──────────────────────────────────────────────────
+   Named by purpose, not by raw value.
+   Rule: every component uses these names. Never use the hex values directly.
+   Changing a token here updates every component that uses it.                 */
+:root {
+
+    /* Surfaces ---------------------------------------------------------------- */
+    --color-page-bg:        #f8fafc;  /* slate-50  — app background             */
+    --color-surface:        #ffffff;  /* white     — cards, sidebar, panels      */
+    --color-surface-subtle: #f8fafc;  /* slate-50  — table headers, hover bg     */
+
+    /* Borders ----------------------------------------------------------------- */
+    --color-border:         #e2e8f0;  /* slate-200 — default borders, dividers   */
+    --color-border-subtle:  #f1f5f9;  /* slate-100 — hairlines, bottom nav line  */
+
+    /* Text -------------------------------------------------------------------- */
+    --color-text-primary:   #0f172a;  /* slate-900 — headings, primary content   */
+    --color-text-secondary: #475569;  /* slate-600 — labels, body, nav items     */
+    --color-text-muted:     #64748b;  /* slate-500 — meta, timestamps, subtitles */
+    --color-text-placeholder:#94a3b8; /* slate-400 — placeholder, counts, hints  */
+
+    /* Brand (interactive) ----------------------------------------------------- */
+    --color-brand:          #7c3aed;  /* brand-600 — CTAs, active state          */
+    --color-brand-bg:       #f5f3ff;  /* brand-50  — active nav item background  */
+    --color-brand-text:     #7c3aed;  /* brand-600 — active nav item text/icon   */
+
+    /* Status: In Progress (blue) ---------------------------------------------- */
+    --color-status-progress-bg:     #dbeafe;  /* blue-100  */
+    --color-status-progress-border: #bfdbfe;  /* blue-200  */
+    --color-status-progress-text:   #1e40af;  /* blue-800  */
+
+    /* Status: Complete (emerald) ----------------------------------------------- */
+    --color-status-complete-bg:     #d1fae5;  /* emerald-100 */
+    --color-status-complete-border: #a7f3d0;  /* emerald-200 */
+    --color-status-complete-text:   #065f46;  /* emerald-800 */
+
+    /* Status: Draft (amber) ---------------------------------------------------- */
+    --color-status-draft-bg:        #fef3c7;  /* amber-100 */
+    --color-status-draft-border:    #fde68a;  /* amber-200 */
+    --color-status-draft-text:      #92400e;  /* amber-800 */
+
+    /* Status: Exported / neutral (slate) --------------------------------------- */
+    --color-status-neutral-bg:      #f1f5f9;  /* slate-100 */
+    --color-status-neutral-border:  #e2e8f0;  /* slate-200 */
+    --color-status-neutral-text:    #334155;  /* slate-700 */
+
+    /* Icon accent backgrounds (stat cards on Dashboard) ----------------------- */
+    --color-icon-bg-blue:   #dbeafe;  /* blue-100    — In Progress card          */
+    --color-icon-bg-green:  #d1fae5;  /* emerald-100 — Completed card            */
+    --color-icon-bg-brand:  #f5f3ff;  /* brand-50    — Total / brand card        */
+
+    /* Elevation / shadow ------------------------------------------------------- */
+    --shadow-card: 0px 1px 2px 0px rgba(0, 0, 0, 0.05);
+
+    /* Layout ------------------------------------------------------------------ */
+    --sidebar-width: 256px;
+}

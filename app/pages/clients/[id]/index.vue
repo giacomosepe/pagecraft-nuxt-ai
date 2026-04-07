@@ -1,34 +1,15 @@
 <script setup lang="ts">
 import type { TableColumn, TableRow } from "@nuxt/ui";
+import { formatDate } from "~/utils/date";
+import { deriveFolderStatus } from "~/utils/folderStatus";
+import { statusColor, statusLabel } from "~/utils/status";
+import type { ClientDetail, FolderItem, FolderTableRow } from "~/types/app.types";
 
 definePageMeta({ middleware: "auth" });
 
 const supabase = useSupabaseClient();
 const route = useRoute();
 const clientId = route.params.id as string;
-
-type PageItem = { id: string; status: string; updated_at: string };
-type FolderItem = {
-	id: string;
-	program_name: string | null;
-	updated_at: string;
-	pages: PageItem[] | null;
-};
-type ClientData = {
-	id: string;
-	name: string;
-	status: string;
-	updated_at: string;
-	folders: FolderItem[] | null;
-};
-
-type RowItem = {
-	id: string;
-	programName: string;
-	documenti: string;
-	lastModified: string;
-	status: string;
-};
 
 const { data, pending } = await useAsyncData(
 	`client-${clientId}`,
@@ -41,7 +22,7 @@ const { data, pending } = await useAsyncData(
 			.eq("id", clientId)
 			.single();
 		if (error) throw error;
-		return data as ClientData;
+		return data as ClientDetail;
 	},
 	{ server: false },
 );
@@ -72,35 +53,7 @@ async function onStatusChange(val: unknown): Promise<void> {
 	});
 }
 
-// --- Derived helpers ---
-
-function deriveFolderStatus(pages: { status: string }[]): string {
-	if (!pages || pages.length === 0) return "in_attesa";
-	if (pages.some((p) => p.status === "in_lavorazione")) return "in_lavorazione";
-	if (pages.every((p) => p.status === "in_attesa")) return "in_attesa";
-	if (pages.every((p) => ["completato", "archiviato"].includes(p.status)))
-		return "completato";
-	return "in_lavorazione";
-}
-
-function formatDate(iso: string): string {
-	const months = [
-		"Gen",
-		"Feb",
-		"Mar",
-		"Apr",
-		"Mag",
-		"Giu",
-		"Lug",
-		"Ago",
-		"Set",
-		"Ott",
-		"Nov",
-		"Dic",
-	];
-	const d = new Date(iso);
-	return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
-}
+// --- Derived folder helpers ---
 
 function lastModified(folder: FolderItem): string {
 	const pages = folder.pages ?? [];
@@ -121,21 +74,7 @@ function documenti(folder: FolderItem): string {
 
 // --- Table ---
 
-const statusColor: Record<string, string> = {
-	in_attesa: "amber",
-	in_lavorazione: "blue",
-	completato: "green",
-	archiviato: "gray",
-};
-
-const statusLabel: Record<string, string> = {
-	in_attesa: "In attesa",
-	in_lavorazione: "In lavorazione",
-	completato: "Completato",
-	archiviato: "Archiviato",
-};
-
-const tableData = computed<RowItem[]>(() =>
+const tableData = computed<FolderTableRow[]>(() =>
 	(data.value?.folders ?? []).map((f) => ({
 		id: f.id,
 		programName: f.program_name ?? "—",
@@ -145,7 +84,7 @@ const tableData = computed<RowItem[]>(() =>
 	})),
 );
 
-const columns: TableColumn<RowItem>[] = [
+const columns: TableColumn<FolderTableRow>[] = [
 	{ accessorKey: "programName", header: "Programma" },
 	{ accessorKey: "documenti", header: "Documenti" },
 	{ accessorKey: "lastModified", header: "Ultima modifica" },
@@ -155,7 +94,7 @@ const columns: TableColumn<RowItem>[] = [
 
 const tableMeta = { class: { tr: "cursor-pointer" } };
 
-function onSelect(_e: Event, row: TableRow<RowItem>): void {
+function onSelect(_e: Event, row: TableRow<FolderTableRow>): void {
 	navigateTo(`/folders/${row.original.id}`);
 }
 </script>

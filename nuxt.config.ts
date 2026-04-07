@@ -23,9 +23,12 @@ export default defineNuxtConfig({
     // url: process.env.NUXT_PUBLIC_SUPABASE_URL,
     // key: process.env.NUXT_PUBLIC_SUPABASE_KEY,
   },
-  ui: {
-    safelistColors: ["brand"],
-  },
+
+  // not needed anymore (April 7, 2026):
+  // ui: {
+  //   safelistColors: ["brand"],
+  // },
+
   // Railway needs this for production
   nitro: {
     preset: "node-server",
