@@ -32,20 +32,7 @@ const clientItems = computed(() =>
 );
 
 // ─── Step 1: Frameworks (multi-select) ─────────────────────────────────────
-const { data: frameworks, pending: frameworksPending } = await useAsyncData(
-	"frameworks-for-new-page",
-	async () => {
-		const { data, error } = await client
-			.from("frameworks")
-			.select("id, name, description")
-			.eq("is_public", true)
-			.is("deprecated_at", null)
-			.order("name");
-		if (error) throw error;
-		return data;
-	},
-	{ server: false },
-);
+const { frameworks, pending: frameworksPending } = await useFrameworks();
 
 // Both frameworks pre-checked by default once loaded
 const selectedFrameworkIds = ref<string[]>([]);
