@@ -57,6 +57,14 @@ export interface FolderTableRow {
   status: string;
 }
 
+// ─── Framework ────────────────────────────────────────────────────────────────
+
+export interface FrameworkItem {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
 // ─── Page + Steps ─────────────────────────────────────────────────────────────
 
 export interface StepRecord {
