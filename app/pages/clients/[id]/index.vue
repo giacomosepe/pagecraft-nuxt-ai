@@ -1,9 +1,5 @@
 <script setup lang="ts">
-import type { TableColumn, TableRow } from "@nuxt/ui";
 import { formatDate } from "~/utils/date";
-import { deriveFolderStatus } from "~/utils/folderStatus";
-import { statusColor, statusLabel } from "~/utils/status";
-import type { FolderItem, FolderTableRow } from "~/types/app.types";
 
 definePageMeta({ middleware: "auth" });
 
@@ -28,50 +24,6 @@ async function onStatusChange(val: unknown): Promise<void> {
 	await updateStatus(val as string);
 }
 
-// --- Derived folder helpers ---
-
-function lastModified(folder: FolderItem): string {
-	const pages = folder.pages ?? [];
-	if (!pages.length) return formatDate(folder.updated_at);
-	const latest = pages.reduce(
-		(max, p) =>
-			new Date(p.updated_at) > new Date(max) ? p.updated_at : max,
-		pages[0].updated_at,
-	);
-	return formatDate(latest);
-}
-
-function documenti(folder: FolderItem): string {
-	const pages = folder.pages ?? [];
-	const completed = pages.filter((p) => p.status === "completato").length;
-	return `${completed} / ${pages.length}`;
-}
-
-// --- Table ---
-
-const tableData = computed<FolderTableRow[]>(() =>
-	(data.value?.folders ?? []).map((f) => ({
-		id: f.id,
-		programName: f.program_name ?? "—",
-		documenti: documenti(f),
-		lastModified: lastModified(f),
-		status: deriveFolderStatus(f.pages ?? []),
-	})),
-);
-
-const columns: TableColumn<FolderTableRow>[] = [
-	{ accessorKey: "programName", header: "Programma" },
-	{ accessorKey: "documenti", header: "Documenti" },
-	{ accessorKey: "lastModified", header: "Ultima modifica" },
-	{ accessorKey: "status", header: "Stato" },
-	{ accessorKey: "id", header: "" },
-];
-
-const tableMeta = { class: { tr: "cursor-pointer" } };
-
-function onSelect(_e: Event, row: TableRow<FolderTableRow>): void {
-	navigateTo(`/folders/${row.original.id}`);
-}
 </script>
 
 <template>
@@ -145,31 +97,7 @@ function onSelect(_e: Event, row: TableRow<FolderTableRow>): void {
 			</div>
 
 			<!-- Programmi table -->
-			<UTable
-				:data="tableData"
-				:columns="columns"
-				:meta="tableMeta"
-				:on-select="onSelect"
-			>
-				<template #status-cell="{ row }">
-					<UBadge
-						:color="statusColor[row.original.status] ?? 'neutral'"
-						variant="soft"
-						size="sm"
-					>
-						{{ statusLabel[row.original.status] ?? row.original.status }}
-					</UBadge>
-				</template>
-				<template #id-cell="{ row }">
-					<NuxtLink
-						:to="`/folders/${row.original.id}`"
-						class="text-sm text-(--ui-text-muted) transition-colors hover:text-(--ui-text)"
-						@click.stop
-					>
-						Apri →
-					</NuxtLink>
-				</template>
-			</UTable>
+			<FolderTable :folders="data.folders" />
 		</template>
 	</div>
 </template>
