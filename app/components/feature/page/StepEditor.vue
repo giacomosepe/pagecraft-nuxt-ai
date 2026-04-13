@@ -2,10 +2,13 @@
 // app/components/feature/page/StepEditor.vue
 //
 // Center panel of the document editor for a single step.
-// Renders step title, form fields from form_schema, and the AI generation action.
-// Generation state is managed via useGeneration() — no inline fetch logic.
+// Renders step title, form fields from form_schema, userContext textarea,
+// and the AI generation action buttons.
+//
+// Generation state lives in the parent page (via useGeneration).
+// This component receives generate/refine as emits and isGenerating as prop
+// so that output is shared with StepOutput on the same page.
 
-import type { ComputedRef } from "vue";
 import type { StepRecord } from "~/types/app.types";
 
 // ─── Form field schema (cast from form_schema JSONB) ──────────────────────────
@@ -20,48 +23,18 @@ interface FormField {
 // ─── Props ────────────────────────────────────────────────────────────────────
 const props = defineProps<{
   activeStep: StepRecord;
-  pageId: string;
+  isGenerating: boolean;
+  errorMsg?: string;
 }>();
 
-// ─── userContext local state ──────────────────────────────────────────────────
-const userContext = ref(props.activeStep.user_context ?? "");
+// Two-way binding for the userContext textarea — owned by the parent page
+const userContext = defineModel<string>("userContext", { required: true });
 
-watch(
-  () => props.activeStep.id,
-  () => {
-    userContext.value = props.activeStep.user_context ?? "";
-    showSystemPrompt.value = false;
-  },
-);
-
-// ─── useGeneration ────────────────────────────────────────────────────────────
-// Stub refs for steps/activeStepIndex — commit is out of scope for this component.
-// generate() and refine() only need activeStep, pageId, and userContext.
-const _steps = ref<StepRecord[] | null>(null);
-const _activeStepIndex = ref(0);
-
-const _activeStep = computed<StepRecord | undefined>(
-  () => props.activeStep,
-) as ComputedRef<StepRecord | undefined>;
-
-const { output, isGenerating, errorMsg, generate, refine } = useGeneration({
-  pageId: props.pageId,
-  activeStep: _activeStep,
-  userContext,
-  steps: _steps,
-  activeStepIndex: _activeStepIndex,
-});
-
-// Seed output from existing committed_output
-output.value = props.activeStep.committed_output ?? "";
-
-watch(
-  () => props.activeStep.id,
-  () => {
-    output.value = props.activeStep.committed_output ?? "";
-    errorMsg.value = "";
-  },
-);
+const emit = defineEmits<{
+  generate: [];
+  refine: [];
+  openContextModal: [];
+}>();
 
 // ─── Form schema ──────────────────────────────────────────────────────────────
 const formFields = computed<FormField[]>(() => {
@@ -105,6 +78,13 @@ async function saveFormField(key: string, value: unknown): Promise<void> {
 // ─── UI state ─────────────────────────────────────────────────────────────────
 const showSystemPrompt = ref(false);
 const isAiStep = computed(() => !!props.activeStep.system_prompt_template);
+
+watch(
+  () => props.activeStep.id,
+  () => {
+    showSystemPrompt.value = false;
+  },
+);
 </script>
 
 <template>
@@ -150,7 +130,7 @@ const isAiStep = computed(() => !!props.activeStep.system_prompt_template);
           icon="i-lucide-sparkles"
           :loading="isGenerating"
           :disabled="isGenerating"
-          @click="generate"
+          @click="emit('generate')"
         >
           Genera bozza AI
         </UButton>
@@ -159,8 +139,8 @@ const isAiStep = computed(() => !!props.activeStep.system_prompt_template);
           variant="outline"
           color="neutral"
           size="sm"
-          :disabled="isGenerating || !output"
-          @click="refine"
+          :disabled="isGenerating"
+          @click="emit('refine')"
         >
           Raffina
         </UButton>
@@ -216,6 +196,16 @@ const isAiStep = computed(() => !!props.activeStep.system_prompt_template);
           <span class="text-xs" style="color: var(--color-text-placeholder)">
             Contesto aggiuntivo
           </span>
+          <UButton
+            variant="ghost"
+            color="primary"
+            size="xs"
+            icon="i-lucide-list-plus"
+            :disabled="isGenerating"
+            @click="emit('openContextModal')"
+          >
+            Usa modulo guidato
+          </UButton>
         </div>
 
         <UTextarea
@@ -271,47 +261,6 @@ const isAiStep = computed(() => !!props.activeStep.system_prompt_template);
         icon="i-lucide-circle-alert"
         size="sm"
       />
-
-      <!-- Output -->
-      <div v-if="output" class="flex flex-col gap-2">
-        <div class="flex items-center justify-between">
-          <span
-            class="text-xs font-medium"
-            style="color: var(--color-text-muted)"
-          >
-            Output generato
-          </span>
-          <UBadge
-            v-if="activeStep.status === 'COMMITTED'"
-            color="success"
-            variant="soft"
-            size="xs"
-          >
-            Salvato
-          </UBadge>
-        </div>
-        <p
-          class="whitespace-pre-wrap text-sm leading-relaxed"
-          style="color: var(--color-text-primary)"
-        >
-          {{ output }}
-        </p>
-      </div>
-
-      <!-- Empty AI state -->
-      <div
-        v-else-if="isAiStep && !isGenerating"
-        class="flex flex-col items-center justify-center py-12 text-center"
-      >
-        <UIcon
-          name="i-lucide-sparkles"
-          class="mb-3 size-8"
-          style="color: var(--color-text-placeholder)"
-        />
-        <p class="text-xs" style="color: var(--color-text-placeholder)">
-          Clicca "Genera bozza AI" per creare il contenuto
-        </p>
-      </div>
     </div>
   </div>
 </template>
