@@ -16,7 +16,9 @@ export async function useClients() {
     async () => {
       const { data, error } = await supabase
         .from("clients")
-        .select("id, name, created_at")
+        .select(
+          "id, name, company_name, industry_sector, status, created_at, updated_at, folders(id, updated_at)",
+        )
         .order("name");
       if (error) throw error;
       return data ?? [];
