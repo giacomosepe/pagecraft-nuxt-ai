@@ -12,7 +12,12 @@
 export interface ClientListItem {
   id: string;
   name: string;
+  company_name: string | null;
+  industry_sector: string | null;
+  status: string;
   created_at: string;
+  updated_at: string;
+  folders: { id: string; updated_at: string }[] | null;
 }
 
 export interface ClientDetail {
