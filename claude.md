@@ -1,5 +1,5 @@
 # PageCraft — Project Context for AI Assistants
-# Last updated: March 31, 2026
+# Last updated: April 2, 2026
 # Paste this at the start of every coding session.
 # Update the BUILD STATUS section at the end of every session.
 
@@ -280,6 +280,41 @@ Pinned (never auto-update): zod, @nuxtjs/supabase, ai, @ai-sdk/anthropic, prisma
 Loose (caret ok): nuxt, vue, @nuxt/ui, tailwindcss, @nuxtjs/i18n, @nuxtjs/sitemap
 
 ---
+
+## Workflow — Linear + GitHub
+
+### Branch naming — required for automation
+Always start work by fetching the branch name from the Linear issue via the Linear MCP.
+The branch name must contain the issue ID for Linear automations to trigger correctly.
+
+- Format: `teamkey-number-short-description`
+- Example: `engneer-92-step-type-aware-input`
+- Never use generic branch names like `feature/settings` or `fix/button`
+
+### PR state automations — how issues move
+Linear tracks PR activity automatically when branch names contain the issue ID:
+
+| GitHub event | Linear issue moves to |
+|---|---|
+| Branch created | In Progress |
+| PR opened | In Review |
+| PR merged | Done |
+
+"In Review" is your review window. Open the Vercel preview URL, check the feature,
+leave feedback as a Linear comment if changes are needed. Only merge when satisfied.
+
+### Review loop
+1. Claude Code pushes branch → Vercel preview deploys → Linear issue moves to In Review
+2. Open preview URL from Vercel dashboard or the PR checks in GitHub
+3. If changes needed → add a comment to the Linear issue (do not rewrite the description)
+4. Next session: Claude Code reads the ticket thread and the comment as a single brief
+5. If satisfied → merge PR → Linear issue moves to Done automatically
+
+### One rule for Claude Code
+After completing a feature, leave a summary comment on the Linear issue describing what was built and what to check in the Vercel preview.
+The preview URL is found in the GitHub PR (posted automatically by Vercel) or at vercel.com → project → Deployments.
+
+--- 
 
 ## BUILD STATUS
 
