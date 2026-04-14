@@ -5,16 +5,16 @@
 // Generation logic is NOT here — that lives in useGeneration.ts.
 //
 // Usage:
-//   const { page, steps, clientData, pending, error } = await usePage(pageId)
+//   const { page, steps, clientData, pending, error } = usePage(pageId)
 
 import type { ClientRecord } from "~/composables/useClientFields";
 import type { PageRecord, StepRecord } from "~/types/app.types";
 
-export async function usePage(pageId: string) {
+export function usePage(pageId: string) {
   const supabase = useSupabaseClient();
 
   // ─── Page + steps — parallel fetch ────────────────────────────────────────
-  const { data, pending, error } = await useAsyncData<{
+  const { data, pending, error } = useAsyncData<{
     page: PageRecord;
     steps: StepRecord[];
   }>(

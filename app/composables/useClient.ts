@@ -6,14 +6,14 @@
 // A single superset query satisfies both pages — edit.vue simply ignores folders.
 //
 // Usage:
-//   const { data, pending, updateStatus } = await useClient(clientId)
+//   const { data, pending, updateStatus } = useClient(clientId)
 
 import type { ClientDetail } from "~/types/app.types";
 
-export async function useClient(clientId: string) {
+export function useClient(clientId: string) {
   const supabase = useSupabaseClient();
 
-  const { data, pending } = await useAsyncData<ClientDetail>(
+  const { data, pending } = useAsyncData<ClientDetail>(
     `client-${clientId}`,
     async () => {
       const { data, error } = await supabase

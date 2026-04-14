@@ -4,14 +4,14 @@
 // a flat list of clients is needed).
 //
 // Usage:
-//   const { clients, pending } = await useClients()
+//   const { clients, pending } = useClients()
 
 import type { ClientListItem } from "~/types/app.types";
 
-export async function useClients() {
+export function useClients() {
   const supabase = useSupabaseClient();
 
-  const { data: clients, pending } = await useAsyncData<ClientListItem[]>(
+  const { data: clients, pending } = useAsyncData<ClientListItem[]>(
     "clients-list",
     async () => {
       const { data, error } = await supabase

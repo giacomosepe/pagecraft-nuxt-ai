@@ -1,7 +1,7 @@
 <script setup lang="ts">
 definePageMeta({ middleware: "auth" });
 
-const { clients, pending } = await useClients();
+const { clients, pending } = useClients();
 </script>
 
 <template>
