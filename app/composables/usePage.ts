@@ -35,7 +35,11 @@ export function usePage(pageId: string) {
           .order("order", { ascending: true }),
       ]);
       if (pageRes.error) throw pageRes.error;
-      if (stepsRes.error) throw stepsRes.error;
+      if (stepsRes.error) {
+        console.error("[usePage] steps query error:", stepsRes.error);
+        throw stepsRes.error;
+      }
+      console.log("[usePage] steps fetched:", stepsRes.data?.length ?? 0, "for page", pageId);
       return {
         page: pageRes.data as PageRecord,
         steps: (stepsRes.data ?? []) as StepRecord[],
