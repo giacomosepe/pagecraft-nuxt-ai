@@ -8,7 +8,7 @@
 // Usage:
 //   const { data, pending, updateStatus } = useClient(clientId)
 
-import type { ClientDetail } from "~/types/app.types";
+import type { ClientDetail, FolderItem } from "~/types/app.types";
 
 export function useClient(clientId: string) {
   const supabase = useSupabaseClient();
@@ -29,6 +29,10 @@ export function useClient(clientId: string) {
     { server: false },
   );
 
+  // Explicit computed so Vue tracks this as a proper reactive dependency
+  // rather than relying on nested property access on the shallowRef.
+  const folders = computed<FolderItem[] | null>(() => data.value?.folders ?? null);
+
   // Persists a new status value and updates data optimistically so any
   // watchEffect / computed depending on data.value.status stays in sync.
   async function updateStatus(newStatus: string): Promise<void> {
@@ -46,5 +50,5 @@ export function useClient(clientId: string) {
     });
   }
 
-  return { data, pending, updateStatus };
+  return { data, folders, pending, updateStatus };
 }

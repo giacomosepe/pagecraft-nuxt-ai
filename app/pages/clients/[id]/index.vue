@@ -6,7 +6,7 @@ definePageMeta({ middleware: "auth" });
 const route = useRoute();
 const clientId = route.params.id as string;
 
-const { data, pending, updateStatus } = useClient(clientId);
+const { data, folders, pending, updateStatus } = useClient(clientId);
 
 // --- Status control ---
 
@@ -97,7 +97,7 @@ async function onStatusChange(val: unknown): Promise<void> {
 			</div>
 
 			<!-- Programmi table -->
-			<FolderTable :folders="data.folders" />
+			<FolderTable :folders="folders" />
 		</template>
 	</div>
 </template>
