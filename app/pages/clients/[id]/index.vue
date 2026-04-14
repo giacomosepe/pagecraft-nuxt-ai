@@ -6,7 +6,7 @@ definePageMeta({ middleware: "auth" });
 const route = useRoute();
 const clientId = route.params.id as string;
 
-const { data, pending, updateStatus } = await useClient(clientId);
+const { data, pending, updateStatus } = useClient(clientId);
 
 // --- Status control ---
 

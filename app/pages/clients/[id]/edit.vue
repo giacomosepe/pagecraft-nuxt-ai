@@ -5,7 +5,7 @@ const route = useRoute();
 const clientId = route.params.id as string;
 
 // ─── Load existing client data ────────────────────────────────────────────────
-const { data: clientData, pending } = await useClient(clientId);
+const { data: clientData, pending } = useClient(clientId);
 
 // ─── Form state — populated once data loads ───────────────────────────────────
 const form = reactive({

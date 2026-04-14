@@ -13,7 +13,7 @@ definePageMeta({ middleware: "auth" });
 const route = useRoute();
 const pageId = route.params.id as string;
 
-const { page, steps, clientData, pending, error } = await usePage(pageId);
+const { page, steps, clientData, pending, error } = usePage(pageId);
 
 // ─── Active step state ────────────────────────────────────────────────────────
 const activeStepIndex = ref(0);
