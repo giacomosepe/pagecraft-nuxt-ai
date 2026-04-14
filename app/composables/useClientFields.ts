@@ -10,7 +10,6 @@
 //
 // No Claude involved. Pure deterministic data transformation.
 // The same map is used by:
-//   - StepContextModal: to pre-populate form fields when the step has a formSchema
 //   - create.post.ts: to build the companyContext string
 //   - Future Word export: to substitute {{variables}} in document templates
 
