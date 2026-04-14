@@ -13,7 +13,7 @@ definePageMeta({ middleware: "auth" });
 const route = useRoute();
 const pageId = route.params.id as string;
 
-const { page, steps, clientData, pending, error } = usePage(pageId);
+const { page, steps, pending, error } = usePage(pageId);
 
 // ─── Active step state ────────────────────────────────────────────────────────
 const activeStepIndex = ref(0);
@@ -41,11 +41,10 @@ const {
   activeStepIndex,
 });
 
-// Initialise userContext + output from DB on first load
+// Initialise output from DB on first load
 watch(
   steps,
   () => {
-    userContext.value = activeStep.value?.user_context ?? "";
     output.value = activeStep.value?.committed_output ?? "";
   },
   { once: true },
@@ -53,18 +52,9 @@ watch(
 
 // Reset on step navigation
 watch(activeStepIndex, () => {
-  userContext.value = activeStep.value?.user_context ?? "";
   output.value = activeStep.value?.committed_output ?? "";
   errorMsg.value = "";
 });
-
-// ─── Modals ───────────────────────────────────────────────────────────────────
-const showContextModal = ref(false);
-
-function onModalConfirm(text: string): void {
-  userContext.value = text;
-  showContextModal.value = false;
-}
 </script>
 
 <template>
@@ -175,10 +165,8 @@ function onModalConfirm(text: string): void {
           :active-step="activeStep"
           :is-generating="isGenerating"
           :error-msg="errorMsg"
-          v-model:user-context="userContext"
           @generate="generate"
           @refine="refine"
-          @open-context-modal="showContextModal = true"
         />
 
         <!-- Right: generated output -->
@@ -194,17 +182,4 @@ function onModalConfirm(text: string): void {
     </template>
   </div>
 
-  <!-- Guided context modal -->
-  <UModal v-model:open="showContextModal" :ui="{ content: 'max-w-lg' }">
-    <template #content>
-      <StepContextModal
-        v-if="activeStep"
-        :step-order="activeStep.order"
-        :step-title="activeStep.title"
-        :client-data="clientData"
-        @confirm="onModalConfirm"
-        @cancel="showContextModal = false"
-      />
-    </template>
-  </UModal>
 </template>
