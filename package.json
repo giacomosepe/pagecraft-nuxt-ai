@@ -19,6 +19,7 @@
     "@nuxtjs/supabase": "2.0.4",
     "@prisma/client": "7.5.0",
     "ai": "6.0.116",
+    "docx": "^9.6.1",
     "nuxt": "^4.3.0",
     "prisma": "7.5.0",
     "tailwindcss": "^4.2.2",
