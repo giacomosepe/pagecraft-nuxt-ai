@@ -9,7 +9,6 @@ import { z } from "zod";
 const GenerateSchema = z.object({
   stepId: z.string().uuid("Invalid step ID"),
   pageId: z.string().uuid("Invalid page ID"),
-  userContext: z.string().max(5000).optional().default(""),
   mode: z.enum(["generate", "refine"]),
   existingOutput: z.string().optional().default(""),
 });
@@ -33,7 +32,7 @@ export default defineEventHandler(async (event) => {
       message: parsed.error.issues[0]?.message ?? "Invalid request body",
     });
   }
-  const { stepId, pageId, userContext, mode, existingOutput } = parsed.data;
+  const { stepId, pageId, mode, existingOutput } = parsed.data;
 
   // ─── Step 3: Verify page ownership ───────────────────────────────────────
   const { error: ownerError } = await userClient
@@ -55,7 +54,7 @@ export default defineEventHandler(async (event) => {
     .from("steps")
     .select(
       `
-      id, title, system_prompt_template, refine_prompt_template,
+      id, order, title, system_prompt_template, refine_prompt_template, form_data, form_schema,
       page:pages (
         title, tax_year,
         client:clients (
@@ -73,6 +72,15 @@ export default defineEventHandler(async (event) => {
   if (stepError || !step) {
     throw createError({ statusCode: 404, message: "Step not found" });
   }
+
+  // Fetch committed outputs from prior steps for cross-step context
+  const { data: priorSteps } = await supabase
+    .from("steps")
+    .select("order, title, committed_output")
+    .eq("page_id", pageId)
+    .lt("order", (step as any).order)
+    .not("committed_output", "is", null)
+    .order("order", { ascending: true });
 
   // ─── Step 5: Build company context string ─────────────────────────────────
   const page = (step.page as any);
@@ -116,6 +124,60 @@ export default defineEventHandler(async (event) => {
     ].join("\n")).join("\n\n");
   }
 
+  function serializeFormData(
+    formData: Record<string, unknown>,
+    formSchema: any[],
+  ): string {
+    const lines: string[] = [];
+    for (const field of formSchema) {
+      const value = formData[field.key];
+      if (value === null || value === undefined || value === "") continue;
+      // File fields: only a filename is stored — skip, content not available server-side
+      if (field.type === "file") continue;
+      if (field.type === "repeatable_group" && Array.isArray(value)) {
+        (value as Record<string, unknown>[]).forEach((item, i) => {
+          if (item.ip_linked === "No") return;
+          const parts: string[] = [`${field.label ?? field.key} ${i + 1}:`];
+          for (const sub of field.fields ?? []) {
+            const sv = item[sub.key];
+            if (sv === null || sv === undefined || sv === "") continue;
+            parts.push(`  ${sub.label ?? sub.key}: ${sv}`);
+          }
+          lines.push(parts.join("\n"));
+        });
+        continue;
+      }
+      if (field.conditional) {
+        const condVal = formData[field.conditional.key];
+        if (condVal !== field.conditional.value) continue;
+      }
+      lines.push(`${field.label ?? field.key}: ${value}`);
+    }
+    return lines.join("\n\n");
+  }
+
+  function buildPriorContext(
+    prior: { order: number; title: string; committed_output: string | null }[],
+  ): string {
+    const blocks = prior
+      .filter((s) => s.committed_output)
+      .map(
+        (s) =>
+          `--- Sezione ${s.order} — ${s.title} ---\n${s.committed_output}`,
+      );
+    const full = blocks.join("\n\n");
+    if (full.length <= 24000) return full;
+    // Truncation strategy: keep first 3 steps + last 3 steps
+    const anchor = prior.filter((s) => s.order <= 3 && s.committed_output);
+    const rest = prior.filter((s) => s.order > 3 && s.committed_output).slice(-3);
+    return [...anchor, ...rest]
+      .map(
+        (s) =>
+          `--- Sezione ${s.order} — ${s.title} ---\n${s.committed_output}`,
+      )
+      .join("\n\n");
+  }
+
   const companyContext = c
     ? [
         `Ragione sociale: ${c.company_name ?? c.name ?? "N/D"} ${c.company_form ?? ""}`.trim(),
@@ -140,12 +202,23 @@ export default defineEventHandler(async (event) => {
       ? step.system_prompt_template
       : step.refine_prompt_template;
 
+  const formDataBlock =
+    (step as any).form_data && (step as any).form_schema
+      ? serializeFormData(
+          (step as any).form_data as Record<string, unknown>,
+          (step as any).form_schema as any[],
+        )
+      : "";
+
+  const priorContext = buildPriorContext(priorSteps ?? []);
+
   const userMessage = [
     companyContext ? `Informazioni aziendali:\n${companyContext}` : "",
+    priorContext ? `Sezioni precedenti già redatte:\n${priorContext}` : "",
+    formDataBlock ? `Dati del passaggio:\n${formDataBlock}` : "",
     mode === "refine" && existingOutput
       ? `Bozza esistente da raffinare:\n${existingOutput}`
       : "",
-    userContext ? `Istruzioni aggiuntive:\n${userContext}` : "",
     `Si prega di ${mode === "generate" ? "scrivere" : "raffinare"} la sezione "${step.title}" ora.`,
   ]
     .filter(Boolean)
@@ -244,7 +317,7 @@ export default defineEventHandler(async (event) => {
           }),
           supabase
             .from("steps")
-            .update({ status: "IN_PROGRESS" })
+            .update({ status: "IN_PROGRESS", last_prompt_used: promptUsed })
             .eq("id", stepId),
         ]);
       } catch (e) {
