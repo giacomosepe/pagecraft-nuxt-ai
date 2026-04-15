@@ -80,7 +80,7 @@ watch(
       }
     }
   },
-  { immediate: true },
+  { immediate: true, deep: true },
 );
 
 function buildEmptyInstance(field: FormField): Record<string, unknown> {
