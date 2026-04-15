@@ -189,48 +189,71 @@ VALUES (
   'Attività Rilevanti',
   'Attività di R&S qualificanti e beni immateriali agevolabili',
   'type_c',
-  'Write the qualifying R&D activities section ("Attività Rilevanti") of the
-Patent Box documentation package.
+  $sysprompt$Write the "Attività Rilevanti" section (A04) of the Patent Box documentation.
+Produce three sub-sections in sequence, each introduced by its heading.
 
-Under Patent Box 2.0 (D.L. 146/2021 and Circolare AdE 5/E 2023), qualifying
-activities include: ricerca industriale, sviluppo sperimentale, and — where
-applicable — tutela dei beni immateriali.
+SUB-SECTION 1 — ATTIVITÀ RILEVANTI
 
-The section must:
-- Describe the nature of the R&D activities carried out by the company,
-  with reference to the qualifying categories under the current legislation
-- Identify the qualifying intangible assets (beni immateriali agevolabili) that
-  result from or are connected to these activities — software protetto da
-  copyright, brevetti industriali, marchi, disegni e modelli, know-how — using
-  only what is indicated in the user message or inferable from the stated sector
-- Explain whether IP was developed internally (in house) or with external
-  involvement (to be detailed in the next section)
-- Demonstrate the direct nexus between R&D activities and the qualifying
-  intangible assets, as required for the majorazione of deductible costs
-- Contextualise the activities within the company''s industry sector
+For each activity block provided, write one paragraph introduced by a subtitle
+in the form "Attività [N] — [brief descriptive title derived from the context]".
+Each paragraph must cover: the nature of the qualifying R&D activity and its
+connection to the intangible asset; the project context and objectives; the
+development phases (if provided); the results achieved (if provided).
 
-If the user has not specified particular technologies or assets, describe the
-activities in sector-appropriate general terms. Do not invent specific project
-names, patent numbers, or proprietary technologies.
+If ip_linked is "No" for an activity, omit that activity entirely.
+If ip_linked is "Parzialmente", include the paragraph but note the partial
+connection to the qualifying asset in one sentence.
 
-Target length: 500–750 words.',
-  'Revise the existing "Attività Rilevanti" section according to the instructions
-provided. Sharpen the legal-technical argument for eligibility. Ensure
-qualifying activities reference the correct regulatory categories under
-Patent Box 2.0. Strengthen the nexus between R&D activities and the identified
-intangible assets. Do not invent data. Return only the revised section text.',
-  '[
-    {"key": "ip_types", "label": "Tipologie di beni immateriali", "type": "multiselect", "options": ["Software protetto da copyright", "Brevetto industriale", "Know-how", "Disegno o modello", "Marchio registrato"], "aiSuggestable": false},
-    {"key": "ip_description", "label": "Descrizione del bene principale", "type": "textarea", "placeholder": "Cosa è, cosa fa, perché è stato sviluppato...", "aiSuggestable": false},
-    {"key": "development_type", "label": "Modalità di sviluppo", "type": "select", "options": ["Interamente interno", "Misto (interno + terzi)", "Principalmente commissionato a terzi"], "aiSuggestable": false},
-    {"key": "rd_start_year", "label": "Anno di inizio R&S", "type": "number", "placeholder": "es. 2021", "aiSuggestable": false},
-    {"key": "key_results", "label": "Risultati tecnici principali", "type": "textarea", "placeholder": "Cosa ha reso possibile questo sviluppo?", "aiSuggestable": false}
-  ]',
+Use the reference document extract (if provided) to enrich descriptions with
+specific technical detail. Never invent facts not present in the inputs.
+
+Target: 300–450 words per activity.
+
+SUB-SECTION 2 — NATURA DI INVESTITORE DELL'IMPRESA
+
+If investor_nature text is provided: write a formal paragraph describing the
+company's financial position, risk propensity, and medium-to-long-term
+investment objectives, based strictly on the text provided.
+
+If investor_nature is empty: output exactly the string [SEZIONE DA COMPLETARE]
+and nothing else for this sub-section.
+
+SUB-SECTION 3 — EVENTUALI OPERAZIONI CON IMPRESE ASSOCIATE
+
+If has_associated_ops is "No": write one formal sentence stating that no
+transactions occurred between the company and associated or related entities
+during the relevant tax year.
+
+If has_associated_ops is "Sì": write a formal paragraph describing the
+operations using associated_ops_description only. Do not elaborate beyond
+what is provided.$sysprompt$,
+  $refineprompt$Revise the "Attività Rilevanti" section as instructed. Maintain the three
+sub-section structure. For activity paragraphs: sharpen the technical
+description and strengthen the nexus to the qualifying intangible asset.
+For sub-section 3: keep strictly to what was provided. Do not invent.
+Return only the revised section text.$refineprompt$,
+  $schema$[
+    {"key": "context_note", "label": "Contesto generale delle attività R&S", "type": "textarea", "placeholder": "Breve descrizione del contesto complessivo delle attività...", "required": false},
+    {"key": "reference_document", "label": "Documento di riferimento del cliente", "type": "file", "accept": [".pdf", ".docx", ".pptx"], "hint": "Utilizzato dall'AI come contesto — non viene incluso direttamente nel documento", "required": false},
+    {"key": "activities", "label": "Attività rilevanti", "type": "repeatable_group", "minItems": 1, "addLabel": "Aggiungi attività", "fields": [
+      {"key": "ip_linked", "label": "Riconducibile alla privativa oggetto di agevolazione?", "type": "select", "options": ["Sì", "Parzialmente", "No"], "required": false},
+      {"key": "context", "label": "Contesto generale del progetto", "type": "textarea", "required": true},
+      {"key": "objectives", "label": "Obiettivo del progetto e risultati attesi", "type": "textarea", "required": true},
+      {"key": "phases", "label": "Fasi di sviluppo (sintesi)", "type": "textarea", "required": false},
+      {"key": "results", "label": "Risultati conseguiti", "type": "textarea", "required": false}
+    ]},
+    {"key": "investor_nature", "label": "Natura di investitore dell'impresa", "type": "textarea", "placeholder": "Sezione in sviluppo — inserire manualmente se disponibile", "required": false, "hint": "Verrà strutturata con prompt dedicato in FPB-4b. Se vuoto, il documento mostrerà [SEZIONE DA COMPLETARE]."},
+    {"key": "has_associated_ops", "label": "L'impresa ha operazioni con imprese associate o collegate?", "type": "select", "options": ["No", "Sì"], "defaultValue": "No", "required": true},
+    {"key": "associated_ops_description", "label": "Descrizione delle operazioni con imprese associate", "type": "textarea", "required": false, "conditional": {"key": "has_associated_ops", "value": "Sì"}, "placeholder": "Descrivere le operazioni intercorse con le imprese associate e/o collegate..."}
+  ]$schema$,
   NOW(),
   NOW()
 )
 ON CONFLICT (id) DO UPDATE SET
   step_type = EXCLUDED.step_type,
+  form_schema = EXCLUDED.form_schema,
+  system_prompt_template = EXCLUDED.system_prompt_template,
+  refine_prompt_template = EXCLUDED.refine_prompt_template,
   updated_at = NOW();
 
 -- Step 5: Attività Commissionate a Terzi (type_c)

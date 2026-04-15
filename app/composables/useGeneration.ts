@@ -5,7 +5,7 @@
 //
 // Usage:
 //   const { output, isGenerating, isCommitting, errorMsg, generate, refine, commit, discard } =
-//     useGeneration({ pageId, activeStep, userContext, steps, activeStepIndex })
+//     useGeneration({ pageId, activeStep, steps, activeStepIndex })
 
 import type { Ref, ComputedRef } from "vue";
 import type { StepRecord } from "~/types/app.types";
@@ -13,7 +13,6 @@ import type { StepRecord } from "~/types/app.types";
 export interface UseGenerationParams {
   pageId: string;
   activeStep: ComputedRef<StepRecord | undefined>;
-  userContext: Ref<string>;
   steps: Ref<StepRecord[] | null | undefined>;
   activeStepIndex: Ref<number>;
 }
@@ -21,7 +20,6 @@ export interface UseGenerationParams {
 export function useGeneration({
   pageId,
   activeStep,
-  userContext,
   steps,
   activeStepIndex,
 }: UseGenerationParams) {
@@ -44,7 +42,6 @@ export function useGeneration({
         body: JSON.stringify({
           stepId: activeStep.value.id,
           pageId,
-          userContext: userContext.value,
           mode: "generate",
         }),
       });
@@ -83,7 +80,6 @@ export function useGeneration({
         body: JSON.stringify({
           stepId: activeStep.value.id,
           pageId,
-          userContext: userContext.value,
           mode: "refine",
           existingOutput: previousOutput,
         }),
@@ -123,7 +119,6 @@ export function useGeneration({
           operation: "update",
           data: {
             committed_output: output.value,
-            user_context: userContext.value,
             status: "COMMITTED",
           },
           where: { id: activeStep.value.id },
@@ -134,7 +129,6 @@ export function useGeneration({
       if (step) {
         step.status = "COMMITTED";
         step.committed_output = output.value;
-        step.user_context = userContext.value;
       }
       if (activeStepIndex.value < (steps.value?.length ?? 0) - 1) {
         activeStepIndex.value++;

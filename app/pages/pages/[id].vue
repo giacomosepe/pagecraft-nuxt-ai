@@ -17,7 +17,6 @@ const { page, steps, pending, error } = usePage(pageId);
 
 // ─── Active step state ────────────────────────────────────────────────────────
 const activeStepIndex = ref(0);
-const userContext = ref("");
 
 const activeStep = computed<StepRecord | undefined>(
   () => steps.value?.[activeStepIndex.value],
@@ -36,7 +35,6 @@ const {
 } = useGeneration({
   pageId,
   activeStep,
-  userContext,
   steps: steps as Ref<StepRecord[] | null | undefined>,
   activeStepIndex,
 });
