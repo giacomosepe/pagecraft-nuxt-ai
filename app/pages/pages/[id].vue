@@ -53,6 +53,41 @@ watch(activeStepIndex, () => {
   output.value = activeStep.value?.committed_output ?? "";
   errorMsg.value = "";
 });
+
+// ─── Word export ──────────────────────────────────────────────────────────────
+const isExporting = ref(false);
+
+const allCommitted = computed(
+  () =>
+    (steps.value?.length ?? 0) > 0 &&
+    (steps.value ?? []).every((s) => s.committed_output !== null),
+);
+
+async function exportWord(): Promise<void> {
+  if (!allCommitted.value || isExporting.value) return;
+  isExporting.value = true;
+  try {
+    const res = await fetch("/api/export/word", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pageId }),
+    });
+    if (!res.ok) throw new Error("Export failed");
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "patent-box.docx";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch {
+    // Silent fail — button returns to normal state
+  } finally {
+    isExporting.value = false;
+  }
+}
 </script>
 
 <template>
@@ -145,7 +180,9 @@ watch(activeStepIndex, () => {
             size="xs"
             icon="i-lucide-download"
             class="w-full justify-center"
-            disabled
+            :disabled="!allCommitted || isExporting"
+            :loading="isExporting"
+            @click="exportWord"
           >
             Esporta Word
           </UButton>
