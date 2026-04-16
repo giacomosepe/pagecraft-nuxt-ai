@@ -81,7 +81,7 @@ export default defineEventHandler(async (event) => {
   // Ordered by `order` so the snapshot preserves the correct sequence.
   const { data: frameworkSteps, error: frameworkStepsError } = await supabase
     .from("framework_steps")
-    .select("id, order, title, system_prompt_template, refine_prompt_template")
+    .select("id, order, title, system_prompt_template, refine_prompt_template, form_schema")
     .eq("framework_id", frameworkId)
     .order("order", { ascending: true });
 
@@ -134,6 +134,7 @@ export default defineEventHandler(async (event) => {
     title: fs.title,
     system_prompt_template: fs.system_prompt_template,
     refine_prompt_template: fs.refine_prompt_template,
+    form_schema: fs.form_schema ?? null,
     status: "PENDING" as const,
     user_context: null,
     committed_output: null,
