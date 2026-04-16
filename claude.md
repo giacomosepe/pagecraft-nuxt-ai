@@ -237,13 +237,19 @@ import { z } from 'zod'             // ✅ correct — not 'zod/v4'
 ## Environment variables
 
 ```
-SUPABASE_URL           ← read by @nuxtjs/supabase module directly
-SUPABASE_KEY           ← publishable key — safe in browser
-SUPABASE_SECRET_KEY    ← secret key — server only
-NUXT_ANTHROPIC_API_KEY ← Claude API — server only
-DATABASE_URL           ← Prisma pooled (port 6543, pgbouncer=true)
-DIRECT_URL             ← Prisma direct for migrations (port 5432)
+NUXT_PUBLIC_SUPABASE_URL  ← mapped explicitly in nuxt.config.ts via url: process.env.NUXT_PUBLIC_SUPABASE_URL
+NUXT_PUBLIC_SUPABASE_KEY  ← mapped explicitly in nuxt.config.ts via key: process.env.NUXT_PUBLIC_SUPABASE_KEY
+SUPABASE_SECRET_KEY       ← server only (must equal SUPABASE_SERVICE_KEY)
+NUXT_ANTHROPIC_API_KEY    ← server only
+DATABASE_URL              ← Prisma pooled (port 6543, pgbouncer=true)
+DIRECT_URL                ← Prisma direct for migrations (port 5432)
 ```
+
+CRITICAL: @nuxtjs/supabase default names are SUPABASE_URL and SUPABASE_KEY.
+This project uses NUXT_PUBLIC_SUPABASE_URL and NUXT_PUBLIC_SUPABASE_KEY.
+The explicit mapping in nuxt.config.ts supabase: { url, key } is REQUIRED.
+Never remove or comment out those two lines or Supabase will fail to initialise.
+If env vars appear not to load, check nuxt.config.ts supabase: { url, key } first.
 
 ---
 

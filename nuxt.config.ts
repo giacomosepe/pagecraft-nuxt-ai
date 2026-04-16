@@ -6,12 +6,7 @@ export default defineNuxtConfig({
     compatibilityVersion: 4,
   },
   components: [{ path: "~/components", pathPrefix: false }],
-  modules: [
-    "@nuxt/icon",
-    "@nuxtjs/sitemap",
-    "@nuxtjs/supabase",
-    "@nuxt/ui",
-  ],
+  modules: ["@nuxt/icon", "@nuxtjs/sitemap", "@nuxtjs/supabase", "@nuxt/ui"],
   css: ["./assets/css/main.css"],
   supabase: {
     redirectOptions: {
@@ -20,8 +15,8 @@ export default defineNuxtConfig({
       exclude: ["/", "/about", "/pricing", "/docs"], // public pages
       saveRedirectToCookie: true, // sends user back where they tried to go
     },
-    // url: process.env.NUXT_PUBLIC_SUPABASE_URL,
-    // key: process.env.NUXT_PUBLIC_SUPABASE_KEY,
+    url: process.env.NUXT_PUBLIC_SUPABASE_URL,
+    key: process.env.NUXT_PUBLIC_SUPABASE_KEY,
   },
 
   // not needed anymore (April 7, 2026):
