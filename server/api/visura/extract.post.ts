@@ -5,6 +5,17 @@
 import { serverSupabaseClient } from "#supabase/server";
 import { z } from "zod";
 
+interface MissingFieldEntry {
+  index: number;
+  name: string;
+  missing: string[];
+}
+
+interface MissingFieldsReport {
+  shareholders: MissingFieldEntry[];
+  subsidiaries: MissingFieldEntry[];
+}
+
 const ExtractSchema = z.object({
   text: z.string().min(100).max(100000),
 });
