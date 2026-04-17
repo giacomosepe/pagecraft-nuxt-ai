@@ -176,7 +176,16 @@ instructions provided. This is a legal declaration — apply corrections
 precisely. Verify names, percentages, and corporate relationships match the
 data in the instructions. Do not invent information. Return only the revised
 section text.',
-  '[]',
+  '[
+    {
+      "key": "visura_pdf",
+      "label": "Visura Camerale (PDF)",
+      "type": "visura_upload",
+      "hint": "Carica la Visura Camerale Storica in formato PDF. L''AI estrarrà automaticamente soci, partecipate e governance.",
+      "required": false,
+      "accept": [".pdf"]
+    }
+  ]',
   NOW(),
   NOW()
 )
