@@ -184,6 +184,13 @@ section text.',
       "hint": "Carica la Visura Camerale Storica in formato PDF. L''AI estrarrà automaticamente soci, partecipate e governance.",
       "required": false,
       "accept": [".pdf"]
+    },
+    {
+      "key": "note_integrative",
+      "type": "textarea",
+      "label": "Note integrative (opzionale)",
+      "placeholder": "Informazioni aggiuntive sulla struttura societaria non presenti nella visura...",
+      "required": false
     }
   ]',
   NOW(),
