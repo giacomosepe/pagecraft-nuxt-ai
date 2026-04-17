@@ -323,7 +323,7 @@ function isFieldVisible(field: FormField): boolean {
                         <USelect
                           v-if="subField.type === 'select'"
                           :model-value="String(instance[subField.key] ?? '')"
-                          :options="subField.options ?? []"
+                          :items="subField.options ?? []"
                           class="w-full"
                           :disabled="isGenerating"
                           @update:model-value="updateInstanceField(field.key, idx, subField.key, $event)"
@@ -506,7 +506,7 @@ function isFieldVisible(field: FormField): boolean {
                 </p>
                 <USelect
                   :model-value="String(formValues[field.key] ?? '')"
-                  :options="field.options ?? []"
+                  :items="field.options ?? []"
                   class="w-full"
                   :disabled="isGenerating"
                   @update:model-value="saveFormField(field.key, $event)"
