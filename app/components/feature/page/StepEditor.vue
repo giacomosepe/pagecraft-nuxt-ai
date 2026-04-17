@@ -22,17 +22,28 @@ interface FormField {
     | "number"
     | "file"
     | "multiselect"
-    | "repeatable_group";
+    | "repeatable_group"
+    | "visura_upload";
   options?: string[];
   placeholder?: string;
   hint?: string;
   required?: boolean;
-  accept?: string[]; // file type only
+  accept?: string[]; // file and visura_upload only
   conditional?: { key: string; value: string }; // show only when another field equals value
   // repeatable_group only:
   minItems?: number;
   addLabel?: string;
   fields?: FormField[];
+}
+
+// ─── Visura extraction result types ───────────────────────────────────────────
+interface VisuraExtractResult {
+  shareholders: unknown[];
+  subsidiaries: unknown[];
+  missing: {
+    shareholders: { index: number; name: string; missing: string[] }[];
+    subsidiaries: { index: number; name: string; missing: string[] }[];
+  };
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -180,6 +191,69 @@ watch(
 function isFieldVisible(field: FormField): boolean {
   if (!field.conditional) return true;
   return String(formValues.value[field.conditional.key] ?? "") === field.conditional.value;
+}
+
+// ─── Visura upload state ───────────────────────────────────────────────────────
+
+// Per-field state keyed by field.key
+const visuraFile = ref<Record<string, File | null>>({});
+const visuraExtracting = ref<Record<string, boolean>>({});
+const visuraError = ref<Record<string, string | null>>({});
+const visuraResult = ref<Record<string, VisuraExtractResult | null>>({});
+
+// Reset visura state when the step changes
+watch(
+  () => props.activeStep.id,
+  () => {
+    visuraFile.value = {};
+    visuraExtracting.value = {};
+    visuraError.value = {};
+    visuraResult.value = {};
+  },
+);
+
+function onVisuraFileChange(fieldKey: string, event: Event): void {
+  const file = (event.target as HTMLInputElement).files?.[0] ?? null;
+  visuraFile.value = { ...visuraFile.value, [fieldKey]: file };
+  visuraError.value = { ...visuraError.value, [fieldKey]: null };
+  visuraResult.value = { ...visuraResult.value, [fieldKey]: null };
+}
+
+async function extractVisura(field: FormField): Promise<void> {
+  const file = visuraFile.value[field.key];
+  if (!file) return;
+
+  visuraExtracting.value = { ...visuraExtracting.value, [field.key]: true };
+  visuraError.value = { ...visuraError.value, [field.key]: null };
+  visuraResult.value = { ...visuraResult.value, [field.key]: null };
+
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const result = await $fetch<VisuraExtractResult>("/api/visura/extract-pdf", {
+      method: "POST",
+      body: formData,
+    });
+
+    visuraResult.value = { ...visuraResult.value, [field.key]: result };
+
+    // Persist extracted data to form_data under the field key
+    await saveFormField(field.key, {
+      filename: file.name,
+      shareholders: result.shareholders,
+      subsidiaries: result.subsidiaries,
+      missing: result.missing,
+      extracted_at: new Date().toISOString(),
+    });
+  } catch (err: unknown) {
+    const msg =
+      err instanceof Error ? err.message : "Errore durante l''estrazione dalla visura";
+    visuraError.value = { ...visuraError.value, [field.key]: msg };
+    console.error("[StepEditor] visura extraction error:", err);
+  } finally {
+    visuraExtracting.value = { ...visuraExtracting.value, [field.key]: false };
+  }
 }
 </script>
 
@@ -436,6 +510,125 @@ function isFieldVisible(field: FormField): boolean {
                     />
                     {{ opt }}
                   </label>
+                </div>
+              </template>
+
+              <!-- ── visura_upload ───────────────────────────────────── -->
+              <template v-else-if="field.type === 'visura_upload'">
+                <label
+                  class="mb-1 block text-xs font-medium"
+                  style="color: var(--color-text-secondary)"
+                >
+                  {{ field.label }}
+                  <span v-if="field.required" class="ml-0.5 text-red-500">*</span>
+                </label>
+                <p v-if="field.hint" class="mb-1.5 text-xs" style="color: var(--color-text-muted)">
+                  {{ field.hint }}
+                </p>
+
+                <!-- File picker + extract button -->
+                <div class="flex flex-col gap-2">
+                  <div class="flex items-center gap-2">
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      :disabled="isGenerating || visuraExtracting[field.key]"
+                      class="block w-full text-xs file:mr-3 file:rounded file:border-0 file:px-3 file:py-1 file:text-xs file:font-medium"
+                      style="color: var(--color-text-secondary)"
+                      @change="onVisuraFileChange(field.key, $event)"
+                    />
+                  </div>
+
+                  <UButton
+                    size="sm"
+                    variant="outline"
+                    color="neutral"
+                    icon="i-lucide-scan-text"
+                    :loading="visuraExtracting[field.key]"
+                    :disabled="!visuraFile[field.key] || isGenerating || visuraExtracting[field.key]"
+                    @click="extractVisura(field)"
+                  >
+                    Estrai dalla visura
+                  </UButton>
+
+                  <!-- Extraction error -->
+                  <UAlert
+                    v-if="visuraError[field.key]"
+                    color="error"
+                    variant="soft"
+                    :description="visuraError[field.key] ?? ''"
+                    icon="i-lucide-circle-alert"
+                    size="sm"
+                  />
+
+                  <!-- Extraction result summary -->
+                  <div
+                    v-if="visuraResult[field.key]"
+                    class="rounded-md border p-3"
+                    style="border-color: var(--color-border-subtle); background-color: var(--color-surface-subtle)"
+                  >
+                    <div class="flex items-center gap-1.5 mb-2">
+                      <UIcon name="i-lucide-check-circle" class="size-3.5" style="color: var(--color-brand)" />
+                      <span class="text-xs font-medium" style="color: var(--color-text-primary)">
+                        Estrazione completata
+                      </span>
+                    </div>
+                    <ul class="text-xs space-y-1" style="color: var(--color-text-secondary)">
+                      <li>
+                        {{ (visuraResult[field.key]?.shareholders ?? []).length }} soci estratti
+                      </li>
+                      <li>
+                        {{ (visuraResult[field.key]?.subsidiaries ?? []).length }} partecipate estratte
+                      </li>
+                    </ul>
+                    <!-- Missing fields warning -->
+                    <div
+                      v-if="
+                        (visuraResult[field.key]?.missing?.shareholders?.length ?? 0) > 0 ||
+                        (visuraResult[field.key]?.missing?.subsidiaries?.length ?? 0) > 0
+                      "
+                      class="mt-2 text-xs"
+                      style="color: var(--color-text-muted)"
+                    >
+                      <span class="font-medium">Dati mancanti:</span>
+                      <span
+                        v-for="entry in [
+                          ...(visuraResult[field.key]?.missing?.shareholders ?? []),
+                          ...(visuraResult[field.key]?.missing?.subsidiaries ?? []),
+                        ]"
+                        :key="entry.index"
+                        class="block"
+                      >
+                        {{ entry.name }}: {{ entry.missing.join(', ') }}
+                      </span>
+                    </div>
+                    <!-- Previously saved extraction notice -->
+                    <p
+                      v-if="formValues[field.key]"
+                      class="mt-2 text-xs"
+                      style="color: var(--color-text-muted)"
+                    >
+                      I dati estratti sono stati salvati per la generazione AI.
+                    </p>
+                  </div>
+
+                  <!-- Previously saved result (on step load, no active extraction) -->
+                  <div
+                    v-else-if="formValues[field.key] && !visuraExtracting[field.key]"
+                    class="rounded-md border p-3"
+                    style="border-color: var(--color-border-subtle); background-color: var(--color-surface-subtle)"
+                  >
+                    <div class="flex items-center gap-1.5">
+                      <UIcon name="i-lucide-check-circle" class="size-3.5" style="color: var(--color-brand)" />
+                      <span class="text-xs font-medium" style="color: var(--color-text-primary)">
+                        Visura già estratta —
+                        {{ (formValues[field.key] as Record<string, unknown>)?.filename ?? 'file.pdf' }}
+                      </span>
+                    </div>
+                    <p class="mt-1 text-xs" style="color: var(--color-text-muted)">
+                      Carica un nuovo PDF e clicca "Estrai dalla visura" per aggiornare i dati.
+                    </p>
+                  </div>
                 </div>
               </template>
 
