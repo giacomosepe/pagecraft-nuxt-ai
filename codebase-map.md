@@ -1,5 +1,5 @@
 # PageCraft — Codebase Map
-> Last updated: 2026-04-17 (post ENGNEER-148, ENGNEER-146, ENGNEER-145, ENGNEER-142)
+> Last updated: 2026-04-17 (post ENGNEER-158, ENGNEER-148, ENGNEER-146, ENGNEER-145, ENGNEER-142)
 > Purpose: index of what exists and its current state. Instructions for what to change live in Linear issue spec documents.
 
 ---
@@ -31,8 +31,8 @@ server/api/
 ├── pages/create.post.ts, create-batch.post.ts
 ├── generations/create.post.ts
 ├── export/word.post.ts
-├── visura/extract.post.ts
-└── extract/document.post.ts
+├── visura/extract.post.ts, extract-pdf.post.ts
+└── (extract/document.post.ts — listed in old map, does not exist)
 prisma/
 ├── grants.sql, seed.sql, rls_policies.sql, trigger.sql
 ```
@@ -65,12 +65,17 @@ Extracts structured shareholder and subsidiary data from raw visura text.
 - Shareholder types: `persona_fisica` (CF, address, birth data) or `persona_giuridica` (company_name, form, address, quota_pct). `legal_rep` is always null for giuridica — not available in visura.
 - `MissingFieldsReport` interface defined inline (lines 9–15)
 
-### `server/api/extract/document.post.ts`
-Accepts a file upload, extracts raw text, returns cleaned string. Pattern to follow for new extract routes.
+### `server/api/visura/extract-pdf.post.ts` — ENGNEER-158
+Accepts a multipart PDF upload, sends it to Claude using the native document API (base64, no pdf-lib needed), extracts structured shareholder/subsidiary data, returns same shape as `extract.post.ts`.
+- Accepts `multipart/form-data` with field `file` (PDF, max 10 MB)
+- Auth: serverSupabaseClient + auth.getUser()
+- Uses `readMultipartFormData` from Nitro
+- Converts buffer to base64, sends as `type: "document"` in Claude messages
+- Returns `{ shareholders[], subsidiaries[], missing: MissingFieldsReport }`
 
 ### `app/components/feature/page/StepEditor.vue` — ~490 lines
 Center panel of the document editor. Renders form fields from `form_schema` and action buttons.
-- `FormField` interface (line ~15): supports `text | textarea | select | number | file | multiselect | repeatable_group`
+- `FormField` interface (line ~15): supports `text | textarea | select | number | file | multiselect | repeatable_group | visura_upload`
 - `isAiStep` computed (line ~155): `true` when `activeStep.system_prompt_template` is present. Controls whether action buttons render.
 - Action buttons ("Genera bozza AI" / "Raffina") render only when `isAiStep === true`. No disabled-by-step-type logic yet — ENGNEER-154 pending.
 - `select` type renders `USelect` with `:options="field.options ?? []"` — options must be present in form_schema seed or dropdown is empty (ENGNEER-155 pending).
@@ -139,7 +144,7 @@ Framework steps seeded here. Uses `ON CONFLICT (step_id) DO UPDATE` pattern — 
 - **ENGNEER-155**: Fix empty dropdowns in Steps 4, 5, 6 — options not binding from form_schema → `StepEditor.vue` + `seed.sql`
 - **ENGNEER-156**: Step 4 file upload loading indicator → `StepEditor.vue`
 - **ENGNEER-157**: System prompt display — make scrollable → `StepEditor.vue`
-- **ENGNEER-158**: FPB-3 Step 3 — visura PDF upload + AI generation → new `server/api/extract/visura-pdf.post.ts` + `StepEditor.vue` + `seed.sql`
+- **ENGNEER-158**: FPB-3 Step 3 — visura PDF upload + AI generation → DONE (branch engneer-158-fpb-3-build-step-3-struttura-partecipativa-visura-pdf-upload)
 
 ---
 
