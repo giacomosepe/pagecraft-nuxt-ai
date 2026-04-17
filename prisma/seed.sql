@@ -95,9 +95,12 @@ the revised section text.',
   NOW()
 )
 ON CONFLICT (id) DO UPDATE SET
-  step_type = EXCLUDED.step_type,
-  form_schema = EXCLUDED.form_schema,
-  updated_at = NOW();
+  description            = EXCLUDED.description,
+  system_prompt_template = EXCLUDED.system_prompt_template,
+  refine_prompt_template = EXCLUDED.refine_prompt_template,
+  form_schema            = EXCLUDED.form_schema,
+  step_type              = EXCLUDED.step_type,
+  updated_at             = NOW();
 
 -- Step 2: Premessa (type_a)
 
@@ -124,9 +127,12 @@ only the revised section text.',
   NOW()
 )
 ON CONFLICT (id) DO UPDATE SET
-  step_type = EXCLUDED.step_type,
-  form_schema = EXCLUDED.form_schema,
-  updated_at = NOW();
+  description            = EXCLUDED.description,
+  system_prompt_template = EXCLUDED.system_prompt_template,
+  refine_prompt_template = EXCLUDED.refine_prompt_template,
+  form_schema            = EXCLUDED.form_schema,
+  step_type              = EXCLUDED.step_type,
+  updated_at             = NOW();
 
 -- Step 3: Struttura Partecipativa (type_b — data comes from clients table, no form fields)
 
@@ -175,9 +181,12 @@ section text.',
   NOW()
 )
 ON CONFLICT (id) DO UPDATE SET
-  step_type = EXCLUDED.step_type,
-  form_schema = EXCLUDED.form_schema,
-  updated_at = NOW();
+  description            = EXCLUDED.description,
+  system_prompt_template = EXCLUDED.system_prompt_template,
+  refine_prompt_template = EXCLUDED.refine_prompt_template,
+  form_schema            = EXCLUDED.form_schema,
+  step_type              = EXCLUDED.step_type,
+  updated_at             = NOW();
 
 -- Step 4: Attività Rilevanti (type_c)
 
@@ -305,8 +314,12 @@ Return only the revised section text.',
   NOW()
 )
 ON CONFLICT (id) DO UPDATE SET
-  step_type = EXCLUDED.step_type,
-  updated_at = NOW();
+  description            = EXCLUDED.description,
+  system_prompt_template = EXCLUDED.system_prompt_template,
+  refine_prompt_template = EXCLUDED.refine_prompt_template,
+  form_schema            = EXCLUDED.form_schema,
+  step_type              = EXCLUDED.step_type,
+  updated_at             = NOW();
 
 -- Step 6: Modello Organizzativo (type_c)
 
@@ -354,8 +367,12 @@ Do not invent facts. Return only the revised section text.',
   NOW()
 )
 ON CONFLICT (id) DO UPDATE SET
-  step_type = EXCLUDED.step_type,
-  updated_at = NOW();
+  description            = EXCLUDED.description,
+  system_prompt_template = EXCLUDED.system_prompt_template,
+  refine_prompt_template = EXCLUDED.refine_prompt_template,
+  form_schema            = EXCLUDED.form_schema,
+  step_type              = EXCLUDED.step_type,
+  updated_at             = NOW();
 
 -- Step 7 (was step 8): Funzioni, Rischi e Beni (type_c)
 -- Note: step 7 "Relazione Tecnica" has been removed (moved to ARKADIA-91 framework)
@@ -413,9 +430,12 @@ Do not invent facts or figures. Return only the revised section text.',
   NOW()
 )
 ON CONFLICT (id) DO UPDATE SET
-  "order" = EXCLUDED."order",
-  step_type = EXCLUDED.step_type,
-  updated_at = NOW();
+  description            = EXCLUDED.description,
+  system_prompt_template = EXCLUDED.system_prompt_template,
+  refine_prompt_template = EXCLUDED.refine_prompt_template,
+  form_schema            = EXCLUDED.form_schema,
+  step_type              = EXCLUDED.step_type,
+  updated_at             = NOW();
 
 -- ─── Framework: Relazione Tecnica — Patent Box (ARKADIA-91) ──────────────────
 -- Standalone technical report framework. Separate from the main Patent Box.
@@ -455,7 +475,13 @@ VALUES (
   ]'::jsonb,
   NOW(), NOW()
 )
-ON CONFLICT (id) DO UPDATE SET step_type = EXCLUDED.step_type, form_schema = EXCLUDED.form_schema, updated_at = NOW();
+ON CONFLICT (id) DO UPDATE SET
+  description            = EXCLUDED.description,
+  system_prompt_template = EXCLUDED.system_prompt_template,
+  refine_prompt_template = EXCLUDED.refine_prompt_template,
+  form_schema            = EXCLUDED.form_schema,
+  step_type              = EXCLUDED.step_type,
+  updated_at             = NOW();
 
 -- Step 2: Attività Rilevanti Svolte
 
@@ -476,7 +502,13 @@ VALUES (
   ]'::jsonb,
   NOW(), NOW()
 )
-ON CONFLICT (id) DO UPDATE SET step_type = EXCLUDED.step_type, form_schema = EXCLUDED.form_schema, updated_at = NOW();
+ON CONFLICT (id) DO UPDATE SET
+  description            = EXCLUDED.description,
+  system_prompt_template = EXCLUDED.system_prompt_template,
+  refine_prompt_template = EXCLUDED.refine_prompt_template,
+  form_schema            = EXCLUDED.form_schema,
+  step_type              = EXCLUDED.step_type,
+  updated_at             = NOW();
 
 -- Step 3: Stato dell'Arte
 
@@ -497,7 +529,13 @@ VALUES (
   ]'::jsonb,
   NOW(), NOW()
 )
-ON CONFLICT (id) DO UPDATE SET step_type = EXCLUDED.step_type, form_schema = EXCLUDED.form_schema, updated_at = NOW();
+ON CONFLICT (id) DO UPDATE SET
+  description            = EXCLUDED.description,
+  system_prompt_template = EXCLUDED.system_prompt_template,
+  refine_prompt_template = EXCLUDED.refine_prompt_template,
+  form_schema            = EXCLUDED.form_schema,
+  step_type              = EXCLUDED.step_type,
+  updated_at             = NOW();
 
 -- Step 4: Gantt di Progetto
 
@@ -518,7 +556,13 @@ VALUES (
   ]'::jsonb,
   NOW(), NOW()
 )
-ON CONFLICT (id) DO UPDATE SET step_type = EXCLUDED.step_type, form_schema = EXCLUDED.form_schema, updated_at = NOW();
+ON CONFLICT (id) DO UPDATE SET
+  description            = EXCLUDED.description,
+  system_prompt_template = EXCLUDED.system_prompt_template,
+  refine_prompt_template = EXCLUDED.refine_prompt_template,
+  form_schema            = EXCLUDED.form_schema,
+  step_type              = EXCLUDED.step_type,
+  updated_at             = NOW();
 
 -- Step 5: Team di Progetto
 
@@ -538,7 +582,13 @@ VALUES (
   ]'::jsonb,
   NOW(), NOW()
 )
-ON CONFLICT (id) DO UPDATE SET step_type = EXCLUDED.step_type, form_schema = EXCLUDED.form_schema, updated_at = NOW();
+ON CONFLICT (id) DO UPDATE SET
+  description            = EXCLUDED.description,
+  system_prompt_template = EXCLUDED.system_prompt_template,
+  refine_prompt_template = EXCLUDED.refine_prompt_template,
+  form_schema            = EXCLUDED.form_schema,
+  step_type              = EXCLUDED.step_type,
+  updated_at             = NOW();
 
 -- Step 6: Materiali e Beni Strumentali
 
@@ -559,7 +609,13 @@ VALUES (
   ]'::jsonb,
   NOW(), NOW()
 )
-ON CONFLICT (id) DO UPDATE SET step_type = EXCLUDED.step_type, form_schema = EXCLUDED.form_schema, updated_at = NOW();
+ON CONFLICT (id) DO UPDATE SET
+  description            = EXCLUDED.description,
+  system_prompt_template = EXCLUDED.system_prompt_template,
+  refine_prompt_template = EXCLUDED.refine_prompt_template,
+  form_schema            = EXCLUDED.form_schema,
+  step_type              = EXCLUDED.step_type,
+  updated_at             = NOW();
 
 -- Step 7: Fasi di Sviluppo
 
@@ -579,7 +635,13 @@ VALUES (
   ]'::jsonb,
   NOW(), NOW()
 )
-ON CONFLICT (id) DO UPDATE SET step_type = EXCLUDED.step_type, form_schema = EXCLUDED.form_schema, updated_at = NOW();
+ON CONFLICT (id) DO UPDATE SET
+  description            = EXCLUDED.description,
+  system_prompt_template = EXCLUDED.system_prompt_template,
+  refine_prompt_template = EXCLUDED.refine_prompt_template,
+  form_schema            = EXCLUDED.form_schema,
+  step_type              = EXCLUDED.step_type,
+  updated_at             = NOW();
 
 -- Step 8: Problematiche Tecniche e Scientifiche
 
@@ -599,7 +661,13 @@ VALUES (
   ]'::jsonb,
   NOW(), NOW()
 )
-ON CONFLICT (id) DO UPDATE SET step_type = EXCLUDED.step_type, form_schema = EXCLUDED.form_schema, updated_at = NOW();
+ON CONFLICT (id) DO UPDATE SET
+  description            = EXCLUDED.description,
+  system_prompt_template = EXCLUDED.system_prompt_template,
+  refine_prompt_template = EXCLUDED.refine_prompt_template,
+  form_schema            = EXCLUDED.form_schema,
+  step_type              = EXCLUDED.step_type,
+  updated_at             = NOW();
 
 -- Step 9: Situazione Futura
 
@@ -619,7 +687,13 @@ VALUES (
   ]'::jsonb,
   NOW(), NOW()
 )
-ON CONFLICT (id) DO UPDATE SET step_type = EXCLUDED.step_type, form_schema = EXCLUDED.form_schema, updated_at = NOW();
+ON CONFLICT (id) DO UPDATE SET
+  description            = EXCLUDED.description,
+  system_prompt_template = EXCLUDED.system_prompt_template,
+  refine_prompt_template = EXCLUDED.refine_prompt_template,
+  form_schema            = EXCLUDED.form_schema,
+  step_type              = EXCLUDED.step_type,
+  updated_at             = NOW();
 
 -- Step 10: Attività di Tutela del Bene
 
@@ -640,7 +714,13 @@ VALUES (
   ]'::jsonb,
   NOW(), NOW()
 )
-ON CONFLICT (id) DO UPDATE SET step_type = EXCLUDED.step_type, form_schema = EXCLUDED.form_schema, updated_at = NOW();
+ON CONFLICT (id) DO UPDATE SET
+  description            = EXCLUDED.description,
+  system_prompt_template = EXCLUDED.system_prompt_template,
+  refine_prompt_template = EXCLUDED.refine_prompt_template,
+  form_schema            = EXCLUDED.form_schema,
+  step_type              = EXCLUDED.step_type,
+  updated_at             = NOW();
 
 -- Step 11: Altre Attività Rilevanti
 
@@ -660,7 +740,13 @@ VALUES (
   ]'::jsonb,
   NOW(), NOW()
 )
-ON CONFLICT (id) DO UPDATE SET step_type = EXCLUDED.step_type, form_schema = EXCLUDED.form_schema, updated_at = NOW();
+ON CONFLICT (id) DO UPDATE SET
+  description            = EXCLUDED.description,
+  system_prompt_template = EXCLUDED.system_prompt_template,
+  refine_prompt_template = EXCLUDED.refine_prompt_template,
+  form_schema            = EXCLUDED.form_schema,
+  step_type              = EXCLUDED.step_type,
+  updated_at             = NOW();
 
 -- ─── Verify ───────────────────────────────────────────────────────────────────
 -- Patent Box (Allegato A): should return 7 rows, steps 1–7, no "Relazione Tecnica"
