@@ -134,6 +134,27 @@ export default defineEventHandler(async (event) => {
       if (value === null || value === undefined || value === "") continue;
       // File fields: only a filename is stored — skip, content not available server-side
       if (field.type === "file") continue;
+      // visura_upload fields: stored as { filename, shareholders, subsidiaries, missing }
+      if (field.type === "visura_upload") {
+        const visura = value as {
+          filename?: string;
+          shareholders?: any[];
+          subsidiaries?: any[];
+          missing?: unknown;
+        };
+        lines.push(
+          [
+            "Struttura societaria estratta dalla visura camerale:",
+            "",
+            "Azionisti:",
+            formatShareholders(visura.shareholders ?? []),
+            "",
+            "Società partecipate:",
+            formatSubsidiaries(visura.subsidiaries ?? []),
+          ].join("\n"),
+        );
+        continue;
+      }
       if (field.type === "repeatable_group" && Array.isArray(value)) {
         (value as Record<string, unknown>[]).forEach((item, i) => {
           if (item.ip_linked === "No") return;
