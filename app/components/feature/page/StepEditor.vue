@@ -115,8 +115,11 @@ async function saveFormField(key: string, value: unknown): Promise<void> {
         where: { id: props.activeStep.id },
       },
     });
-  } catch {
-    // Non-blocking — local state already updated optimistically
+  } catch (err: unknown) {
+    // Non-blocking for most fields — local state already updated optimistically.
+    // Re-throw so callers that track loading state (e.g. onFileChange) can handle errors.
+    console.error("[StepEditor] saveFormField error:", err);
+    throw err;
   }
 }
 
@@ -191,6 +194,42 @@ watch(
 function isFieldVisible(field: FormField): boolean {
   if (!field.conditional) return true;
   return String(formValues.value[field.conditional.key] ?? "") === field.conditional.value;
+}
+
+// ─── File upload state (type: "file") ─────────────────────────────────────────
+
+// Per-field loading and error state keyed by field.key
+const fileUploading = ref<Record<string, boolean>>({});
+const fileUploadError = ref<Record<string, string | null>>({});
+
+// Derived: true when any file field is currently saving
+const isAnyFileUploading = computed(() =>
+  Object.values(fileUploading.value).some(Boolean),
+);
+
+// Reset file upload state when the step changes
+watch(
+  () => props.activeStep.id,
+  () => {
+    fileUploading.value = {};
+    fileUploadError.value = {};
+  },
+);
+
+async function onFileChange(fieldKey: string, event: Event): Promise<void> {
+  const filename = (event.target as HTMLInputElement).files?.[0]?.name ?? "";
+  fileUploading.value = { ...fileUploading.value, [fieldKey]: true };
+  fileUploadError.value = { ...fileUploadError.value, [fieldKey]: null };
+  try {
+    await saveFormField(fieldKey, filename);
+  } catch (err: unknown) {
+    const msg =
+      err instanceof Error ? err.message : "Errore durante il salvataggio del file";
+    fileUploadError.value = { ...fileUploadError.value, [fieldKey]: msg };
+    console.error("[StepEditor] file save error:", err);
+  } finally {
+    fileUploading.value = { ...fileUploading.value, [fieldKey]: false };
+  }
 }
 
 // ─── Visura upload state ───────────────────────────────────────────────────────
@@ -299,7 +338,7 @@ async function extractVisura(field: FormField): Promise<void> {
           size="sm"
           icon="i-lucide-sparkles"
           :loading="isGenerating"
-          :disabled="isGenerating"
+          :disabled="isGenerating || isAnyFileUploading"
           @click="emit('generate')"
         >
           Genera bozza AI
@@ -309,7 +348,7 @@ async function extractVisura(field: FormField): Promise<void> {
           variant="outline"
           color="neutral"
           size="sm"
-          :disabled="isGenerating"
+          :disabled="isGenerating || isAnyFileUploading"
           @click="emit('refine')"
         >
           Raffina
@@ -644,22 +683,43 @@ async function extractVisura(field: FormField): Promise<void> {
                 <p v-if="field.hint" class="mb-1.5 text-xs" style="color: var(--color-text-muted)">
                   {{ field.hint }}
                 </p>
-                <div class="flex items-center gap-2">
-                  <input
-                    type="file"
-                    :accept="(field.accept ?? []).join(',')"
-                    :disabled="isGenerating"
-                    class="block w-full text-xs file:mr-3 file:rounded file:border-0 file:px-3 file:py-1 file:text-xs file:font-medium"
-                    style="color: var(--color-text-secondary)"
-                    @change="saveFormField(field.key, ($event.target as HTMLInputElement).files?.[0]?.name ?? '')"
+                <div class="flex flex-col gap-2">
+                  <div class="flex items-center gap-2">
+                    <input
+                      type="file"
+                      :accept="(field.accept ?? []).join(',')"
+                      :disabled="isGenerating || fileUploading[field.key]"
+                      class="block w-full text-xs file:mr-3 file:rounded file:border-0 file:px-3 file:py-1 file:text-xs file:font-medium"
+                      style="color: var(--color-text-secondary)"
+                      @change="onFileChange(field.key, $event)"
+                    />
+                    <!-- Loading indicator -->
+                    <span
+                      v-if="fileUploading[field.key]"
+                      class="flex shrink-0 items-center gap-1.5 text-xs"
+                      style="color: var(--color-text-muted)"
+                    >
+                      <UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />
+                      Caricamento...
+                    </span>
+                    <!-- Saved filename (shown when not loading) -->
+                    <span
+                      v-else-if="formValues[field.key]"
+                      class="shrink-0 text-xs"
+                      style="color: var(--color-text-muted)"
+                    >
+                      {{ formValues[field.key] }}
+                    </span>
+                  </div>
+                  <!-- Upload error -->
+                  <UAlert
+                    v-if="fileUploadError[field.key]"
+                    color="error"
+                    variant="soft"
+                    :description="fileUploadError[field.key] ?? ''"
+                    icon="i-lucide-circle-alert"
+                    size="sm"
                   />
-                  <span
-                    v-if="formValues[field.key]"
-                    class="shrink-0 text-xs"
-                    style="color: var(--color-text-muted)"
-                  >
-                    {{ formValues[field.key] }}
-                  </span>
                 </div>
               </template>
 
