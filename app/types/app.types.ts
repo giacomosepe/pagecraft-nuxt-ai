@@ -77,6 +77,7 @@ export interface StepRecord {
   order: number;
   title: string;
   status: string;
+  step_type: string | null;
   user_context: string | null;
   committed_output: string | null;
   system_prompt_template: string | null;
