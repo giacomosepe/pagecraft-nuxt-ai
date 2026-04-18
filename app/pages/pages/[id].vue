@@ -191,8 +191,8 @@ async function exportWord(): Promise<void> {
 
       <!-- Center + Right panels -->
       <div
-        class="grid min-w-0 flex-1"
-        style="grid-template-columns: 2fr 1fr"
+        class="grid min-w-0 flex-1 overflow-hidden"
+        style="grid-template-columns: 2fr 1fr; grid-template-rows: 1fr"
       >
         <!-- Center: input + controls -->
         <StepEditor
