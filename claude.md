@@ -1,5 +1,5 @@
 # PageCraft — CLAUDE.md
-# Last updated: April 17, 2026
+# Last updated: April 18, 2026
 # Read this file fully before starting any task.
 # Subdirectory CLAUDE.md files load automatically — do not @import them here.
 # For history and decisions: ~/Claude/_projects/pagecraft/changelog.md
@@ -24,8 +24,9 @@ Read `codebase-map.md` in the repo root before opening any source file.
 
 Tasks are scoped and routed by the PM before reaching Claude Code.
 
-**Execute directly** when the spec is fully prescriptive (exact code, exact line numbers).
-**Spawn a subagent** when the task is open-ended, requires design judgment, or is labelled in Linear.
+**Execute directly** when the spec is fully prescriptive — exact file, exact change, no design judgment needed.
+**Spawn a subagent** when the task is open-ended, crosses multiple layers, or requires domain judgment.
+**Use the label as a hint**, not a hard instruction — if the task is simple and prescriptive, execute directly regardless of label.
 
 | Linear label | Subagent | Owns |
 |---|---|---|
@@ -35,7 +36,7 @@ Tasks are scoped and routed by the PM before reaching Claude Code.
 | `🔍 Agent: evaluator` | `evaluator` | Spec compliance, ACs, regression checks |
 | `✍️ Agent: prompt-writer` | `prompt-writer` | AI prompt design and review |
 
-Run `agent evaluator` after any issue touching high-risk files or closing a milestone.
+Always run evaluator after any issue touching high-risk files or closing a milestone.
 Never run two agents simultaneously on the same repo.
 
 **When a Linear issue lists concrete values from source files (options, field names, prompts),
@@ -130,7 +131,7 @@ When writing or revising Linear issues, read `~/Claude/_skills/linear-issue-writ
 
 ---
 
-## BUILD STATUS — April 17, 2026
+## BUILD STATUS — April 18, 2026
 
 | Area | Status |
 |---|---|
@@ -138,6 +139,7 @@ When writing or revising Linear issues, read `~/Claude/_skills/linear-issue-writ
 | Step editor (3-panel, generate, refine, commit) | ✅ Working |
 | Generation pipeline (form_data + cross-step context) | ✅ ENGNEER-93 |
 | Word export | ✅ ENGNEER-87 |
+| Step 3 visura upload + generation | ✅ ENGNEER-158, 160, 162 |
 | V0 exit test | ⬅️ ENGNEER-98 — next |
 
 **Known issues:**
