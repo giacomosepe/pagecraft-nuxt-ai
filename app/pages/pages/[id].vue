@@ -191,20 +191,18 @@ async function exportWord(): Promise<void> {
 
       <!-- Center + Right panels -->
       <div
-        class="grid min-w-0 flex-1"
+        class="grid h-full min-w-0 flex-1"
         style="grid-template-columns: 2fr 1fr"
       >
-        <!-- Center: input + controls (full-panel scroll) -->
-        <div class="overflow-y-auto">
-          <StepEditor
-            v-if="activeStep"
-            :active-step="activeStep"
-            :is-generating="isGenerating"
-            :error-msg="errorMsg"
-            @generate="generate"
-            @refine="refine"
-          />
-        </div>
+        <!-- Center: input + controls -->
+        <StepEditor
+          v-if="activeStep"
+          :active-step="activeStep"
+          :is-generating="isGenerating"
+          :error-msg="errorMsg"
+          @generate="generate"
+          @refine="refine"
+        />
 
         <!-- Right: generated output -->
         <StepOutput

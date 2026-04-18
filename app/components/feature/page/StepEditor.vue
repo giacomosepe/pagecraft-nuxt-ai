@@ -314,7 +314,7 @@ async function extractVisura(field: FormField): Promise<void> {
 
 <template>
   <div
-    class="flex flex-col"
+    class="flex h-full flex-col"
     style="background-color: var(--color-surface)"
   >
     <!-- Step header -->
@@ -378,8 +378,8 @@ async function extractVisura(field: FormField): Promise<void> {
       </div>
     </div>
 
-    <!-- Form content -->
-    <div class="flex flex-col gap-4 p-4">
+    <!-- Scrollable form content -->
+    <div class="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
 
       <!-- Form fields -->
       <template v-if="formFields.length">
