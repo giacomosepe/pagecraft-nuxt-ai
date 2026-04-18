@@ -1,5 +1,5 @@
 # PageCraft — Codebase Map
-> Last updated: 2026-04-18 (post ENGNEER-155, 156, 157, 158, 160, 161, 162)
+> Last updated: 2026-04-18 (post ENGNEER-154)
 > Purpose: index of what exists and its current state. Instructions for what to change live in Linear issue spec documents.
 
 ---
@@ -70,13 +70,14 @@ Accepts PDF upload, sends to Claude as native document, returns same shape as ex
 ### `app/components/feature/page/StepEditor.vue` — ~520 lines
 Center panel. Renders form fields from `form_schema` and action buttons.
 - `FormField` interface: `text | textarea | select | number | file | multiselect | repeatable_group | visura_upload`
-- `visura_upload` type: PDF upload → calls `/api/visura/extract-pdf` → stores result in `form_data[field.key]` as `{ filename, shareholders, subsidiaries, missing }`. Shows loading/success/error state.
-- `isVisuraReady` computed: `true` when no `visura_upload` field exists on this step, OR when `form_data[field.key]` is non-null. **Non-null check handles previous-session uploads — extraction result persists in form_data across page loads.**
-- "Genera bozza AI" disabled when `!isVisuraReady || isGenerating`
+- `isTypeAStep` computed: `true` when `activeStep.step_type === 'type_a'`. Buttons disabled + greyed, subtitle swapped to template-fill text. ✅ ENGNEER-154
+- `visura_upload` type: PDF upload → calls `/api/visura/extract-pdf` → stores result in `form_data[field.key]`. Shows loading/success/error state.
+- `isVisuraReady` computed: `true` when no `visura_upload` field exists, OR when `form_data[field.key]` is non-null. Non-null check handles previous-session uploads.
+- "Genera bozza AI" disabled when `!isVisuraReady || isGenerating || isTypeAStep`
 - `select` type: uses `:items="field.options ?? []"` (NuxtUI v4 — not `:options`)
 - `repeatable_group`: collapsible cards, add/remove, auto-collapse at 3+
-- System prompt toggle: scrollable container (`max-h-64 overflow-y-auto`), `whitespace-pre-wrap font-mono text-xs` ✅ ENGNEER-157
-- `saveFormField()`: persists to `steps.form_data` via `/api/db/mutate`. Silent catch — ENGNEER-159 pending.
+- System prompt toggle: scrollable (`max-h-64 overflow-y-auto`), `whitespace-pre-wrap font-mono text-xs` ✅ ENGNEER-157
+- `saveFormField()`: persists to `steps.form_data` via `/api/db/mutate`. Logs errors, re-throws. ✅ ENGNEER-159
 
 ### `app/components/feature/page/StepOutput.vue` — 167 lines
 Right panel. Displays streamed AI output with commit/discard. Has expand modal.
@@ -91,7 +92,7 @@ Three-panel editor. Thin orchestrator. Uses `usePage` + `useGeneration`. Word ex
 All AI generation state. Returns `{ output, isGenerating, isCommitting, errorMsg, generate, refine, commit, discard }`.
 
 ### `app/composables/usePage.ts` — 76 lines
-Returns `{ page, steps, clientData, pending, error }`. Steps include `form_data` and `form_schema`.
+Returns `{ page, steps, clientData, pending, error }`. Steps include `form_data`, `form_schema`, and `step_type` (joined from `framework_steps`).
 
 ### `app/composables/useClientFields.ts` — 232 lines
 Client-side only. Cannot be imported in server routes.
@@ -100,14 +101,14 @@ Client-side only. Cannot be imported in server routes.
 Generic write route. Whitelisted tables: `clients`, `folders`, `pages`, `files`, `steps`, `generations`. RLS applies.
 
 ### `prisma/seed.sql`
-Framework steps seeded here. `ON CONFLICT DO UPDATE` includes all fields (ENGNEER-146 ✅).
-Step 3 form_schema: `visura_pdf` (visura_upload type) + `note_integrative` (textarea, optional) — ENGNEER-162 ✅.
+All 7 Patent Box steps + all 11 Relazione Tecnica steps fully seeded with prompts and form_schemas.
+`ON CONFLICT DO UPDATE` includes all fields. Step 3 has `visura_upload` + `note_integrative` fields. ✅
 
 ---
 
 ## Types — `app/types/app.types.ts`
-- `StepRecord`: `{ id, order, title, status, user_context, committed_output, system_prompt_template, refine_prompt_template, form_schema, form_data }`
-- `step_type` is NOT on `StepRecord` — lives on `framework_steps`. Steps inherit `form_schema` at creation (ENGNEER-148 ✅).
+- `StepRecord`: `{ id, order, title, status, step_type, user_context, committed_output, system_prompt_template, refine_prompt_template, form_schema, form_data }`
+- `step_type` IS on StepRecord and IS fetched by usePage via join on framework_steps. ✅ ENGNEER-154
 
 ---
 
@@ -122,8 +123,7 @@ Step 3 form_schema: `visura_pdf` (visura_upload type) + `note_integrative` (text
 ---
 
 ## Open issues (pending)
-- **ENGNEER-154**: Grey out AI buttons on type_a steps, fix subtitle, merge anno fiscale → `StepEditor.vue` + `seed.sql`
-- **ENGNEER-159**: Fix silent catch in `saveFormField()` → `StepEditor.vue`
+- **ENGNEER-159**: Fix silent catch in `saveFormField()` → already fixed in ENGNEER-154 merge, verify and close
 
 ---
 
@@ -131,6 +131,6 @@ Step 3 form_schema: `visura_pdf` (visura_upload type) + `note_integrative` (text
 - `nuxi typecheck`: `styleText requires Node v20.12+` — pre-existing, ignore
 - White screen after branch switch: `rm -rf .nuxt && npm run dev`
 - `folders.name` legacy column — tracked in ENGNEER-103 (backlog)
-- `step_type` is on `framework_steps` not `steps` — check form_schema structure if needed
 - NuxtUI v4: USelect uses `:items`, not `:options`
 - `visura_upload` disable logic checks both in-memory extraction ref AND `formValues[field.key]` — the latter handles previous-session uploads that persisted to DB
+- type_b steps (Step 3) correctly show active AI buttons — generation is the point of that step type
