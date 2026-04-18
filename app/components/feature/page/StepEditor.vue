@@ -811,7 +811,7 @@ async function extractVisura(field: FormField): Promise<void> {
             style="background-color: var(--color-surface-subtle)"
           >
             <pre
-              class="whitespace-pre-wrap text-xs"
+              class="max-h-64 overflow-y-auto whitespace-pre-wrap font-mono text-xs"
               style="color: var(--color-text-muted)"
               >{{ activeStep.system_prompt_template }}</pre
             >
