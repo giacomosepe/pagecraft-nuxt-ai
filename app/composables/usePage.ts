@@ -29,7 +29,7 @@ export function usePage(pageId: string) {
         supabase
           .from("steps")
           .select(
-            "id, order, title, status, user_context, committed_output, system_prompt_template, refine_prompt_template, form_schema, form_data",
+            "id, order, title, status, user_context, committed_output, system_prompt_template, refine_prompt_template, form_schema, form_data, framework_steps!framework_step_id(step_type)",
           )
           .eq("page_id", pageId)
           .order("order", { ascending: true }),
@@ -41,7 +41,10 @@ export function usePage(pageId: string) {
       }
       return {
         page: pageRes.data as PageRecord,
-        steps: (stepsRes.data ?? []) as StepRecord[],
+        steps: (stepsRes.data ?? []).map((s: Record<string, unknown>) => ({
+            ...s,
+            step_type: (s.framework_steps as { step_type: string } | null)?.step_type ?? null,
+          })) as StepRecord[],
       };
     },
     { server: false },

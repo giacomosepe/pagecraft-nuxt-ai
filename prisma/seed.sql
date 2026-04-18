@@ -120,8 +120,7 @@ and tax year into the fixed legal boilerplate.',
 boilerplate — only correct factual errors (company name, tax year). Return
 only the revised section text.',
   '[
-    {"key": "tax_year_start", "label": "Anno fiscale (inizio)", "type": "number", "placeholder": "es. 2024", "aiSuggestable": false},
-    {"key": "tax_year_end", "label": "Anno fiscale (fine)", "type": "number", "placeholder": "es. 2024", "aiSuggestable": false}
+    {"key": "esercizio_fiscale", "label": "Esercizio fiscale", "type": "text", "placeholder": "es. 2023", "required": true}
   ]',
   NOW(),
   NOW()

@@ -183,6 +183,7 @@ function instanceSummary(
 // ─── UI state ─────────────────────────────────────────────────────────────────
 const showSystemPrompt = ref(false);
 const isAiStep = computed(() => !!props.activeStep.system_prompt_template);
+const isTypeAStep = computed(() => props.activeStep.step_type === "type_a");
 
 watch(
   () => props.activeStep.id,
@@ -336,8 +337,12 @@ async function extractVisura(field: FormField): Promise<void> {
         </h2>
       </div>
       <p class="mt-1 text-xs" style="color: var(--color-text-muted)">
-        Descrivi cosa approfondire — l'AI combina le tue istruzioni con il
-        profilo aziendale automaticamente.
+        <template v-if="isTypeAStep">
+          Compila i campi — il contenuto verrà inserito automaticamente nel documento.
+        </template>
+        <template v-else>
+          Descrivi cosa approfondire — l'AI combina le tue istruzioni con il profilo aziendale automaticamente.
+        </template>
       </p>
     </div>
 
@@ -353,7 +358,8 @@ async function extractVisura(field: FormField): Promise<void> {
           size="sm"
           icon="i-lucide-sparkles"
           :loading="isGenerating"
-          :disabled="isGenerating || isAnyFileUploading || !isVisuraReady"
+          :disabled="isGenerating || isAnyFileUploading || !isVisuraReady || isTypeAStep"
+          :class="isTypeAStep ? 'opacity-50 cursor-not-allowed' : ''"
           @click="emit('generate')"
         >
           Genera bozza AI
@@ -363,7 +369,8 @@ async function extractVisura(field: FormField): Promise<void> {
           variant="outline"
           color="neutral"
           size="sm"
-          :disabled="isGenerating || isAnyFileUploading"
+          :disabled="isGenerating || isAnyFileUploading || isTypeAStep"
+          :class="isTypeAStep ? 'opacity-50 cursor-not-allowed' : ''"
           @click="emit('refine')"
         >
           Raffina
