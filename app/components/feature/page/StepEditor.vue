@@ -207,6 +207,21 @@ const isAnyFileUploading = computed(() =>
   Object.values(fileUploading.value).some(Boolean),
 );
 
+// ─── Visura gate computeds ─────────────────────────────────────────────────────
+// isVisuraRequired: true when the current step has a visura_upload field
+const isVisuraRequired = computed(() =>
+  formFields.value.some((f) => f.type === "visura_upload"),
+);
+
+// isVisuraReady: true when no visura is required, OR when extraction result is
+// present (either from this session's visuraResult or a previously saved formValues entry)
+const isVisuraReady = computed(() => {
+  if (!isVisuraRequired.value) return true;
+  return formFields.value
+    .filter((f) => f.type === "visura_upload")
+    .some((f) => visuraResult.value[f.key] != null || formValues.value[f.key] != null);
+});
+
 // Reset file upload state when the step changes
 watch(
   () => props.activeStep.id,
@@ -338,7 +353,7 @@ async function extractVisura(field: FormField): Promise<void> {
           size="sm"
           icon="i-lucide-sparkles"
           :loading="isGenerating"
-          :disabled="isGenerating || isAnyFileUploading"
+          :disabled="isGenerating || isAnyFileUploading || !isVisuraReady"
           @click="emit('generate')"
         >
           Genera bozza AI
@@ -668,6 +683,15 @@ async function extractVisura(field: FormField): Promise<void> {
                       Carica un nuovo PDF e clicca "Estrai dalla visura" per aggiornare i dati.
                     </p>
                   </div>
+
+                  <!-- Hint: visura required but not yet extracted -->
+                  <p
+                    v-if="isVisuraRequired && !isVisuraReady"
+                    class="text-xs"
+                    style="color: var(--color-text-muted)"
+                  >
+                    Carica la visura per abilitare la generazione
+                  </p>
                 </div>
               </template>
 
