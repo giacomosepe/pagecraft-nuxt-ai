@@ -343,6 +343,12 @@ Rationale:
 
 `type_c` should focus on fact collection for prose generation. Keep it simpler than `type_b` unless a later product need justifies expanding it.
 
+Transitional compatibility note:
+
+- the current implementation temporarily allows `repeatable_group` in `type_c` because at least one existing framework step still depends on it
+- this should be treated as compatibility behavior, not as the preferred target architecture
+- the target model still treats `repeatable_group` as native to `type_b` unless a future product decision confirms a real `type_c` use case
+
 ## Non-Negotiable Rules
 
 These rules should hold across implementation unless a later architecture change replaces them explicitly.

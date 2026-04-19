@@ -72,12 +72,40 @@ export interface FrameworkItem {
 
 // ─── Page + Steps ─────────────────────────────────────────────────────────────
 
+export type StepType = "type_a" | "type_b" | "type_c";
+export type StepFieldType =
+  | "text"
+  | "textarea"
+  | "select"
+  | "number"
+  | "file"
+  | "file_upload_generation"
+  | "multiselect"
+  | "repeatable_group"
+  | "visura_upload"
+  | "file_upload_extraction";
+
+export interface StepFormField {
+  key: string;
+  label: string;
+  type: StepFieldType;
+  options?: string[];
+  placeholder?: string;
+  hint?: string;
+  required?: boolean;
+  accept?: string[];
+  conditional?: { key: string; value: string };
+  minItems?: number;
+  addLabel?: string;
+  fields?: StepFormField[];
+}
+
 export interface StepRecord {
   id: string;
   order: number;
   title: string;
   status: string;
-  step_type: string | null;
+  step_type: StepType | null;
   user_context: string | null;
   committed_output: string | null;
   system_prompt_template: string | null;
