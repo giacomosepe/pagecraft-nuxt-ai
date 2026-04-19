@@ -589,11 +589,11 @@ async function extractVisura(field: FormField): Promise<void> {
                 </p>
 
                 <!-- File picker + extract button -->
-                <div class="flex flex-col gap-2">
-                  <div class="flex items-center gap-2">
+                <div class="flex flex-col gap-6">
+                  <div class="flex items-center gap-12">
                     <!-- Hidden native input — triggered programmatically -->
                     <input
-                      :ref="(el) => { visuraInputRefs.value[field.key] = el as HTMLInputElement }"
+                      :ref="(el) => { visuraInputRefs[field.key] = el as HTMLInputElement }"
                       type="file"
                       accept=".pdf"
                       class="sr-only"
