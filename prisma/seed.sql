@@ -179,7 +179,7 @@ section text.',
     {
       "key": "visura_pdf",
       "label": "Visura Camerale (PDF)",
-      "type": "visura_upload",
+      "type": "file_upload_extraction",
       "hint": "Carica la Visura Camerale Storica in formato PDF. L''AI estrarrà automaticamente soci, partecipate e governance.",
       "required": false,
       "accept": [".pdf"]
@@ -258,7 +258,7 @@ For sub-section 3: keep strictly to what was provided. Do not invent.
 Return only the revised section text.$refineprompt$,
   $schema$[
     {"key": "context_note", "label": "Contesto generale delle attività R&S", "type": "textarea", "placeholder": "Breve descrizione del contesto complessivo delle attività...", "required": false},
-    {"key": "reference_document", "label": "Documento di riferimento del cliente", "type": "file", "accept": [".pdf", ".docx", ".pptx"], "hint": "Utilizzato dall'AI come contesto — non viene incluso direttamente nel documento", "required": false},
+    {"key": "reference_document", "label": "Documento di riferimento del cliente", "type": "file_upload_generation", "accept": [".pdf", ".docx", ".pptx"], "hint": "Utilizzato dall'AI come contesto — non viene incluso direttamente nel documento", "required": false},
     {"key": "activities", "label": "Attività rilevanti", "type": "repeatable_group", "minItems": 1, "addLabel": "Aggiungi attività", "fields": [
       {"key": "ip_linked", "label": "Riconducibile alla privativa oggetto di agevolazione?", "type": "select", "options": ["Sì", "Parzialmente", "No"], "required": false},
       {"key": "context", "label": "Contesto generale del progetto", "type": "textarea", "required": true},
@@ -335,6 +335,54 @@ ON CONFLICT (id) DO UPDATE SET
   form_schema            = EXCLUDED.form_schema,
   step_type              = EXCLUDED.step_type,
   updated_at             = NOW();
+
+-- Backfill current step copies after step-schema contract changes
+UPDATE framework_steps
+SET form_schema = '[
+  {
+    "key": "visura_pdf",
+    "label": "Visura Camerale (PDF)",
+    "type": "file_upload_extraction",
+    "hint": "Carica la Visura Camerale Storica in formato PDF. L''AI estrarrà automaticamente soci, partecipate e governance.",
+    "required": false,
+    "accept": [".pdf"]
+  },
+  {
+    "key": "note_integrative",
+    "type": "textarea",
+    "label": "Note integrative (opzionale)",
+    "placeholder": "Informazioni aggiuntive sulla struttura societaria non presenti nella visura...",
+    "required": false
+  }
+]'
+WHERE id = '11111111-0000-0000-0000-000000000003';
+
+UPDATE framework_steps
+SET form_schema = $schema$[
+  {"key": "context_note", "label": "Contesto generale delle attività R&S", "type": "textarea", "placeholder": "Breve descrizione del contesto complessivo delle attività...", "required": false},
+  {"key": "reference_document", "label": "Documento di riferimento del cliente", "type": "file_upload_generation", "accept": [".pdf", ".docx", ".pptx"], "hint": "Utilizzato dall'AI come contesto — non viene incluso direttamente nel documento", "required": false},
+  {"key": "activities", "label": "Attività rilevanti", "type": "repeatable_group", "minItems": 1, "addLabel": "Aggiungi attività", "fields": [
+    {"key": "ip_linked", "label": "Riconducibile alla privativa oggetto di agevolazione?", "type": "select", "options": ["Sì", "Parzialmente", "No"], "required": false},
+    {"key": "context", "label": "Contesto generale del progetto", "type": "textarea", "required": true},
+    {"key": "objectives", "label": "Obiettivo del progetto e risultati attesi", "type": "textarea", "required": true},
+    {"key": "phases", "label": "Fasi di sviluppo (sintesi)", "type": "textarea", "required": false},
+    {"key": "results", "label": "Risultati conseguiti", "type": "textarea", "required": false}
+  ]},
+  {"key": "investor_nature", "label": "Natura di investitore dell'impresa", "type": "textarea", "placeholder": "Sezione in sviluppo — inserire manualmente se disponibile", "required": false, "hint": "Verrà strutturata con prompt dedicato in FPB-4b. Se vuoto, il documento mostrerà [SEZIONE DA COMPLETARE]."},
+  {"key": "has_associated_ops", "label": "L'impresa ha operazioni con imprese associate o collegate?", "type": "select", "options": ["No", "Sì"], "defaultValue": "No", "required": true},
+  {"key": "associated_ops_description", "label": "Descrizione delle operazioni con imprese associate", "type": "textarea", "required": false, "conditional": {"key": "has_associated_ops", "value": "Sì"}, "placeholder": "Descrivere le operazioni intercorse con le imprese associate e/o collegate..."}
+]$schema$
+WHERE id = '11111111-0000-0000-0000-000000000004';
+
+UPDATE steps s
+SET form_schema = fs.form_schema
+FROM framework_steps fs
+WHERE fs.id = s.framework_step_id
+  AND fs.id IN (
+    '11111111-0000-0000-0000-000000000003',
+    '11111111-0000-0000-0000-000000000004'
+  )
+  AND s.form_schema IS DISTINCT FROM fs.form_schema;
 
 -- Step 6: Modello Organizzativo (type_c)
 
@@ -456,10 +504,11 @@ ON CONFLICT (id) DO UPDATE SET
 -- Standalone technical report framework. Separate from the main Patent Box.
 -- 11 steps, all type_c.
 
-INSERT INTO frameworks (id, name, description, is_public, created_at, updated_at)
+INSERT INTO frameworks (id, name, slug, description, is_public, created_at, updated_at)
 VALUES (
   'b2c3d4e5-f6a7-8901-bcde-f12345678901',
   'Relazione Tecnica — Patent Box',
+  'relazione-tecnica-patent-box',
   'Standalone technical report required for Patent Box. Prepared by the R&D responsible and countersigned by the legal representative. Separate document from the Allegato A.',
   true,
   NOW(),
@@ -467,6 +516,7 @@ VALUES (
 )
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
+  slug = EXCLUDED.slug,
   description = EXCLUDED.description,
   updated_at = NOW();
 

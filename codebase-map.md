@@ -47,7 +47,7 @@ Note: `server/api/extract/` does NOT exist. Any reference to `extract/document.p
 Main AI generation route. Handles generate and refine modes with streaming.
 - Zod schema (line 9): `stepId`, `pageId`, `mode` (generate|refine), `existingOutput` (optional)
 - Step select (lines 54–70): fetches `id, order, title, system_prompt_template, refine_prompt_template, form_data, form_schema` + nested page → client data
-- `serializeFormData()`: serializes form_data using form_schema. Handles: `file` (skip), `visura_upload` (format shareholders/subsidiaries as Italian prose), `repeatable_group` (skip if ip_linked=No), `conditional` (skip if condition not met). Default: `label: value`.
+- `serializeFormData()`: serializes form_data using form_schema. Handles legacy/current upload naming for extraction and generation context, formats extracted shareholder/subsidiary data as Italian prose, skips `repeatable_group` items when `ip_linked=No`, and skips unmet `conditional` fields. Default: `label: value`.
 - `buildPriorContext()`: concatenates prior committed outputs. Truncates at ~24k chars — keeps first 3 + last 3 steps.
 - User message order: companyContext → priorContext → formDataBlock → existingOutput (refine) → closing instruction
 
@@ -67,16 +67,35 @@ Accepts PDF upload, sends to Claude as native document, returns same shape as ex
 - Accepts `multipart/form-data` with field `file` (PDF, max 10 MB)
 - Converts buffer to base64, sends as `type: "document"` — no text extraction needed
 
-### `app/components/feature/page/StepEditor.vue` — ~520 lines
-Center panel. Renders form fields from `form_schema` and action buttons.
-- `FormField` interface: `text | textarea | select | number | file | multiselect | repeatable_group | visura_upload`
-- `visura_upload` type: PDF upload → calls `/api/visura/extract-pdf` → stores result in `form_data[field.key]` as `{ filename, shareholders, subsidiaries, missing }`. Shows loading/success/error state.
-- `isVisuraReady` computed: `true` when no `visura_upload` field exists on this step, OR when `form_data[field.key]` is non-null. **Non-null check handles previous-session uploads — extraction result persists in form_data across page loads.**
-- "Genera bozza AI" disabled when `!isVisuraReady || isGenerating`
-- `select` type: uses `:items="field.options ?? []"` (NuxtUI v4 — not `:options`)
-- `repeatable_group`: collapsible cards, add/remove, auto-collapse at 3+
-- System prompt toggle: scrollable container (`max-h-64 overflow-y-auto`), `whitespace-pre-wrap font-mono text-xs` ✅ ENGNEER-157
-- `saveFormField()`: persists to `steps.form_data` via `/api/db/mutate`. Silent catch — ENGNEER-159 pending.
+### `app/components/feature/page/StepEditor.vue` — ~500 lines
+Center panel. Now acts as the step assembler rather than the all-in-one field renderer.
+- Reads `activeStep.step_type` + `form_schema`
+- Centralizes step behavior in `STEP_TYPE_CONFIG`
+- Computes `renderableFields` / `unsupportedFields` from step-type compatibility
+- Delegates field rendering to extracted components
+- Keeps upload/extraction wiring and AI gating logic
+- "Genera bozza AI" is gated by generation state, upload state, and extraction readiness for visible extraction fields
+- Transitional compatibility remains in code for legacy field names (`visura_upload`, `file`) and temporary `type_c` + `repeatable_group` support
+
+### `app/components/feature/page/StepFieldShell.vue`
+Shared field wrapper for label, hint, and required marker.
+
+### `app/components/feature/page/StepSimpleField.vue`
+Renders `text`, `textarea`, `number`, `select`, and `multiselect`.
+
+### `app/components/feature/page/StepRepeatableGroupField.vue`
+Renders `repeatable_group` with add/remove, collapse, and nested field rendering.
+
+### `app/components/feature/page/StepExtractionUploadField.vue`
+Renders extraction upload UI (`visura_upload` / `file_upload_extraction`).
+- PDF upload → `/api/visura/extract-pdf`
+- Persists structured extraction result in `form_data[field.key]`
+- Shows loading, success, missing-data summary, and prior saved-state notice
+
+### `app/components/feature/page/StepGenerationUploadField.vue`
+Renders generation-supporting upload UI (`file` / `file_upload_generation`).
+- Saves selected filename into `steps.form_data`
+- Used as AI prompt context, not document output
 
 ### `app/components/feature/page/StepOutput.vue` — 167 lines
 Right panel. Displays streamed AI output with commit/discard. Has expand modal.
@@ -90,8 +109,19 @@ Three-panel editor. Thin orchestrator. Uses `usePage` + `useGeneration`. Word ex
 ### `app/composables/useGeneration.ts` — 165 lines
 All AI generation state. Returns `{ output, isGenerating, isCommitting, errorMsg, generate, refine, commit, discard }`.
 
+### `app/composables/useStepForm.ts`
+Owns form state and persistence for `StepEditor`.
+- normalizes `form_data`
+- preloads empty instances for `repeatable_group` when `minItems >= 1`
+- serializes `steps.form_data` saves through a promise queue to avoid stale overwrites
+- exposes repeatable-group helpers and shared field visibility logic
+- surfaces save errors through `formSaveError`
+
 ### `app/composables/usePage.ts` — 76 lines
-Returns `{ page, steps, clientData, pending, error }`. Steps include `form_data` and `form_schema`.
+Returns `{ page, steps, clientData, pending, error }`.
+- joins `framework_steps!framework_step_id(step_type)`
+- maps `step_type` onto each returned `StepRecord`
+- steps include `form_data` and `form_schema`
 
 ### `app/composables/useClientFields.ts` — 232 lines
 Client-side only. Cannot be imported in server routes.
@@ -101,13 +131,19 @@ Generic write route. Whitelisted tables: `clients`, `folders`, `pages`, `files`,
 
 ### `prisma/seed.sql`
 Framework steps seeded here. `ON CONFLICT DO UPDATE` includes all fields (ENGNEER-146 ✅).
-Step 3 form_schema: `visura_pdf` (visura_upload type) + `note_integrative` (textarea, optional) — ENGNEER-162 ✅.
+- Patent Box Step 3 now uses `file_upload_extraction`
+- Patent Box Step 4 reference document now uses `file_upload_generation`
+- Includes backfill SQL to align existing `steps.form_schema` rows with those schema-name changes
+- Also seeds the `Relazione Tecnica — Patent Box` framework with a required `slug`
 
 ---
 
 ## Types — `app/types/app.types.ts`
-- `StepRecord`: `{ id, order, title, status, user_context, committed_output, system_prompt_template, refine_prompt_template, form_schema, form_data }`
-- `step_type` is NOT on `StepRecord` — lives on `framework_steps`. Steps inherit `form_schema` at creation (ENGNEER-148 ✅).
+- `StepType`: `type_a | type_b | type_c`
+- `StepFieldType`: shared field-type union used by `StepEditor` and extracted field components
+- `StepFormField`: shared schema shape for `form_schema`
+- `StepRecord`: includes `step_type`, `form_schema`, and `form_data`
+- `step_type` still lives in `framework_steps` at the DB level, but `usePage()` joins and maps it onto the UI `StepRecord`
 
 ---
 
@@ -122,8 +158,7 @@ Step 3 form_schema: `visura_pdf` (visura_upload type) + `note_integrative` (text
 ---
 
 ## Open issues (pending)
-- **ENGNEER-154**: Grey out AI buttons on type_a steps, fix subtitle, merge anno fiscale → `StepEditor.vue` + `seed.sql`
-- **ENGNEER-159**: Fix silent catch in `saveFormField()` → `StepEditor.vue`
+- Keep this section light and verify in Linear before relying on it; the issue tracker is the source of truth for active work.
 
 ---
 
@@ -131,6 +166,7 @@ Step 3 form_schema: `visura_pdf` (visura_upload type) + `note_integrative` (text
 - `nuxi typecheck`: `styleText requires Node v20.12+` — pre-existing, ignore
 - White screen after branch switch: `rm -rf .nuxt && npm run dev`
 - `folders.name` legacy column — tracked in ENGNEER-103 (backlog)
-- `step_type` is on `framework_steps` not `steps` — check form_schema structure if needed
+- `step_type` is on `framework_steps`, not `steps`; UI gets it via the join in `usePage.ts`
 - NuxtUI v4: USelect uses `:items`, not `:options`
-- `visura_upload` disable logic checks both in-memory extraction ref AND `formValues[field.key]` — the latter handles previous-session uploads that persisted to DB
+- extraction readiness checks both in-memory extraction results and persisted `form_data`, so previous-session uploads remain valid across reloads
+- code still supports legacy upload field names (`visura_upload`, `file`) for compatibility during the step-assembly transition
