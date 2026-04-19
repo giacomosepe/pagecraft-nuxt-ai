@@ -252,6 +252,7 @@ async function onFileChange(fieldKey: string, event: Event): Promise<void> {
 
 // Per-field state keyed by field.key
 const visuraFile = ref<Record<string, File | null>>({});
+const visuraInputRefs = ref<Record<string, HTMLInputElement | null>>({});
 const visuraExtracting = ref<Record<string, boolean>>({});
 const visuraError = ref<Record<string, string | null>>({});
 const visuraResult = ref<Record<string, VisuraExtractResult | null>>({});
@@ -379,7 +380,7 @@ async function extractVisura(field: FormField): Promise<void> {
     </div>
 
     <!-- Scrollable content -->
-    <div class="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
+    <div class="flex flex-1 flex-col gap-4 overflow-y-auto p-4 pb-48">
 
       <!-- Form fields -->
       <template v-if="formFields.length">
@@ -588,16 +589,36 @@ async function extractVisura(field: FormField): Promise<void> {
                 </p>
 
                 <!-- File picker + extract button -->
-                <div class="flex flex-col gap-2">
-                  <div class="flex items-center gap-2">
+                <div class="flex flex-col gap-6">
+                  <div class="flex items-center gap-12">
+                    <!-- Hidden native input — triggered programmatically -->
                     <input
+                      :ref="(el) => { visuraInputRefs[field.key] = el as HTMLInputElement }"
                       type="file"
                       accept=".pdf"
+                      class="sr-only"
                       :disabled="isGenerating || visuraExtracting[field.key]"
-                      class="block w-full text-xs file:mr-3 file:rounded file:border-0 file:px-3 file:py-1 file:text-xs file:font-medium"
-                      style="color: var(--color-text-secondary)"
                       @change="onVisuraFileChange(field.key, $event)"
                     />
+                    <!-- Styled trigger -->
+                    <UButton
+                      type="button"
+                      variant="outline"
+                      color="neutral"
+                      size="sm"
+                      icon="i-lucide-paperclip"
+                      :disabled="isGenerating || visuraExtracting[field.key]"
+                      @click="visuraInputRefs[field.key]?.click()"
+                    >
+                      Scegli file
+                    </UButton>
+                    <!-- File status -->
+                    <span
+                      class="text-xs"
+                      :style="visuraFile[field.key] ? 'color: var(--color-text-primary)' : 'color: var(--color-text-muted)'"
+                    >
+                      {{ visuraFile[field.key]?.name ?? 'Nessun file selezionato' }}
+                    </span>
                   </div>
 
                   <UButton
