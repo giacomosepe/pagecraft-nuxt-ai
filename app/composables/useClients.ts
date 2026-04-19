@@ -17,9 +17,9 @@ export function useClients() {
       const { data, error } = await supabase
         .from("clients")
         .select(
-          "id, name, company_name, industry_sector, status, created_at, updated_at, folders(id, updated_at)",
+          "id, name, company_name, industry_sector, status, created_at, updated_at, folders(id, updated_at, pages(id, updated_at))",
         )
-        .order("name");
+        .order("updated_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
     },

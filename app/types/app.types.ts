@@ -17,7 +17,14 @@ export interface ClientListItem {
   status: string;
   created_at: string;
   updated_at: string;
-  folders: { id: string; updated_at: string }[] | null;
+  folders: {
+    id: string;
+    updated_at: string;
+    pages?: {
+      id: string;
+      updated_at: string;
+    }[] | null;
+  }[] | null;
 }
 
 export interface ClientDetail {
