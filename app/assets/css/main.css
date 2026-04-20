@@ -25,3 +25,9 @@
     --ui-color-primary-900: var(--color-brand-900);
     --ui-color-primary-950: var(--color-brand-950);
 }
+
+@layer components {
+    .interactive-row {
+        cursor: pointer;
+    }
+}

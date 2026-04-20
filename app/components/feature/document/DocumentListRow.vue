@@ -38,7 +38,7 @@ function openDocument(): void {
 <template>
   <button
     type="button"
-    class="grid w-full cursor-pointer grid-cols-[minmax(0,2.1fr)_minmax(180px,1.2fr)_minmax(150px,1fr)_minmax(125px,0.9fr)_minmax(120px,0.9fr)] items-center gap-4 border-t border-slate-200 px-6 py-4 text-left transition-colors hover:bg-slate-50"
+    class="interactive-row grid w-full grid-cols-[minmax(0,2.1fr)_minmax(180px,1.2fr)_minmax(150px,1fr)_minmax(125px,0.9fr)_minmax(120px,0.9fr)] items-center gap-4 border-t border-slate-200 px-6 py-4 text-left transition-colors hover:bg-slate-50"
     @click="openDocument"
   >
     <div class="flex min-w-0 items-start gap-3">
