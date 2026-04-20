@@ -108,26 +108,22 @@ async function selectFilter(
 </script>
 
 <template>
-	<div class="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-10">
-		<div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-			<div class="space-y-2">
-				<h1 class="text-3xl font-semibold tracking-tight text-slate-900">
-					{{ headerTitle }}
-				</h1>
-				<p class="text-sm text-slate-500">
-					Gestisci i clienti e i loro programmi in un'unica vista.
-				</p>
-			</div>
-
-			<UButton
-				to="/clients/new"
-				icon="i-lucide-plus"
-				size="lg"
-				class="justify-center rounded-xl px-5"
-			>
-				Aggiungi cliente
-			</UButton>
-		</div>
+	<BasePageContainer size="full">
+		<BasePageHeader
+			:title="headerTitle"
+			description="Gestisci i clienti e i loro programmi in un'unica vista."
+		>
+			<template #actions>
+				<UButton
+					to="/clients/new"
+					icon="i-lucide-plus"
+					size="lg"
+					class="justify-center rounded-xl px-5"
+				>
+					Aggiungi cliente
+				</UButton>
+			</template>
+		</BasePageHeader>
 
 		<section class="rounded-[28px] border border-slate-200 bg-white shadow-sm">
 			<div class="flex flex-col gap-4 border-b border-slate-200 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
@@ -193,5 +189,5 @@ async function selectFilter(
 		<p class="text-sm text-slate-500">
 			{{ headerSubtitle }}
 		</p>
-	</div>
+	</BasePageContainer>
 </template>

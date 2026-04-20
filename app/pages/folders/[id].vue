@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { statusColor, statusLabel } from "~/utils/status";
+import { statusLabel } from "~/utils/status";
 
 definePageMeta({ middleware: "auth" });
 
@@ -56,111 +56,118 @@ function formatDate(iso: string): string {
 </script>
 
 <template>
-	<div class="mx-auto max-w-4xl px-6 py-8">
+	<BasePageContainer size="xl">
 		<!-- Loading -->
 		<div v-if="pending" class="flex justify-center py-24">
 			<UIcon
 				name="i-lucide-loader-circle"
-				class="size-6 animate-spin text-gray-400"
+				class="size-6 animate-spin text-slate-400"
 			/>
 		</div>
 
 		<template v-else-if="data">
-			<!-- Header -->
-			<div class="mb-8">
+			<div class="mb-4">
 				<NuxtLink
 					:to="data.folder.client_id ? `/clients/${data.folder.client_id}` : '/dashboard'"
-					class="mb-2 flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+					class="mb-3 flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-slate-700"
 				>
 					<UIcon name="i-lucide-arrow-left" class="size-4" />
 					{{ clientName ?? "Dashboard" }}
 				</NuxtLink>
 
-				<div class="flex items-start justify-between gap-4">
-					<div>
-						<h1 class="text-xl font-semibold text-gray-900 dark:text-white">
-							{{ data.folder.program_name ?? "Programma senza nome" }}
-						</h1>
-						<p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+				<BasePageHeader
+					:title="data.folder.program_name ?? 'Programma senza nome'"
+					description="Esplora i documenti collegati e il loro stato di avanzamento."
+				>
+					<template #meta>
+						<p class="text-sm text-slate-500">
 							<span v-if="clientName">{{ clientName }} · </span>
 							Creato il
 							{{ new Date(data.folder.created_at).toLocaleDateString("it-IT") }}
 						</p>
-					</div>
-					<UBadge color="primary" variant="soft" size="sm">
+					</template>
+
+					<template #actions>
+						<UBadge color="primary" variant="soft" size="sm">
 						{{ data.pages.length }}
 						{{ data.pages.length === 1 ? "documento" : "documenti" }}
-					</UBadge>
-				</div>
-			</div>
-
-			<!-- Section label -->
-			<div class="mb-4">
-				<h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">
-					Documenti
-				</h2>
-			</div>
-
-			<!-- Empty state -->
-			<div
-				v-if="!data.pages.length"
-				class="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 py-16 text-center dark:border-gray-700"
-			>
-				<UIcon
-					name="i-lucide-file-text"
-					class="mb-3 size-9 text-gray-300 dark:text-gray-600"
-				/>
-				<p class="text-sm font-medium text-gray-900 dark:text-white">
-					Nessun documento
-				</p>
-				<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-					Questo programma non contiene ancora documenti
-				</p>
-			</div>
-
-			<!-- Document list -->
-			<div v-else class="flex flex-col gap-2">
-				<NuxtLink
-					v-for="page in data.pages"
-					:key="page.id"
-					:to="`/pages/${page.id}`"
-					class="block rounded-lg border border-(--ui-border) bg-(--ui-bg) px-4 py-3 transition-colors hover:bg-(--ui-bg-elevated)"
-				>
-					<div class="flex items-start justify-between gap-3">
-						<p class="text-sm font-medium text-(--ui-text-highlighted)">
-							{{ page.framework_name ?? "—" }}
-						</p>
-						<UBadge
-							:color="statusColor[page.status] ?? 'neutral'"
-							variant="soft"
-							size="sm"
-							class="shrink-0"
-						>
-							{{ statusLabel[page.status] ?? page.status }}
 						</UBadge>
-					</div>
-					<p class="mt-1 text-xs text-(--ui-text-muted)">
-						Ultima modifica: {{ formatDate(page.updated_at) }}
-					</p>
-				</NuxtLink>
+					</template>
+				</BasePageHeader>
 			</div>
+
+			<BaseDetailSection
+				title="Documenti"
+				description="Traccia i documenti collegati e apri subito quello giusto."
+			>
+				<div
+					v-if="!data.pages.length"
+					class="flex flex-col items-center justify-center py-10 text-center"
+				>
+					<div class="mb-3 flex size-12 items-center justify-center rounded-2xl bg-slate-100">
+						<UIcon
+							name="i-lucide-file-text"
+							class="size-6 text-slate-400"
+						/>
+					</div>
+					<p class="text-sm font-medium text-slate-900">
+						Nessun documento
+					</p>
+					<p class="mt-1 text-sm text-slate-500">
+						Questo programma non contiene ancora documenti.
+					</p>
+				</div>
+
+				<div v-else class="overflow-hidden rounded-2xl border border-slate-200">
+					<div class="grid grid-cols-[minmax(0,2fr)_minmax(120px,1fr)_120px] gap-4 bg-slate-50 px-5 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+						<p>Documento</p>
+						<p>Stato</p>
+						<p>Ultima attività</p>
+					</div>
+
+					<NuxtLink
+						v-for="page in data.pages"
+						:key="page.id"
+						:to="`/pages/${page.id}`"
+						class="grid grid-cols-[minmax(0,2fr)_minmax(120px,1fr)_120px] items-center gap-4 border-t border-slate-200 px-5 py-4 transition-colors hover:bg-slate-50"
+					>
+						<div class="min-w-0">
+							<p class="truncate text-sm font-semibold text-slate-900">
+								{{ page.title }}
+							</p>
+							<p class="truncate text-xs text-slate-500">
+								{{ page.framework_name ?? "—" }}
+							</p>
+						</div>
+
+						<div>
+							<span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+								{{ statusLabel[page.status] ?? page.status }}
+							</span>
+						</div>
+
+						<p class="text-sm text-slate-500">
+							{{ formatDate(page.updated_at) }}
+						</p>
+					</NuxtLink>
+				</div>
+			</BaseDetailSection>
 		</template>
 
-		<!-- Not found -->
 		<div v-else class="flex flex-col items-center justify-center py-24 text-center">
 			<UIcon
 				name="i-lucide-circle-alert"
-				class="mb-3 size-9 text-gray-300 dark:text-gray-600"
+				class="mb-3 size-9 text-slate-300"
 			/>
-			<p class="text-sm font-medium text-gray-900 dark:text-white">
+			<p class="text-sm font-medium text-slate-900">
 				Programma non trovato
 			</p>
 			<NuxtLink
 				to="/dashboard"
-				class="mt-3 text-sm text-primary-600 hover:underline dark:text-primary-400"
+				class="mt-3 text-sm text-primary-600 hover:underline"
 			>
 				Torna al dashboard
 			</NuxtLink>
 		</div>
-	</div>
+	</BasePageContainer>
 </template>

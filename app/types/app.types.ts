@@ -69,6 +69,15 @@ export interface FolderTableRow {
   status: string;
 }
 
+export interface ProjectListItem {
+  id: string;
+  program_name: string | null;
+  updated_at: string;
+  client_id: string | null;
+  clients: { id: string; name: string } | null;
+  pages: PageItem[] | null;
+}
+
 // ─── Framework ────────────────────────────────────────────────────────────────
 
 export interface FrameworkItem {

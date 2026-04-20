@@ -1,23 +1,13 @@
 <script setup lang="ts">
-import type { TableColumn, TableRow } from "@nuxt/ui";
 import { formatDate } from "~/utils/date";
 import { deriveFolderStatus } from "~/utils/folderStatus";
-import type { FolderItem, FolderTableRow } from "~/types/app.types";
+import { statusLabel } from "~/utils/status";
+import type { FolderItem } from "~/types/app.types";
 
 const props = defineProps<{
   folders: FolderItem[] | null | undefined;
 }>();
 
-// ─── Column definitions ────────────────────────────────────────────────────────
-const columns: TableColumn<FolderTableRow>[] = [
-  { accessorKey: "programName", header: "Programma" },
-  { accessorKey: "status", header: "Stato" },
-  { accessorKey: "documenti", header: "Documenti" },
-  { accessorKey: "lastModified", header: "Ultima modifica" },
-  { accessorKey: "id", header: "" },
-];
-
-// ─── Row helpers ────────────────────────────────────────────────────────────────
 function lastModified(folder: FolderItem): string {
   const pages = folder.pages ?? [];
   if (!pages.length) return formatDate(folder.updated_at);
@@ -33,64 +23,79 @@ function documenti(folder: FolderItem): string {
   return `${completed} / ${pages.length}`;
 }
 
-// ─── Computed rows ──────────────────────────────────────────────────────────────
-const rows = computed<FolderTableRow[]>(() =>
-  (props.folders ?? []).map((f) => ({
-    id: f.id,
-    programName: f.program_name ?? "—",
-    documenti: documenti(f),
-    lastModified: lastModified(f),
-    status: deriveFolderStatus(f.pages ?? []),
+const rows = computed(() =>
+  (props.folders ?? []).map((folder) => ({
+    id: folder.id,
+    programName: folder.program_name ?? "—",
+    documenti: documenti(folder),
+    lastModified: lastModified(folder),
+    status: deriveFolderStatus(folder.pages ?? []),
   })),
 );
-
-const tableMeta = { class: { tr: "cursor-pointer" } };
-
-function onSelect(_e: Event, row: TableRow<FolderTableRow>): void {
-  navigateTo(`/folders/${row.original.id}`);
-}
 </script>
 
 <template>
-  <!-- Empty state -->
-  <div
-    v-if="!rows.length"
-    class="flex flex-col items-center justify-center rounded-xl border border-dashed py-16 text-center"
-    style="border-color: var(--color-border)"
+  <BaseDetailSection
+    title="Programmi"
+    description="Apri rapidamente i programmi collegati e controlla il loro avanzamento."
   >
-    <UIcon
-      name="i-lucide-folder-open"
-      class="mb-3 size-9"
-      style="color: var(--color-text-placeholder)"
-    />
-    <p class="text-sm font-medium" style="color: var(--color-text-primary)">
-      Nessun programma
-    </p>
-    <p class="mt-1 text-xs" style="color: var(--color-text-muted)">
-      Crea il primo documento per avviare un programma
-    </p>
-  </div>
+    <div
+      v-if="!rows.length"
+      class="flex flex-col items-center justify-center py-10 text-center"
+    >
+      <div class="mb-3 flex size-12 items-center justify-center rounded-2xl bg-slate-100">
+        <UIcon
+          name="i-lucide-folder-open"
+          class="size-6 text-slate-400"
+        />
+      </div>
+      <p class="text-sm font-medium text-slate-900">
+        Nessun programma
+      </p>
+      <p class="mt-1 text-sm text-slate-500">
+        Crea il primo documento per avviare un programma.
+      </p>
+    </div>
 
-  <!-- Folder table -->
-  <UTable
-    v-else
-    :data="rows"
-    :columns="columns"
-    :meta="tableMeta"
-    :on-select="onSelect"
-  >
-    <template #status-cell="{ row }">
-      <BaseStatusBadge :status="row.original.status" />
-    </template>
-    <template #id-cell="{ row }">
+    <div v-else class="overflow-hidden rounded-2xl border border-slate-200">
+      <div class="grid grid-cols-[minmax(0,1.8fr)_minmax(110px,0.9fr)_minmax(140px,1fr)_minmax(120px,0.95fr)_80px] gap-4 bg-slate-50 px-5 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+        <p>Programma</p>
+        <p>Stato</p>
+        <p>Documenti</p>
+        <p>Ultima attività</p>
+        <p class="text-right">Apri</p>
+      </div>
+
       <NuxtLink
-        :to="`/folders/${row.original.id}`"
-        class="text-sm transition-colors hover:underline"
-        style="color: var(--color-brand)"
-        @click.stop
+        v-for="row in rows"
+        :key="row.id"
+        :to="`/folders/${row.id}`"
+        class="grid grid-cols-[minmax(0,1.8fr)_minmax(110px,0.9fr)_minmax(140px,1fr)_minmax(120px,0.95fr)_80px] items-center gap-4 border-t border-slate-200 px-5 py-4 transition-colors hover:bg-slate-50"
       >
-        Apri →
+        <div class="min-w-0">
+          <p class="truncate text-sm font-semibold text-slate-900">
+            {{ row.programName }}
+          </p>
+        </div>
+
+        <div>
+          <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+            {{ statusLabel[row.status] ?? row.status }}
+          </span>
+        </div>
+
+        <p class="text-sm text-slate-600">
+          {{ row.documenti }}
+        </p>
+
+        <p class="text-sm text-slate-500">
+          {{ row.lastModified }}
+        </p>
+
+        <p class="text-right text-sm font-medium text-violet-600">
+          Apri
+        </p>
       </NuxtLink>
-    </template>
-  </UTable>
+    </div>
+  </BaseDetailSection>
 </template>
