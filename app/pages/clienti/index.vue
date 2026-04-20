@@ -135,31 +135,31 @@ function onSelect(_e: Event, row: TableRow<RowItem>): void {
 </script>
 
 <template>
-	<div class="mx-auto max-w-5xl px-6 py-8">
-		<!-- Header -->
-		<div class="mb-4 flex items-center justify-between gap-4">
-			<h1 class="text-xl font-semibold text-(--ui-text-highlighted)">
-				{{ pageTitle }}
-			</h1>
-			<div class="flex items-center gap-3">
+	<BasePageContainer size="xl">
+		<BasePageHeader
+			:title="pageTitle"
+			description="Gestisci i clienti e monitora programmi e documenti collegati."
+		>
+			<template #actions>
 				<UInput
 					v-model="search"
 					placeholder="Cerca cliente..."
 					icon="i-lucide-search"
+					size="lg"
+					class="w-full sm:w-72"
 				/>
 				<UButton
 					v-if="showNewButton"
 					icon="i-lucide-plus"
-					size="sm"
+					size="lg"
 					to="/clients/new"
 				>
 					Nuovo cliente
 				</UButton>
-			</div>
-		</div>
+			</template>
+		</BasePageHeader>
 
-		<!-- Filter chips — Tutti view only -->
-		<div v-if="showFilterChips" class="mb-4 flex gap-2">
+		<div v-if="showFilterChips" class="mb-4 flex flex-wrap gap-2">
 			<UButton
 				variant="soft"
 				color="neutral"
@@ -186,7 +186,6 @@ function onSelect(_e: Event, row: TableRow<RowItem>): void {
 			</UButton>
 		</div>
 
-		<!-- Table -->
 		<UTable
 			:data="tableData"
 			:columns="columns"
@@ -203,5 +202,5 @@ function onSelect(_e: Event, row: TableRow<RowItem>): void {
 				</UBadge>
 			</template>
 		</UTable>
-	</div>
+	</BasePageContainer>
 </template>
