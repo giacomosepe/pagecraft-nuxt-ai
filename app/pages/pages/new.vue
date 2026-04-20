@@ -152,10 +152,16 @@ async function submit() {
 				})),
 			},
 		});
-		await navigateTo(`/folders/${folderId}`);
+		await navigateTo({
+			path: `/folders/${folderId}`,
+			query: {
+				created: "documents",
+				count: String(selectedFrameworkIds.value.length),
+			},
+		});
 	} catch (e: any) {
 		errorMsg.value =
-			e?.data?.message ?? "Something went wrong. Please try again.";
+			e?.data?.message ?? "Si è verificato un errore durante la creazione dei documenti.";
 		loading.value = false;
 	}
 }
@@ -215,7 +221,7 @@ async function submit() {
 			title="Cliente"
 			description="Seleziona il cliente per cui stai creando il documento."
 		>
-			<div class="space-y-5">
+			<div v-if="clientItems.length" class="space-y-5">
 				<UFormField label="Cliente">
 					<USelect
 						v-model="selectedClientId"
@@ -230,6 +236,20 @@ async function submit() {
 					Se arrivi da una scheda cliente, il cliente può essere già preselezionato.
 				</InlineHelpBlock>
 			</div>
+
+			<BaseStateMessage
+				v-else
+				compact
+				icon="i-lucide-building-2"
+				title="Nessun cliente disponibile"
+				description="Crea prima un cliente, poi torna qui per avviare un nuovo documento."
+			>
+				<template #actions>
+					<UButton to="/clients/new" icon="i-lucide-plus">
+						Crea cliente
+					</UButton>
+				</template>
+			</BaseStateMessage>
 		</FormSectionCard>
 
 		<FormSectionCard
@@ -237,12 +257,20 @@ async function submit() {
 			title="Framework"
 			description="Seleziona uno o più tipi di documento da creare."
 		>
-			<div v-if="frameworksPending" class="flex justify-center py-10">
-				<UIcon
-					name="i-lucide-loader-circle"
-					class="size-5 animate-spin text-slate-400"
-				/>
-			</div>
+			<BaseStateMessage
+				v-if="frameworksPending"
+				compact
+				loading
+				title="Caricamento framework in corso..."
+			/>
+
+			<BaseStateMessage
+				v-else-if="!frameworks?.length"
+				compact
+				icon="i-lucide-files"
+				title="Nessun framework disponibile"
+				description="Aggiungi o pubblica almeno un framework prima di creare un nuovo documento."
+			/>
 
 			<div v-else class="space-y-3">
 				<button

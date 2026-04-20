@@ -19,7 +19,10 @@ async function createClient() {
 				data: { name: name.value.trim() },
 			},
 		});
-		await navigateTo(`/clients/${result.id}`);
+		await navigateTo({
+			path: `/clients/${result.id}`,
+			query: { created: "client" },
+		});
 	} catch (e: any) {
 		errorMsg.value = "Errore durante la creazione del cliente.";
 		loading.value = false;
