@@ -75,103 +75,103 @@ async function save() {
 </script>
 
 <template>
-	<div class="mx-auto max-w-2xl px-6 py-10">
-
-		<!-- Loading -->
+	<FormPageLayout
+		title="Modifica cliente"
+		description="Aggiorna i dati principali del cliente mantenendo il form coerente con il resto del prodotto."
+		:back-to="`/clients/${clientId}`"
+		:back-label="clientData?.name ?? 'Cliente'"
+		eyebrow="Modifica"
+		size="lg"
+	>
 		<div v-if="pending" class="flex justify-center py-24">
-			<UIcon name="i-lucide-loader-circle" class="size-6 animate-spin text-gray-400" />
+			<UIcon name="i-lucide-loader-circle" class="size-6 animate-spin text-slate-400" />
 		</div>
 
 		<template v-else-if="clientData">
-			<!-- Header -->
-			<div class="mb-8">
-				<NuxtLink
-					:to="`/clients/${clientId}`"
-					class="mb-4 flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-				>
-					<UIcon name="i-lucide-arrow-left" class="size-4" />
-					{{ clientData.name }}
-				</NuxtLink>
-				<h1 class="text-xl font-semibold text-gray-900 dark:text-white">
-					Modifica cliente
-				</h1>
-			</div>
-
-			<div class="flex flex-col gap-5">
-				<!-- Name -->
-				<UFormField label="Nome cliente *">
-					<UInput v-model="form.name" placeholder="es. Acme S.r.l." class="w-full" />
-				</UFormField>
-
-				<!-- Company name -->
-				<UFormField label="Ragione sociale">
-					<UInput v-model="form.company_name" placeholder="es. Acme S.r.l." class="w-full" />
-				</UFormField>
-
-				<!-- Company form -->
-				<UFormField label="Forma giuridica">
-					<UInput v-model="form.company_form" placeholder="es. S.r.l., S.p.A., S.n.c." class="w-full" />
-				</UFormField>
-
-				<!-- VAT + Codice fiscale -->
-				<div class="grid grid-cols-2 gap-4">
-					<UFormField label="Partita IVA">
-						<UInput v-model="form.vat_number" placeholder="es. 12345678901" class="w-full" />
+			<FormSectionCard
+				title="Identità aziendale"
+				description="Aggiorna il nome principale e i dati anagrafici usati in tutto il workspace."
+			>
+				<div class="space-y-5">
+					<UFormField label="Nome cliente *">
+						<UInput v-model="form.name" placeholder="es. Acme S.r.l." class="w-full" />
 					</UFormField>
-					<UFormField label="Codice fiscale">
-						<UInput v-model="form.codice_fiscale" placeholder="es. RSSMRA80A01H501U" class="w-full" />
+
+					<UFormField label="Ragione sociale">
+						<UInput v-model="form.company_name" placeholder="es. Acme S.r.l." class="w-full" />
+					</UFormField>
+
+					<UFormField label="Forma giuridica">
+						<UInput v-model="form.company_form" placeholder="es. S.r.l., S.p.A., S.n.c." class="w-full" />
 					</UFormField>
 				</div>
+			</FormSectionCard>
 
-				<!-- Industry + Employees -->
-				<div class="grid grid-cols-2 gap-4">
-					<UFormField label="Settore">
-						<UInput v-model="form.industry_sector" placeholder="es. Software, Farmaceutica" class="w-full" />
+			<FormSectionCard
+				title="Dati fiscali e operativi"
+				description="Mantieni allineate le informazioni usate nei programmi e nei documenti."
+			>
+				<div class="space-y-5">
+					<div class="grid gap-4 md:grid-cols-2">
+						<UFormField label="Partita IVA">
+							<UInput v-model="form.vat_number" placeholder="es. 12345678901" class="w-full" />
+						</UFormField>
+						<UFormField label="Codice fiscale">
+							<UInput v-model="form.codice_fiscale" placeholder="es. RSSMRA80A01H501U" class="w-full" />
+						</UFormField>
+					</div>
+
+					<div class="grid gap-4 md:grid-cols-2">
+						<UFormField label="Settore">
+							<UInput v-model="form.industry_sector" placeholder="es. Software, Farmaceutica" class="w-full" />
+						</UFormField>
+						<UFormField label="Numero dipendenti">
+							<UInput v-model="form.employee_count" type="number" placeholder="es. 42" class="w-full" />
+						</UFormField>
+					</div>
+
+					<UFormField label="Rappresentante legale">
+						<UInput v-model="form.legal_representative" placeholder="es. Mario Rossi" class="w-full" />
 					</UFormField>
-					<UFormField label="Numero dipendenti">
-						<UInput v-model="form.employee_count" type="number" placeholder="es. 42" class="w-full" />
+
+					<UFormField label="Sede legale">
+						<UInput v-model="form.registered_address" placeholder="es. Via Roma 1, 20100 Milano" class="w-full" />
 					</UFormField>
 				</div>
+			</FormSectionCard>
 
-				<!-- Legal rep -->
-				<UFormField label="Rappresentante legale">
-					<UInput v-model="form.legal_representative" placeholder="es. Mario Rossi" class="w-full" />
-				</UFormField>
-
-				<!-- Address -->
-				<UFormField label="Sede legale">
-					<UInput v-model="form.registered_address" placeholder="es. Via Roma 1, 20100 Milano" class="w-full" />
-				</UFormField>
-
-				<!-- Error -->
-				<UAlert
-					v-if="errorMsg"
-					color="error"
-					variant="soft"
-					:description="errorMsg"
-					icon="i-lucide-circle-alert"
-				/>
-
-				<!-- Actions -->
-				<div class="flex justify-end gap-3 pt-2">
-					<UButton color="neutral" variant="ghost" :to="`/clients/${clientId}`">
-						Annulla
-					</UButton>
-					<UButton :loading="loading" @click="save">
-						Salva modifiche
-					</UButton>
-				</div>
-			</div>
+			<UAlert
+				v-if="errorMsg"
+				color="error"
+				variant="soft"
+				:description="errorMsg"
+				icon="i-lucide-circle-alert"
+			/>
 		</template>
 
-		<!-- Not found -->
 		<div v-else class="flex flex-col items-center justify-center py-24 text-center">
-			<UIcon name="i-lucide-circle-alert" class="mb-3 size-9 text-gray-300 dark:text-gray-600" />
-			<p class="text-sm font-medium text-gray-900 dark:text-white">Cliente non trovato</p>
-			<NuxtLink to="/clients" class="mt-3 text-sm text-primary-600 hover:underline dark:text-primary-400">
+			<UIcon name="i-lucide-circle-alert" class="mb-3 size-9 text-slate-300" />
+			<p class="text-sm font-medium text-slate-900">Cliente non trovato</p>
+			<NuxtLink to="/clients" class="mt-3 text-sm text-primary-600 hover:underline">
 				Torna ai clienti
 			</NuxtLink>
 		</div>
 
-	</div>
+		<template #footer>
+			<FormActionsFooter v-if="clientData && !pending">
+				<template #leading>
+					<p class="text-sm text-slate-500">
+						Le modifiche si rifletteranno nelle viste clienti e nei nuovi documenti creati in seguito.
+					</p>
+				</template>
+
+				<UButton color="neutral" variant="ghost" :to="`/clients/${clientId}`">
+					Annulla
+				</UButton>
+				<UButton :loading="loading" @click="save">
+					Salva modifiche
+				</UButton>
+			</FormActionsFooter>
+		</template>
+	</FormPageLayout>
 </template>

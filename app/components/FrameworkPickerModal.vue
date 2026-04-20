@@ -32,66 +32,58 @@ function confirm() {
 </script>
 
 <template>
-	<div class="p-5 flex flex-col gap-5">
-		<!-- Header -->
-		<div>
-			<h2 class="text-base font-semibold text-gray-900 dark:text-white">
-				Choose a framework
-			</h2>
-			<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-				The framework defines the structure of your document
-			</p>
-		</div>
-
-		<!-- Framework list -->
-		<div v-if="pending" class="flex justify-center py-6">
+	<SelectionModalLayout
+		title="Seleziona un framework"
+		description="Scegli la struttura di partenza del documento. La selezione definisce lo scheletro che verrà creato."
+	>
+		<div v-if="pending" class="flex justify-center py-10">
 			<UIcon
 				name="i-lucide-loader-circle"
-				class="size-5 animate-spin text-gray-400"
+				class="size-5 animate-spin text-slate-400"
 			/>
 		</div>
 
-		<div v-else class="flex flex-col gap-2">
+		<div v-else class="space-y-3">
 			<button
 				v-for="fw in frameworks"
 				:key="fw.id"
-				class="w-full text-left rounded-lg border px-4 py-3 transition-colors"
+				type="button"
+				class="w-full rounded-[22px] border px-4 py-4 text-left transition-colors"
 				:class="
 					selected === fw.id
-						? 'border-primary-500 bg-primary-50 dark:bg-primary-950 dark:border-primary-400'
-						: 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600'
+						? 'border-violet-300 bg-violet-50'
+						: 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
 				"
 				@click="selected = fw.id"
 			>
 				<div class="flex items-start gap-3">
-					<!-- Radio indicator -->
 					<div
-						class="mt-0.5 size-4 rounded-full border-2 flex items-center justify-center shrink-0"
+						class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-2"
 						:class="
 							selected === fw.id
-								? 'border-primary-500'
-								: 'border-gray-300 dark:border-gray-600'
+								? 'border-violet-600'
+								: 'border-slate-300'
 						"
 					>
 						<div
 							v-if="selected === fw.id"
-							class="size-1.5 rounded-full bg-primary-500"
+							class="size-2 rounded-full bg-violet-600"
 						/>
 					</div>
-					<div>
+					<div class="space-y-1">
 						<p
-							class="text-sm font-medium"
+							class="text-sm font-semibold"
 							:class="
 								selected === fw.id
-									? 'text-primary-700 dark:text-primary-300'
-									: 'text-gray-900 dark:text-white'
+									? 'text-violet-700'
+									: 'text-slate-900'
 							"
 						>
 							{{ fw.name }}
 						</p>
 						<p
 							v-if="fw.description"
-							class="mt-0.5 text-xs text-gray-500 dark:text-gray-400"
+							class="text-sm leading-6 text-slate-500"
 						>
 							{{ fw.description }}
 						</p>
@@ -100,16 +92,15 @@ function confirm() {
 			</button>
 		</div>
 
-		<!-- Actions -->
-		<div
-			class="flex justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-800"
-		>
-			<UButton color="neutral" variant="ghost" @click="emit('cancel')">
-				Cancel
-			</UButton>
-			<UButton :disabled="!selected" @click="confirm">
-				Continue →
-			</UButton>
-		</div>
-	</div>
+		<template #footer>
+			<div class="flex justify-end gap-2">
+				<UButton color="neutral" variant="ghost" @click="emit('cancel')">
+					Annulla
+				</UButton>
+				<UButton :disabled="!selected" @click="confirm">
+					Continua
+				</UButton>
+			</div>
+		</template>
+	</SelectionModalLayout>
 </template>

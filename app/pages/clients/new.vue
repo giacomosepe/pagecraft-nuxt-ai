@@ -28,44 +28,51 @@ async function createClient() {
 </script>
 
 <template>
-	<div class="mx-auto max-w-lg px-6 py-10">
-		<div class="mb-8">
-			<NuxtLink
-				to="/clients"
-				class="mb-4 flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-			>
-				<UIcon name="i-lucide-arrow-left" class="size-4" />
-				Clienti
-			</NuxtLink>
-			<h1 class="text-xl font-semibold text-gray-900 dark:text-white">
-				Nuovo cliente
-			</h1>
-		</div>
+	<FormPageLayout
+		title="Nuovo cliente"
+		description="Crea rapidamente un nuovo cliente e completa i dettagli in un secondo momento, se serve."
+		back-to="/clients"
+		back-label="Clienti"
+		eyebrow="Creazione"
+		size="md"
+	>
+		<FormSectionCard
+			title="Dati iniziali"
+			description="Per iniziare basta il nome del cliente. Gli altri dettagli potranno essere aggiunti dopo."
+		>
+			<div class="space-y-5">
+				<UFormField label="Nome cliente">
+					<UInput
+						v-model="name"
+						placeholder="es. Acme S.r.l."
+						size="lg"
+						class="w-full"
+						autofocus
+						@keyup.enter="createClient"
+					/>
+				</UFormField>
 
-		<div class="flex flex-col gap-5">
-			<UFormField label="Nome cliente">
-				<UInput
-					v-model="name"
-					placeholder="es. Acme S.r.l."
-					size="md"
-					class="w-full"
-					autofocus
-					@keyup.enter="createClient"
+				<UAlert
+					v-if="errorMsg"
+					color="error"
+					variant="soft"
+					:description="errorMsg"
+					icon="i-lucide-circle-alert"
 				/>
-			</UFormField>
+			</div>
+		</FormSectionCard>
 
-			<UAlert
-				v-if="errorMsg"
-				color="error"
-				variant="soft"
-				:description="errorMsg"
-				icon="i-lucide-circle-alert"
-			/>
+		<template #footer>
+			<FormActionsFooter>
+				<template #leading>
+					<p class="text-sm text-slate-500">
+						Dopo la creazione verrai portato direttamente alla scheda del cliente.
+					</p>
+				</template>
 
-			<div class="flex justify-end gap-3">
-				<UButton color="neutral" variant="ghost" to="/clients"
-					>Annulla</UButton
-				>
+				<UButton color="neutral" variant="ghost" to="/clients">
+					Annulla
+				</UButton>
 				<UButton
 					:disabled="!name.trim()"
 					:loading="loading"
@@ -73,7 +80,7 @@ async function createClient() {
 				>
 					Crea cliente
 				</UButton>
-			</div>
-		</div>
-	</div>
+			</FormActionsFooter>
+		</template>
+	</FormPageLayout>
 </template>
