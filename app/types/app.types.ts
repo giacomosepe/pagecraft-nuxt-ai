@@ -78,6 +78,18 @@ export interface ProjectListItem {
   pages: PageItem[] | null;
 }
 
+export interface DocumentListItem {
+  id: string;
+  title: string;
+  status: string;
+  updated_at: string;
+  framework_name: string | null;
+  folder_id: string | null;
+  client_id: string | null;
+  folders: { id: string; program_name: string | null } | null;
+  clients: { id: string; name: string } | null;
+}
+
 // ─── Framework ────────────────────────────────────────────────────────────────
 
 export interface FrameworkItem {

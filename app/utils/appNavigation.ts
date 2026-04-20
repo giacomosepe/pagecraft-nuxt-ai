@@ -25,9 +25,9 @@ export const appSidebarSections: AppNavSection[] = [
 			},
 			{
 				label: "Documenti",
-				to: "/pages/new",
+				to: "/documenti",
 				icon: "i-lucide-files",
-				match: { path: "/pages" },
+				match: { path: "/documenti" },
 			},
 			{
 				label: "Info prodotto",

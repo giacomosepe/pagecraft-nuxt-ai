@@ -1,0 +1,205 @@
+<script setup lang="ts">
+import type { DocumentListItem } from "~/types/app.types";
+
+const props = defineProps<{
+  documents?: DocumentListItem[] | null;
+  pending?: boolean;
+}>();
+
+const route = useRoute();
+const router = useRouter();
+const search = ref("");
+
+const filters = [
+  { key: "recenti", label: "Recenti", icon: "i-lucide-history" },
+  { key: "in_lavorazione", label: "In lavorazione", icon: "i-lucide-loader-circle" },
+  { key: "completato", label: "Completati", icon: "i-lucide-circle-check-big" },
+  { key: "tutti", label: "Tutti i documenti", icon: "i-lucide-files" },
+] as const;
+
+const activeFilter = ref<"recenti" | "in_lavorazione" | "completato" | "tutti">(
+  "tutti",
+);
+
+const normalizedDocuments = computed(() => props.documents ?? []);
+
+watchEffect(() => {
+  const view = route.query.view as string | undefined;
+  const status = route.query.status as string | undefined;
+
+  if (view === "recenti") {
+    activeFilter.value = "recenti";
+    return;
+  }
+
+  if (status === "in_lavorazione") {
+    activeFilter.value = "in_lavorazione";
+    return;
+  }
+
+  if (status === "completato") {
+    activeFilter.value = "completato";
+    return;
+  }
+
+  activeFilter.value = "tutti";
+});
+
+const filteredDocuments = computed(() => {
+  const query = search.value.trim().toLowerCase();
+
+  return normalizedDocuments.value.filter((document, index) => {
+    if (activeFilter.value === "recenti" && index >= 8) return false;
+    if (
+      activeFilter.value === "in_lavorazione" &&
+      document.status !== "in_lavorazione"
+    ) {
+      return false;
+    }
+    if (activeFilter.value === "completato" && document.status !== "completato") {
+      return false;
+    }
+
+    if (!query) return true;
+
+    return [
+      document.title,
+      document.framework_name,
+      document.folders?.program_name,
+      document.clients?.name,
+    ]
+      .filter(Boolean)
+      .some((value) => value?.toLowerCase().includes(query));
+  });
+});
+
+const headerTitle = computed(() => {
+  switch (activeFilter.value) {
+    case "recenti":
+      return "Documenti recenti";
+    case "in_lavorazione":
+      return "Documenti in lavorazione";
+    case "completato":
+      return "Documenti completati";
+    default:
+      return "Documenti";
+  }
+});
+
+const headerSubtitle = computed(() => {
+  const count = filteredDocuments.value.length;
+  if (!count) return "Nessun documento trovato.";
+  return count === 1
+    ? "1 documento nella vista corrente."
+    : `${count} documenti nella vista corrente.`;
+});
+
+async function selectFilter(
+  filterKey: "recenti" | "in_lavorazione" | "completato" | "tutti",
+): Promise<void> {
+  activeFilter.value = filterKey;
+
+  if (filterKey === "recenti") {
+    await router.push({ query: { view: "recenti" } });
+    return;
+  }
+
+  if (filterKey === "in_lavorazione" || filterKey === "completato") {
+    await router.push({ query: { status: filterKey } });
+    return;
+  }
+
+  await router.push({ query: {} });
+}
+</script>
+
+<template>
+  <BasePageContainer size="full">
+    <BasePageHeader
+      :title="headerTitle"
+      description="Consulta i documenti esistenti, riprendi quelli recenti e crea nuovi documenti quando serve."
+    >
+      <template #actions>
+        <UButton
+          to="/pages/new"
+          icon="i-lucide-plus"
+          size="lg"
+          class="justify-center rounded-xl px-5"
+        >
+          Nuovo documento
+        </UButton>
+      </template>
+    </BasePageHeader>
+
+    <section class="rounded-[28px] border border-slate-200 bg-white shadow-sm">
+      <div class="flex flex-col gap-4 border-b border-slate-200 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+        <div class="flex flex-wrap gap-2">
+          <UButton
+            v-for="filter in filters"
+            :key="filter.key"
+            :icon="filter.icon"
+            :variant="activeFilter === filter.key ? 'soft' : 'ghost'"
+            color="neutral"
+            class="rounded-xl"
+            @click="selectFilter(filter.key)"
+          >
+            {{ filter.label }}
+          </UButton>
+        </div>
+
+        <UInput
+          v-model="search"
+          icon="i-lucide-search"
+          size="lg"
+          placeholder="Cerca documento, progetto o cliente..."
+          class="w-full lg:max-w-sm"
+        />
+      </div>
+
+      <div
+        v-if="pending"
+        class="flex flex-col items-center justify-center gap-3 px-6 py-20"
+      >
+        <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin text-slate-400" />
+        <p class="text-sm text-slate-500">Caricamento documenti in corso...</p>
+      </div>
+
+      <div
+        v-else-if="!filteredDocuments.length"
+        class="flex flex-col items-center justify-center gap-3 px-6 py-20 text-center"
+      >
+        <div class="flex size-14 items-center justify-center rounded-2xl bg-slate-100">
+          <UIcon name="i-lucide-file-stack" class="size-7 text-slate-400" />
+        </div>
+        <div class="space-y-1">
+          <p class="text-sm font-semibold text-slate-900">Nessun documento trovato</p>
+          <p class="text-sm text-slate-500">
+            Prova a cambiare filtro o crea un nuovo documento.
+          </p>
+        </div>
+      </div>
+
+      <div v-else class="overflow-x-auto">
+        <div class="min-w-[1080px]">
+          <div class="grid grid-cols-[minmax(0,2.1fr)_minmax(180px,1.2fr)_minmax(150px,1fr)_minmax(125px,0.9fr)_minmax(120px,0.9fr)] gap-4 bg-slate-50 px-6 py-4 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+            <p>Documento</p>
+            <p>Progetto</p>
+            <p>Cliente</p>
+            <p>Stato</p>
+            <p>Ultima attività</p>
+          </div>
+
+          <DocumentListRow
+            v-for="document in filteredDocuments"
+            :key="document.id"
+            :document="document"
+          />
+        </div>
+      </div>
+    </section>
+
+    <p class="text-sm text-slate-500">
+      {{ headerSubtitle }}
+    </p>
+  </BasePageContainer>
+</template>
