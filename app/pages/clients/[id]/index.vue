@@ -27,7 +27,7 @@ async function onStatusChange(val: unknown): Promise<void> {
 </script>
 
 <template>
-	<div class="mx-auto max-w-5xl px-6 py-8">
+	<BasePageContainer size="xl">
 		<!-- Loading -->
 		<div v-if="pending" class="flex justify-center py-24">
 			<UIcon
@@ -57,15 +57,12 @@ async function onStatusChange(val: unknown): Promise<void> {
 		</div>
 
 		<template v-else>
-			<!-- Header -->
-			<div class="mb-8 flex items-start justify-between gap-4">
-				<div>
-					<h1
-						class="text-xl font-semibold text-(--ui-text-highlighted)"
-					>
-						{{ data.name }}
-					</h1>
-					<p class="mt-1 text-sm text-(--ui-text-muted)">
+			<BasePageHeader
+				:title="data.name"
+				description="Panoramica del cliente e dei programmi attivi."
+			>
+				<template #meta>
+					<p class="text-sm text-(--ui-text-muted)">
 						{{ data.folders?.length ?? 0 }} programmi · ultimo aggiornamento
 						{{ formatDate(data.updated_at) }}
 					</p>
@@ -76,8 +73,9 @@ async function onStatusChange(val: unknown): Promise<void> {
 						class="mt-3 w-44"
 						@update:model-value="onStatusChange"
 					/>
-				</div>
-				<div class="flex shrink-0 items-center gap-2">
+				</template>
+
+				<template #actions>
 					<UButton
 						variant="outline"
 						color="neutral"
@@ -93,11 +91,10 @@ async function onStatusChange(val: unknown): Promise<void> {
 					>
 						Nuovo programma
 					</UButton>
-				</div>
-			</div>
+				</template>
+			</BasePageHeader>
 
-			<!-- Programmi table -->
 			<FolderTable :folders="folders" />
 		</template>
-	</div>
+	</BasePageContainer>
 </template>

@@ -142,25 +142,25 @@ function onSelect(_e: Event, row: TableRow<RowItem>): void {
 </script>
 
 <template>
-	<div class="mx-auto max-w-5xl px-6 py-8">
-		<!-- Header -->
-		<div class="mb-4 flex items-center justify-between gap-4">
-			<h1 class="text-xl font-semibold text-(--ui-text-highlighted)">
-				{{ pageTitle }}
-			</h1>
-			<div class="flex items-center gap-3">
+	<BasePageContainer size="xl">
+		<BasePageHeader
+			:title="pageTitle"
+			description="Segui lo stato dei programmi e apri rapidamente i documenti collegati."
+		>
+			<template #actions>
 				<UInput
 					v-model="search"
 					placeholder="Cerca progetto o cliente..."
 					icon="i-lucide-search"
+					size="lg"
+					class="w-full sm:w-80"
 				/>
-				<UButton icon="i-lucide-plus" size="sm" to="/pages/new">
+				<UButton icon="i-lucide-plus" size="lg" to="/pages/new">
 					Nuovo programma
 				</UButton>
-			</div>
-		</div>
+			</template>
+		</BasePageHeader>
 
-		<!-- Table -->
 		<UTable
 			:data="tableData"
 			:columns="columns"
@@ -177,5 +177,5 @@ function onSelect(_e: Event, row: TableRow<RowItem>): void {
 				</UBadge>
 			</template>
 		</UTable>
-	</div>
+	</BasePageContainer>
 </template>

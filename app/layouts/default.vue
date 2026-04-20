@@ -3,18 +3,14 @@
 </script>
 
 <template>
-	<div class="flex h-screen bg-gray-50 dark:bg-gray-950">
-		<!-- Sidebar — desktop only -->
-		<AppSidebar class="hidden md:flex" />
+	<div class="flex min-h-screen bg-slate-50 text-slate-900">
+		<AppSidebar />
 
-		<!-- Main content area -->
-		<div class="flex flex-1 flex-col overflow-hidden">
-			<!-- Page content scrolls here -->
+		<div class="flex min-h-screen min-w-0 flex-1 flex-col overflow-hidden">
 			<main class="flex-1 overflow-y-auto">
 				<slot />
 			</main>
 
-			<!-- Bottom bar — mobile only -->
 			<AppBottomBar class="md:hidden" />
 		</div>
 	</div>

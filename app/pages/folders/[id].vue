@@ -56,7 +56,7 @@ function formatDate(iso: string): string {
 </script>
 
 <template>
-	<div class="mx-auto max-w-4xl px-6 py-8">
+	<BasePageContainer size="lg">
 		<!-- Loading -->
 		<div v-if="pending" class="flex justify-center py-24">
 			<UIcon
@@ -66,59 +66,58 @@ function formatDate(iso: string): string {
 		</div>
 
 		<template v-else-if="data">
-			<!-- Header -->
-			<div class="mb-8">
+			<div class="mb-4">
 				<NuxtLink
 					:to="data.folder.client_id ? `/clients/${data.folder.client_id}` : '/dashboard'"
-					class="mb-2 flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+					class="mb-3 flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-slate-700"
 				>
 					<UIcon name="i-lucide-arrow-left" class="size-4" />
 					{{ clientName ?? "Dashboard" }}
 				</NuxtLink>
 
-				<div class="flex items-start justify-between gap-4">
-					<div>
-						<h1 class="text-xl font-semibold text-gray-900 dark:text-white">
-							{{ data.folder.program_name ?? "Programma senza nome" }}
-						</h1>
-						<p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+				<BasePageHeader
+					:title="data.folder.program_name ?? 'Programma senza nome'"
+					description="Esplora i documenti collegati e il loro stato di avanzamento."
+				>
+					<template #meta>
+						<p class="text-sm text-slate-500">
 							<span v-if="clientName">{{ clientName }} · </span>
 							Creato il
 							{{ new Date(data.folder.created_at).toLocaleDateString("it-IT") }}
 						</p>
-					</div>
-					<UBadge color="primary" variant="soft" size="sm">
+					</template>
+
+					<template #actions>
+						<UBadge color="primary" variant="soft" size="sm">
 						{{ data.pages.length }}
 						{{ data.pages.length === 1 ? "documento" : "documenti" }}
-					</UBadge>
-				</div>
+						</UBadge>
+					</template>
+				</BasePageHeader>
 			</div>
 
-			<!-- Section label -->
 			<div class="mb-4">
-				<h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+				<h2 class="text-sm font-semibold text-slate-700">
 					Documenti
 				</h2>
 			</div>
 
-			<!-- Empty state -->
 			<div
 				v-if="!data.pages.length"
-				class="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 py-16 text-center dark:border-gray-700"
+				class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 py-16 text-center"
 			>
 				<UIcon
 					name="i-lucide-file-text"
-					class="mb-3 size-9 text-gray-300 dark:text-gray-600"
+					class="mb-3 size-9 text-slate-300"
 				/>
-				<p class="text-sm font-medium text-gray-900 dark:text-white">
+				<p class="text-sm font-medium text-slate-900">
 					Nessun documento
 				</p>
-				<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+				<p class="mt-1 text-sm text-slate-500">
 					Questo programma non contiene ancora documenti
 				</p>
 			</div>
 
-			<!-- Document list -->
 			<div v-else class="flex flex-col gap-2">
 				<NuxtLink
 					v-for="page in data.pages"
@@ -150,17 +149,17 @@ function formatDate(iso: string): string {
 		<div v-else class="flex flex-col items-center justify-center py-24 text-center">
 			<UIcon
 				name="i-lucide-circle-alert"
-				class="mb-3 size-9 text-gray-300 dark:text-gray-600"
+				class="mb-3 size-9 text-slate-300"
 			/>
-			<p class="text-sm font-medium text-gray-900 dark:text-white">
+			<p class="text-sm font-medium text-slate-900">
 				Programma non trovato
 			</p>
 			<NuxtLink
 				to="/dashboard"
-				class="mt-3 text-sm text-primary-600 hover:underline dark:text-primary-400"
+				class="mt-3 text-sm text-primary-600 hover:underline"
 			>
 				Torna al dashboard
 			</NuxtLink>
 		</div>
-	</div>
+	</BasePageContainer>
 </template>
