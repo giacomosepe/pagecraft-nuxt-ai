@@ -44,7 +44,7 @@ const accountInitials = computed(() => {
 				color="neutral"
 				icon="i-lucide-square-pen"
 				size="xs"
-				class="rounded-lg text-violet-600"
+				class="rounded-lg text-violet-600 hover:bg-violet-50"
 				to="/pages/new"
 			/>
 		</div>
@@ -73,7 +73,7 @@ const accountInitials = computed(() => {
 				:key="section.label"
 				class="mb-6 last:mb-0"
 			>
-				<p class="px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+				<p class="px-2 pb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
 					{{ section.label }}
 				</p>
 				<div class="space-y-1">
@@ -86,10 +86,10 @@ const accountInitials = computed(() => {
 						size="sm"
 						block
 						:icon="item.icon"
-						class="justify-start rounded-lg px-2.5 py-2 text-slate-600"
+						class="justify-start rounded-xl px-2.5 py-2.5 text-[13px] font-medium text-slate-600"
 						:class="
 							isItemActive(item.match?.path ?? item.to, item.match?.status)
-								? 'bg-violet-50 font-medium text-violet-700'
+								? 'bg-violet-50 text-violet-700'
 								: 'hover:bg-slate-50 hover:text-slate-900'
 						"
 					>
@@ -106,10 +106,10 @@ const accountInitials = computed(() => {
 				color="neutral"
 				icon="i-lucide-info"
 				block
-				class="justify-start rounded-lg px-2.5 text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+				class="justify-start rounded-xl px-2.5 py-2.5 text-[13px] font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
 				:class="
 					route.path.startsWith('/about')
-						? 'bg-slate-100 font-medium text-slate-900'
+						? 'bg-slate-100 text-slate-900'
 						: ''
 				"
 			>
@@ -120,7 +120,7 @@ const accountInitials = computed(() => {
 				color="neutral"
 				icon="i-lucide-log-out"
 				block
-				class="justify-start rounded-lg px-2.5 text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+				class="justify-start rounded-xl px-2.5 py-2.5 text-[13px] font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
 				@click="signOut"
 			>
 				Esci

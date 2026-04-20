@@ -77,7 +77,7 @@ function navigate(): void {
 <template>
 	<button
 		type="button"
-		class="grid w-full grid-cols-[minmax(0,2.4fr)_minmax(120px,1.2fr)_minmax(110px,0.9fr)_minmax(110px,0.9fr)_minmax(120px,0.9fr)] items-center gap-4 border-t border-slate-200 px-6 py-4 text-left transition-colors hover:bg-slate-50"
+		class="interactive-row grid w-full grid-cols-[minmax(0,2.4fr)_minmax(120px,1.2fr)_minmax(110px,0.9fr)_minmax(110px,0.9fr)_minmax(120px,0.9fr)] items-center gap-4 border-t border-slate-200 px-6 py-4 text-left transition-colors hover:bg-slate-50"
 		@click="navigate"
 	>
 		<div class="flex min-w-0 items-center gap-3">

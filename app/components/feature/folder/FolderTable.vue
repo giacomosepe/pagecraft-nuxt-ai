@@ -70,7 +70,7 @@ const rows = computed(() =>
         v-for="row in rows"
         :key="row.id"
         :to="`/folders/${row.id}`"
-        class="grid grid-cols-[minmax(0,1.8fr)_minmax(110px,0.9fr)_minmax(140px,1fr)_minmax(120px,0.95fr)_80px] items-center gap-4 border-t border-slate-200 px-5 py-4 transition-colors hover:bg-slate-50"
+        class="interactive-row grid grid-cols-[minmax(0,1.8fr)_minmax(110px,0.9fr)_minmax(140px,1fr)_minmax(120px,0.95fr)_80px] items-center gap-4 border-t border-slate-200 px-5 py-4 transition-colors hover:bg-slate-50"
       >
         <div class="min-w-0">
           <p class="truncate text-sm font-semibold text-slate-900">

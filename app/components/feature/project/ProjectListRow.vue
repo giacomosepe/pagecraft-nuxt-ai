@@ -53,7 +53,7 @@ function openProject(): void {
 <template>
 	<button
 		type="button"
-		class="grid w-full grid-cols-[minmax(0,2.2fr)_minmax(140px,1.1fr)_minmax(180px,1.1fr)_minmax(125px,0.9fr)_minmax(120px,0.85fr)] items-center gap-4 border-t border-slate-200 px-6 py-4 text-left transition-colors hover:bg-slate-50"
+		class="interactive-row grid w-full grid-cols-[minmax(0,2.2fr)_minmax(140px,1.1fr)_minmax(180px,1.1fr)_minmax(125px,0.9fr)_minmax(120px,0.85fr)] items-center gap-4 border-t border-slate-200 px-6 py-4 text-left transition-colors hover:bg-slate-50"
 		@click="openProject"
 	>
 		<div class="flex min-w-0 items-start gap-3">
