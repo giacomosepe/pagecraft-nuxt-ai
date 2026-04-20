@@ -24,9 +24,11 @@ const accountInitials = computed(() => {
 
 <template>
 	<aside
-		class="hidden h-screen w-64 shrink-0 flex-col border-r border-slate-200 bg-white md:sticky md:top-0 md:flex"
+		class="hidden h-full w-64 shrink-0 flex-col border-r border-slate-200 bg-white md:flex"
 	>
-		<div class="flex h-16 items-center justify-between border-b border-slate-200 px-4">
+		<div
+			class="flex h-16 items-center justify-between border-b border-slate-200 px-4"
+		>
 			<div class="flex items-center gap-3">
 				<div
 					class="flex size-8 items-center justify-center rounded-md bg-violet-600 text-sm font-bold text-white"
@@ -34,19 +36,23 @@ const accountInitials = computed(() => {
 					P
 				</div>
 				<div>
-					<p class="text-sm font-semibold text-slate-900">PageCraft</p>
+					<p class="text-sm font-semibold text-slate-900">
+						PageCraft
+					</p>
 					<p class="text-xs text-slate-500">Workspace principale</p>
 				</div>
 			</div>
 
-			<UButton
-				variant="ghost"
-				color="neutral"
-				icon="i-lucide-square-pen"
-				size="xs"
-				class="rounded-lg text-violet-600"
-				to="/pages/new"
-			/>
+			<div class="flex items-center gap-1">
+				<UButton
+					variant="ghost"
+					color="neutral"
+					icon="i-lucide-square-pen"
+					size="xs"
+					class="rounded-lg text-violet-600"
+					to="/pages/new"
+				/>
+			</div>
 		</div>
 
 		<div class="border-b border-slate-100 px-3 py-3">
@@ -73,7 +79,9 @@ const accountInitials = computed(() => {
 				:key="section.label"
 				class="mb-6 last:mb-0"
 			>
-				<p class="px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+				<p
+					class="px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400"
+				>
 					{{ section.label }}
 				</p>
 				<div class="space-y-1">
@@ -88,7 +96,10 @@ const accountInitials = computed(() => {
 						:icon="item.icon"
 						class="justify-start rounded-lg px-2.5 py-2 text-slate-600"
 						:class="
-							isItemActive(item.match?.path ?? item.to, item.match?.status)
+							isItemActive(
+								item.match?.path ?? item.to,
+								item.match?.status,
+							)
 								? 'bg-violet-50 font-medium text-violet-700'
 								: 'hover:bg-slate-50 hover:text-slate-900'
 						"

@@ -27,7 +27,10 @@ async function onStatusChange(val: unknown): Promise<void> {
 const summaryItems = computed(() => {
 	const foldersCount = data.value?.folders?.length ?? 0;
 	const documentsCount =
-		data.value?.folders?.reduce((total, folder) => total + (folder.pages?.length ?? 0), 0) ?? 0;
+		data.value?.folders?.reduce(
+			(total, folder) => total + (folder.pages?.length ?? 0),
+			0,
+		) ?? 0;
 
 	return [
 		{ label: "Programmi", value: String(foldersCount) },
@@ -38,7 +41,6 @@ const summaryItems = computed(() => {
 		},
 	];
 });
-
 </script>
 
 <template>
@@ -78,7 +80,8 @@ const summaryItems = computed(() => {
 			>
 				<template #meta>
 					<p class="text-sm text-(--ui-text-muted)">
-						{{ data.folders?.length ?? 0 }} programmi · ultimo aggiornamento
+						{{ data.folders?.length ?? 0 }} programmi · ultimo
+						aggiornamento
 						{{ formatDate(data.updated_at) }}
 					</p>
 					<USelect
@@ -89,6 +92,7 @@ const summaryItems = computed(() => {
 						@update:model-value="onStatusChange"
 					/>
 				</template>
+
 				<template #actions>
 					<UButton
 						variant="outline"
@@ -119,7 +123,9 @@ const summaryItems = computed(() => {
 						:key="item.label"
 						class="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4"
 					>
-						<p class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+						<p
+							class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400"
+						>
 							{{ item.label }}
 						</p>
 						<p class="mt-2 text-2xl font-semibold text-slate-900">

@@ -13,7 +13,9 @@ const { data, pending } = await useAsyncData(
 		const [folderRes, pagesRes] = await Promise.all([
 			supabase
 				.from("folders")
-				.select("id, program_name, client_id, created_at, clients(name)")
+				.select(
+					"id, program_name, client_id, created_at, clients(name)",
+				)
 				.eq("id", folderId)
 				.single(),
 			supabase
@@ -68,7 +70,11 @@ function formatDate(iso: string): string {
 		<template v-else-if="data">
 			<div class="mb-4">
 				<NuxtLink
-					:to="data.folder.client_id ? `/clients/${data.folder.client_id}` : '/dashboard'"
+					:to="
+						data.folder.client_id
+							? `/clients/${data.folder.client_id}`
+							: '/dashboard'
+					"
 					class="mb-3 flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-slate-700"
 				>
 					<UIcon name="i-lucide-arrow-left" class="size-4" />
@@ -83,14 +89,22 @@ function formatDate(iso: string): string {
 						<p class="text-sm text-slate-500">
 							<span v-if="clientName">{{ clientName }} · </span>
 							Creato il
-							{{ new Date(data.folder.created_at).toLocaleDateString("it-IT") }}
+							{{
+								new Date(
+									data.folder.created_at,
+								).toLocaleDateString("it-IT")
+							}}
 						</p>
 					</template>
 
 					<template #actions>
 						<UBadge color="primary" variant="soft" size="sm">
-						{{ data.pages.length }}
-						{{ data.pages.length === 1 ? "documento" : "documenti" }}
+							{{ data.pages.length }}
+							{{
+								data.pages.length === 1
+									? "documento"
+									: "documenti"
+							}}
 						</UBadge>
 					</template>
 				</BasePageHeader>
@@ -104,7 +118,9 @@ function formatDate(iso: string): string {
 					v-if="!data.pages.length"
 					class="flex flex-col items-center justify-center py-10 text-center"
 				>
-					<div class="mb-3 flex size-12 items-center justify-center rounded-2xl bg-slate-100">
+					<div
+						class="mb-3 flex size-12 items-center justify-center rounded-2xl bg-slate-100"
+					>
 						<UIcon
 							name="i-lucide-file-text"
 							class="size-6 text-slate-400"
@@ -118,8 +134,13 @@ function formatDate(iso: string): string {
 					</p>
 				</div>
 
-				<div v-else class="overflow-hidden rounded-2xl border border-slate-200">
-					<div class="grid grid-cols-[minmax(0,2fr)_minmax(120px,1fr)_120px] gap-4 bg-slate-50 px-5 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+				<div
+					v-else
+					class="overflow-hidden rounded-2xl border border-slate-200"
+				>
+					<div
+						class="grid grid-cols-[minmax(0,2fr)_minmax(120px,1fr)_120px] gap-4 bg-slate-50 px-5 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500"
+					>
 						<p>Documento</p>
 						<p>Stato</p>
 						<p>Ultima attività</p>
@@ -132,7 +153,9 @@ function formatDate(iso: string): string {
 						class="grid grid-cols-[minmax(0,2fr)_minmax(120px,1fr)_120px] items-center gap-4 border-t border-slate-200 px-5 py-4 transition-colors hover:bg-slate-50"
 					>
 						<div class="min-w-0">
-							<p class="truncate text-sm font-semibold text-slate-900">
+							<p
+								class="truncate text-sm font-semibold text-slate-900"
+							>
 								{{ page.title }}
 							</p>
 							<p class="truncate text-xs text-slate-500">
@@ -141,7 +164,9 @@ function formatDate(iso: string): string {
 						</div>
 
 						<div>
-							<span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+							<span
+								class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
+							>
 								{{ statusLabel[page.status] ?? page.status }}
 							</span>
 						</div>
@@ -154,7 +179,10 @@ function formatDate(iso: string): string {
 			</BaseDetailSection>
 		</template>
 
-		<div v-else class="flex flex-col items-center justify-center py-24 text-center">
+		<div
+			v-else
+			class="flex flex-col items-center justify-center py-24 text-center"
+		>
 			<UIcon
 				name="i-lucide-circle-alert"
 				class="mb-3 size-9 text-slate-300"

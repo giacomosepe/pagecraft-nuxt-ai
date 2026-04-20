@@ -1,0 +1,7 @@
+interface:
+  display_name: "PageCraft UI Refactor"
+  short_description: "Restyle PageCraft with reusable layouts and workspaces"
+  default_prompt: "Use $pagecraft-ui-refactor to restyle and refactor a PageCraft surface from Figma into reusable layouts, workspaces, and thin route pages."
+
+policy:
+  allow_implicit_invocation: true
