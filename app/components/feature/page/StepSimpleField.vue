@@ -32,20 +32,19 @@ function toggleMultiselectValue(option: string): void {
   >
     <div
       v-if="field.type === 'multiselect'"
-      class="flex flex-col gap-1.5"
+      class="grid gap-2 sm:grid-cols-2"
     >
       <label
         v-for="opt in field.options ?? []"
         :key="opt"
-        class="flex cursor-pointer items-center gap-2 text-xs"
-        style="color: var(--color-text-primary)"
+        class="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700 transition-colors hover:border-violet-200 hover:bg-violet-50/40"
       >
         <input
           type="checkbox"
           :value="opt"
           :checked="Array.isArray(modelValue) && (modelValue as string[]).includes(opt)"
           :disabled="disabled"
-          class="rounded"
+          class="rounded border-slate-300 text-violet-600 focus:ring-violet-500"
           @change="toggleMultiselectValue(opt)"
         />
         {{ opt }}
@@ -57,7 +56,10 @@ function toggleMultiselectValue(option: string): void {
       :model-value="String(modelValue ?? '')"
       :placeholder="field.placeholder ?? ''"
       :rows="5"
-      class="w-full text-sm"
+      class="w-full"
+      :ui="{
+        base: 'w-full rounded-2xl border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-violet-300 focus:ring-violet-200',
+      }"
       :disabled="disabled"
       @update:model-value="emit('update:modelValue', $event)"
     />
@@ -67,6 +69,9 @@ function toggleMultiselectValue(option: string): void {
       :model-value="String(modelValue ?? '')"
       :items="field.options ?? []"
       class="w-full"
+      :ui="{
+        base: 'w-full rounded-2xl border-slate-200 bg-white text-sm text-slate-700',
+      }"
       :disabled="disabled"
       @update:model-value="emit('update:modelValue', $event)"
     />
@@ -77,6 +82,9 @@ function toggleMultiselectValue(option: string): void {
       :placeholder="field.placeholder ?? ''"
       :type="field.type === 'number' ? 'number' : 'text'"
       class="w-full"
+      :ui="{
+        base: 'w-full rounded-2xl border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-violet-300 focus:ring-violet-200',
+      }"
       :disabled="disabled"
       @update:model-value="emit('update:modelValue', $event)"
     />

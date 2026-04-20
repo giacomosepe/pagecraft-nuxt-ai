@@ -18,7 +18,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="flex flex-col gap-3">
+  <div class="flex flex-col gap-4 rounded-[24px] border border-slate-200 bg-white p-4 sm:p-5">
     <StepFieldShell
       :label="field.label"
       :hint="field.hint"
@@ -28,14 +28,12 @@ const emit = defineEmits<{
     <div
       v-for="(instance, idx) in instances"
       :key="idx"
-      class="rounded-lg border p-3"
-      style="border-color: var(--color-border-subtle); background-color: var(--color-surface-subtle)"
+      class="rounded-[22px] border border-slate-200 bg-slate-50 p-4"
     >
-      <div class="mb-2 flex items-center justify-between">
+      <div class="mb-3 flex items-center justify-between gap-3">
         <button
           v-if="instances.length >= 3"
-          class="flex items-center gap-1 text-xs"
-          style="color: var(--color-text-muted)"
+          class="flex items-center gap-1.5 text-xs font-medium text-slate-500"
           type="button"
           @click="emit('toggleCollapse', idx)"
         >
@@ -46,20 +44,20 @@ const emit = defineEmits<{
           <span v-if="isCollapsed(idx)">
             {{ instanceSummary(instance) }}
           </span>
-          <span v-else>Comprimi</span>
+          <span v-else>Comprimi sezione</span>
         </button>
         <span
           v-else
-          class="text-xs font-medium"
-          style="color: var(--color-text-muted)"
+          class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400"
         >
-          #{{ idx + 1 }}
+          Voce {{ idx + 1 }}
         </span>
 
         <UButton
           variant="ghost"
           color="neutral"
-          size="xs"
+          size="sm"
+          class="rounded-xl"
           icon="i-lucide-x"
           :disabled="instances.length <= (field.minItems ?? 1) || disabled"
           @click="emit('remove', idx)"
@@ -88,8 +86,9 @@ const emit = defineEmits<{
     <UButton
       variant="outline"
       color="neutral"
-      size="xs"
+      size="sm"
       icon="i-lucide-plus"
+      class="w-full rounded-xl border-dashed border-slate-300 bg-slate-50 justify-center sm:w-auto"
       :disabled="disabled"
       @click="emit('add')"
     >

@@ -57,8 +57,8 @@ const savedFilename = computed(() => {
     :hint="field.hint"
     :required="field.required"
   >
-    <div class="flex flex-col gap-6">
-      <div class="flex items-center gap-12">
+    <div class="space-y-4 rounded-[24px] border border-slate-200 bg-white p-4 sm:p-5">
+      <div class="flex flex-col gap-3 rounded-[20px] border border-dashed border-slate-300 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
         <input
           ref="inputRef"
           type="file"
@@ -74,6 +74,7 @@ const savedFilename = computed(() => {
           color="neutral"
           size="sm"
           icon="i-lucide-paperclip"
+          class="rounded-xl border-slate-300 bg-white"
           :disabled="disabled || isExtracting"
           @click="inputRef?.click()"
         >
@@ -81,8 +82,8 @@ const savedFilename = computed(() => {
         </UButton>
 
         <span
-          class="text-xs"
-          :style="selectedFile ? 'color: var(--color-text-primary)' : 'color: var(--color-text-muted)'"
+          class="text-xs leading-5"
+          :class="selectedFile ? 'text-slate-700' : 'text-slate-500'"
         >
           {{ selectedFile?.name ?? 'Nessun file selezionato' }}
         </span>
@@ -93,6 +94,7 @@ const savedFilename = computed(() => {
         variant="outline"
         color="neutral"
         icon="i-lucide-scan-text"
+        class="rounded-xl border-slate-300 bg-white sm:w-fit"
         :loading="isExtracting"
         :disabled="!selectedFile || disabled || isExtracting"
         @click="emit('extract')"
@@ -111,20 +113,18 @@ const savedFilename = computed(() => {
 
       <div
         v-if="result"
-        class="rounded-md border p-3"
-        style="border-color: var(--color-border-subtle); background-color: var(--color-surface-subtle)"
+        class="rounded-[20px] border border-emerald-200 bg-emerald-50 p-4"
       >
         <div class="mb-2 flex items-center gap-1.5">
           <UIcon
             name="i-lucide-check-circle"
-            class="size-3.5"
-            style="color: var(--color-brand)"
+            class="size-4 text-emerald-600"
           />
-          <span class="text-xs font-medium" style="color: var(--color-text-primary)">
+          <span class="text-sm font-semibold text-emerald-800">
             Estrazione completata
           </span>
         </div>
-        <ul class="space-y-1 text-xs" style="color: var(--color-text-secondary)">
+        <ul class="space-y-1 text-xs text-emerald-800/90">
           <li>
             {{ (result.shareholders ?? []).length }} soci estratti
           </li>
@@ -138,8 +138,7 @@ const savedFilename = computed(() => {
             (result.missing?.shareholders?.length ?? 0) > 0 ||
             (result.missing?.subsidiaries?.length ?? 0) > 0
           "
-          class="mt-2 text-xs"
-          style="color: var(--color-text-muted)"
+          class="mt-3 text-xs leading-5 text-emerald-700"
         >
           <span class="font-medium">Dati mancanti:</span>
           <span
@@ -156,8 +155,7 @@ const savedFilename = computed(() => {
 
         <p
           v-if="savedValue"
-          class="mt-2 text-xs"
-          style="color: var(--color-text-muted)"
+          class="mt-3 text-xs text-emerald-700"
         >
           I dati estratti sono stati salvati per la generazione AI.
         </p>
@@ -165,28 +163,25 @@ const savedFilename = computed(() => {
 
       <div
         v-else-if="savedValue && !isExtracting"
-        class="rounded-md border p-3"
-        style="border-color: var(--color-border-subtle); background-color: var(--color-surface-subtle)"
+        class="rounded-[20px] border border-slate-200 bg-slate-50 p-4"
       >
         <div class="flex items-center gap-1.5">
           <UIcon
             name="i-lucide-check-circle"
-            class="size-3.5"
-            style="color: var(--color-brand)"
+            class="size-4 text-violet-600"
           />
-          <span class="text-xs font-medium" style="color: var(--color-text-primary)">
+          <span class="text-sm font-semibold text-slate-900">
             Visura già estratta — {{ savedFilename }}
           </span>
         </div>
-        <p class="mt-1 text-xs" style="color: var(--color-text-muted)">
+        <p class="mt-2 text-xs leading-5 text-slate-500">
           Carica un nuovo PDF e clicca "Estrai dalla visura" per aggiornare i dati.
         </p>
       </div>
 
       <p
         v-if="showRequiredHint"
-        class="text-xs"
-        style="color: var(--color-text-muted)"
+        class="text-xs font-medium text-slate-500"
       >
         Carica la visura per abilitare la generazione
       </p>
