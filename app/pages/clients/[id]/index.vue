@@ -5,8 +5,12 @@ definePageMeta({ middleware: "auth" });
 
 const route = useRoute();
 const clientId = route.params.id as string;
+const router = useRouter();
 
 const { data, folders, pending, updateStatus } = useClient(clientId);
+const deleteDialogOpen = ref(false);
+const isDeleting = ref(false);
+const deleteError = ref<string | null>(null);
 
 // --- Status control ---
 
@@ -59,6 +63,33 @@ const transitionNotice = computed(() => {
 
 	return null;
 });
+
+async function confirmDeleteClient(): Promise<void> {
+	if (!data.value) return;
+
+	isDeleting.value = true;
+	deleteError.value = null;
+
+	try {
+		await $fetch("/api/db/delete", {
+			method: "POST",
+			body: {
+				entity: "client",
+				id: clientId,
+			},
+		});
+
+		await router.push({ path: "/clienti", query: { deleted: "client" } });
+	}
+	catch {
+		deleteError.value =
+			"Non siamo riusciti a eliminare il cliente. Riprova tra qualche istante.";
+	}
+	finally {
+		isDeleting.value = false;
+		deleteDialogOpen.value = false;
+	}
+}
 </script>
 
 <template>
@@ -120,23 +151,40 @@ const transitionNotice = computed(() => {
 				</template>
 
 				<template #actions>
-					<UButton
-						variant="outline"
-						color="neutral"
-						size="lg"
-						class="rounded-xl px-5"
-						:to="`/clients/${clientId}/edit`"
-					>
-						Modifica profilo
-					</UButton>
-					<UButton
-						icon="i-lucide-plus"
-						size="lg"
-						class="rounded-xl px-5"
-						:to="`/pages/new?clientId=${clientId}`"
-					>
-						Nuovo progetto
-					</UButton>
+					<div class="flex w-full flex-col gap-2 sm:items-end">
+						<div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+							<UButton
+								variant="outline"
+								color="neutral"
+								size="lg"
+								class="rounded-xl px-5"
+								:to="`/clients/${clientId}/edit`"
+							>
+								Modifica profilo
+							</UButton>
+							<UButton
+								icon="i-lucide-plus"
+								size="lg"
+								class="rounded-xl px-5"
+								:to="`/pages/new?clientId=${clientId}`"
+							>
+								Nuovo progetto
+							</UButton>
+							<UButton
+								color="error"
+								variant="soft"
+								size="lg"
+								class="rounded-xl px-5"
+								icon="i-lucide-trash-2"
+								@click="deleteDialogOpen = true"
+							>
+								Elimina cliente
+							</UButton>
+						</div>
+						<p class="text-xs text-slate-500 sm:max-w-sm sm:text-right">
+							L'eliminazione rimuovera anche i progetti e i documenti collegati.
+						</p>
+					</div>
 				</template>
 			</BasePageHeader>
 
@@ -147,6 +195,16 @@ const transitionNotice = computed(() => {
 				icon="i-lucide-circle-check-big"
 				:title="transitionNotice.title"
 				:description="transitionNotice.description"
+				class="mb-6"
+			/>
+
+			<UAlert
+				v-if="deleteError"
+				color="error"
+				variant="soft"
+				icon="i-lucide-circle-alert"
+				title="Eliminazione non riuscita"
+				:description="deleteError"
 				class="mb-6"
 			/>
 
@@ -174,6 +232,15 @@ const transitionNotice = computed(() => {
 			</BaseDetailSection>
 
 			<FolderTable :folders="folders" />
+
+			<BaseConfirmDialog
+				v-model:open="deleteDialogOpen"
+				title="Eliminare il cliente?"
+				description="Il cliente, i progetti collegati e tutti i documenti associati verranno eliminati definitivamente. Questa azione non puo essere annullata."
+				confirm-label="Elimina cliente"
+				:loading="isDeleting"
+				@confirm="confirmDeleteClient"
+			/>
 		</template>
 	</BasePageContainer>
 </template>

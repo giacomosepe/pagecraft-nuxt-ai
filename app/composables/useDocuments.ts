@@ -3,7 +3,7 @@ import type { DocumentListItem } from "~/types/app.types";
 export function useDocuments() {
   const supabase = useSupabaseClient();
 
-  const { data: documents, pending } = useAsyncData<DocumentListItem[]>(
+  const { data: documents, pending, refresh } = useAsyncData<DocumentListItem[]>(
     "documents-list",
     async () => {
       const { data, error } = await supabase
@@ -19,5 +19,5 @@ export function useDocuments() {
     { server: false },
   );
 
-  return { documents, pending };
+  return { documents, pending, refresh };
 }

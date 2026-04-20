@@ -1,9 +1,13 @@
 <script setup lang="ts">
 definePageMeta({ middleware: "auth" });
 
-const { documents, pending } = useDocuments();
+const { documents, pending, refresh } = useDocuments();
 </script>
 
 <template>
-  <DocumentListWorkspace :documents="documents" :pending="pending" />
+  <DocumentListWorkspace
+    :documents="documents"
+    :pending="pending"
+    :refresh-documents="refresh"
+  />
 </template>

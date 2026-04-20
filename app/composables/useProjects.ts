@@ -3,7 +3,7 @@ import type { ProjectListItem } from "~/types/app.types";
 export function useProjects() {
   const supabase = useSupabaseClient();
 
-  const { data: projects, pending } = useAsyncData<ProjectListItem[]>(
+  const { data: projects, pending, refresh } = useAsyncData<ProjectListItem[]>(
     "projects-list",
     async () => {
       const { data, error } = await supabase
@@ -18,5 +18,5 @@ export function useProjects() {
     { server: false },
   );
 
-  return { projects, pending };
+  return { projects, pending, refresh };
 }
