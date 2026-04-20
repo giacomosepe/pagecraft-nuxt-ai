@@ -19,70 +19,83 @@ const progressPct = computed(() =>
     ? Math.round((committedCount.value / props.steps.length) * 100)
     : 0,
 );
-
-function bubbleStyle(step: StepRecord, index: number): Record<string, string> {
-  if (step.status === "COMMITTED") {
-    return {
-      backgroundColor: "var(--color-status-complete-bg)",
-      color: "var(--color-status-complete-text)",
-    };
-  }
-  if (index === props.activeIndex) {
-    return { backgroundColor: "var(--color-brand)", color: "white" };
-  }
-  return {
-    border: "1px solid var(--color-border)",
-    color: "var(--color-text-placeholder)",
-  };
-}
 </script>
 
 <template>
   <div class="flex h-full flex-col">
-    <!-- Progress bar -->
-    <div class="border-b px-3 py-3" style="border-color: var(--color-border-subtle)">
-      <div class="h-1 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
-        <div
-          class="h-full rounded-full transition-all duration-300"
-          :style="{ width: `${progressPct}%`, backgroundColor: 'var(--color-brand)' }"
-        />
-      </div>
-      <p class="mt-1 text-xs" style="color: var(--color-text-muted)">
-        {{ committedCount }}/{{ steps.length }} completati
-      </p>
-    </div>
+    <div class="border-b border-slate-200 px-4 py-4">
+      <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div class="flex items-start justify-between gap-3">
+          <div class="space-y-1">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+              Avanzamento
+            </p>
+            <p class="text-sm font-semibold text-slate-900">
+              {{ committedCount }}/{{ steps.length }} step completati
+            </p>
+            <p class="text-xs text-slate-500">
+              Continua dallo step attivo o rivedi quelli già salvati.
+            </p>
+          </div>
 
-    <!-- Step list -->
-    <nav class="flex-1 overflow-y-auto px-2 py-2">
-      <button
-        v-for="(step, index) in steps"
-        :key="step.id"
-        class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors"
-        :style="index === activeIndex ? 'background-color: var(--color-brand-bg)' : ''"
-        @click="emit('select', index)"
-      >
-        <!-- Step number / completion indicator -->
-        <div
-          class="flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-bold"
-          :style="bubbleStyle(step, index)"
-        >
-          <UIcon v-if="step.status === 'COMMITTED'" name="i-lucide-check" class="size-3" />
-          <span v-else>{{ step.order }}</span>
+          <div class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-violet-700">
+            {{ progressPct }}%
+          </div>
         </div>
 
-        <!-- Step title -->
-        <span
-          class="truncate text-xs"
-          :class="index === activeIndex ? 'font-semibold' : 'font-normal'"
-          :style="
+        <div class="mt-4 h-2 w-full overflow-hidden rounded-full bg-white">
+          <div
+            class="h-full rounded-full bg-violet-600 transition-all duration-300"
+            :style="{ width: `${progressPct}%` }"
+          />
+        </div>
+      </div>
+    </div>
+
+    <nav class="flex-1 overflow-y-auto px-3 py-3">
+      <div class="space-y-2">
+        <button
+          v-for="(step, index) in steps"
+          :key="step.id"
+          class="flex w-full items-start gap-3 rounded-2xl border px-3 py-3 text-left transition-all"
+          :class="
             index === activeIndex
-              ? 'color: var(--color-text-primary)'
-              : 'color: var(--color-text-secondary)'
+              ? 'border-violet-200 bg-violet-50 shadow-sm'
+              : 'border-transparent bg-white hover:border-slate-200 hover:bg-slate-50'
           "
+          @click="emit('select', index)"
         >
-          {{ step.title }}
-        </span>
-      </button>
+          <div
+            class="flex size-9 shrink-0 items-center justify-center rounded-2xl text-sm font-semibold"
+            :class="
+              step.status === 'COMMITTED'
+                ? 'bg-emerald-100 text-emerald-700'
+                : index === activeIndex
+                  ? 'bg-violet-600 text-white'
+                  : 'border border-slate-200 bg-white text-slate-400'
+            "
+          >
+            <UIcon v-if="step.status === 'COMMITTED'" name="i-lucide-check" class="size-4" />
+            <span v-else>{{ step.order }}</span>
+          </div>
+
+          <div class="min-w-0 flex-1 space-y-1">
+            <div class="flex items-start justify-between gap-2">
+              <p
+                class="line-clamp-2 text-sm font-medium"
+                :class="index === activeIndex ? 'text-slate-900' : 'text-slate-700'"
+              >
+                {{ step.title }}
+              </p>
+              <StepStatusPill :status="step.status" :active="index === activeIndex" />
+            </div>
+
+            <p class="text-xs text-slate-500">
+              Step {{ step.order }} di {{ steps.length }}
+            </p>
+          </div>
+        </button>
+      </div>
     </nav>
   </div>
 </template>

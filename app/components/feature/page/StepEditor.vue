@@ -322,130 +322,102 @@ async function extractVisura(field: StepFormField): Promise<void> {
 </script>
 
 <template>
-  <div
-    class="flex h-full flex-col"
-    style="background-color: var(--color-surface)"
-  >
-    <!-- Step header -->
-    <div
-      class="border-b px-4 py-3"
-      style="border-color: var(--color-border-subtle)"
-    >
-      <div class="flex items-center gap-2">
-        <div
-          class="flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
-          style="background-color: var(--color-brand)"
-        >
-          {{ activeStep.order }}
-        </div>
-        <h2
-          class="text-sm font-semibold"
-          style="color: var(--color-text-primary)"
-        >
-          {{ activeStep.title }}
-        </h2>
+  <EditorPanel body-class="overflow-y-auto px-5 py-5">
+    <template #header>
+      <EditorPanelHeader
+        :title="activeStep.title"
+        :description="stepConfig.subtitle"
+        eyebrow="Editor step"
+      >
+        <template #badge>
+          <div
+            class="inline-flex items-center rounded-full bg-violet-600 px-2.5 py-1 text-xs font-semibold text-white"
+          >
+            Step {{ activeStep.order }}
+          </div>
+        </template>
+
+        <template #meta>
+          <div class="flex flex-wrap items-center gap-2 text-xs">
+            <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-medium text-slate-600">
+              {{ activeStep.step_type ?? "step generico" }}
+            </span>
+            <span
+              v-if="isAiStep"
+              class="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 font-medium text-violet-700"
+            >
+              Supporto AI attivo
+            </span>
+          </div>
+        </template>
+      </EditorPanelHeader>
+    </template>
+
+    <div class="flex flex-col gap-5">
+      <GenerationActionBar
+        v-if="isAiStep"
+        :is-generating="isGenerating"
+        :disable-generate="isGenerating || isAnyFileUploading || !isVisuraReady || areAiActionsDisabled"
+        :disable-refine="isGenerating || isAnyFileUploading || areAiActionsDisabled"
+        @generate="emit('generate')"
+        @refine="emit('refine')"
+      />
+
+      <div
+        v-if="formFields.length"
+        class="space-y-5 rounded-[24px] border border-slate-200 bg-slate-50/60 p-4 sm:p-5"
+      >
+        <template v-for="field in renderableFields" :key="field.key">
+          <div v-if="isFieldVisible(field)">
+            <StepRepeatableGroupField
+              v-if="field.type === 'repeatable_group'"
+              :field="field"
+              :instances="getInstances(field.key)"
+              :disabled="isGenerating"
+              :is-collapsed="(idx) => isCollapsed(field.key, idx)"
+              :instance-summary="(instance) => instanceSummary(field, instance)"
+              @add="addInstance(field)"
+              @remove="removeInstance(field, $event)"
+              @toggle-collapse="toggleCollapse(field.key, $event)"
+              @update-sub-field="updateInstanceField(field.key, $event.index, $event.subKey, $event.value)"
+            />
+
+            <StepSimpleField
+              v-else-if="isSimpleField(field)"
+              :field="field"
+              :model-value="formValues[field.key]"
+              :disabled="isGenerating"
+              @update:model-value="saveFormField(field.key, $event)"
+            />
+
+            <StepExtractionUploadField
+              v-else-if="isExtractionUploadField(field)"
+              :field="field"
+              :selected-file="visuraFile[field.key]"
+              :disabled="isGenerating"
+              :is-extracting="visuraExtracting[field.key]"
+              :error="visuraError[field.key]"
+              :result="visuraResult[field.key]"
+              :saved-value="formValues[field.key]"
+              :show-required-hint="isVisuraRequired && !isVisuraReady"
+              @select-file="onVisuraFileChange(field.key, $event)"
+              @extract="extractVisura(field)"
+            />
+
+            <StepGenerationUploadField
+              v-else-if="isGenerationUploadField(field)"
+              :field="field"
+              :disabled="isGenerating"
+              :loading="fileUploading[field.key]"
+              :error="fileUploadError[field.key]"
+              :saved-value="formValues[field.key]"
+              @select-file="onFileChange(field.key, $event)"
+            />
+
+            <template v-else />
+          </div>
+        </template>
       </div>
-      <p class="mt-1 text-xs" style="color: var(--color-text-muted)">
-        {{ stepConfig.subtitle }}
-      </p>
-    </div>
-
-    <!-- Generate action bar (AI steps only) -->
-    <div
-      v-if="isAiStep"
-      class="border-b px-4 py-3"
-      style="border-color: var(--color-border-subtle)"
-    >
-      <div class="flex gap-2">
-        <UButton
-          class="flex-1 justify-center"
-          size="sm"
-          icon="i-lucide-sparkles"
-          :loading="isGenerating"
-          :disabled="isGenerating || isAnyFileUploading || !isVisuraReady || areAiActionsDisabled"
-          :class="areAiActionsDisabled ? 'opacity-50 cursor-not-allowed' : ''"
-          @click="emit('generate')"
-        >
-          Genera bozza AI
-        </UButton>
-        <UButton
-          class="flex-1 justify-center"
-          variant="outline"
-          color="neutral"
-          size="sm"
-          :disabled="isGenerating || isAnyFileUploading || areAiActionsDisabled"
-          :class="areAiActionsDisabled ? 'opacity-50 cursor-not-allowed' : ''"
-          @click="emit('refine')"
-        >
-          Raffina
-        </UButton>
-      </div>
-    </div>
-
-    <!-- Scrollable content -->
-    <div class="flex flex-1 flex-col gap-4 overflow-y-auto p-4 pb-48">
-
-      <!-- Form fields -->
-      <template v-if="formFields.length">
-        <div class="flex flex-col gap-5">
-          <template v-for="field in renderableFields" :key="field.key">
-            <!-- conditional visibility wrapper -->
-            <div v-if="isFieldVisible(field)">
-
-              <!-- ── repeatable_group ─────────────────────────────── -->
-              <StepRepeatableGroupField
-                v-if="field.type === 'repeatable_group'"
-                :field="field"
-                :instances="getInstances(field.key)"
-                :disabled="isGenerating"
-                :is-collapsed="(idx) => isCollapsed(field.key, idx)"
-                :instance-summary="(instance) => instanceSummary(field, instance)"
-                @add="addInstance(field)"
-                @remove="removeInstance(field, $event)"
-                @toggle-collapse="toggleCollapse(field.key, $event)"
-                @update-sub-field="updateInstanceField(field.key, $event.index, $event.subKey, $event.value)"
-              />
-
-              <!-- ── multiselect (top-level) ──────────────────────── -->
-              <StepSimpleField
-                v-else-if="isSimpleField(field)"
-                :field="field"
-                :model-value="formValues[field.key]"
-                :disabled="isGenerating"
-                @update:model-value="saveFormField(field.key, $event)"
-              />
-
-              <StepExtractionUploadField
-                v-else-if="isExtractionUploadField(field)"
-                :field="field"
-                :selected-file="visuraFile[field.key]"
-                :disabled="isGenerating"
-                :is-extracting="visuraExtracting[field.key]"
-                :error="visuraError[field.key]"
-                :result="visuraResult[field.key]"
-                :saved-value="formValues[field.key]"
-                :show-required-hint="isVisuraRequired && !isVisuraReady"
-                @select-file="onVisuraFileChange(field.key, $event)"
-                @extract="extractVisura(field)"
-              />
-
-              <StepGenerationUploadField
-                v-else-if="isGenerationUploadField(field)"
-                :field="field"
-                :disabled="isGenerating"
-                :loading="fileUploading[field.key]"
-                :error="fileUploadError[field.key]"
-                :saved-value="formValues[field.key]"
-                @select-file="onFileChange(field.key, $event)"
-              />
-
-              <!-- ── unsupported fallback ─────────────────────────────── -->
-              <template v-else />
-
-            </div>
-          </template>
-        </div>
-      </template>
 
       <UAlert
         v-if="unsupportedFields.length"
@@ -456,44 +428,29 @@ async function extractVisura(field: StepFormField): Promise<void> {
         size="sm"
       />
 
-      <!-- System prompt toggle (AI steps only) -->
-      <template v-if="isAiStep && activeStep.system_prompt_template">
-        <div>
-          <UButton
-            variant="ghost"
-            color="neutral"
-            size="xs"
-            :icon="showSystemPrompt ? 'i-lucide-eye-off' : 'i-lucide-eye'"
-            @click="showSystemPrompt = !showSystemPrompt"
-          >
-            {{ showSystemPrompt ? "Nascondi" : "Mostra" }} system prompt
-          </UButton>
-          <div
-            v-if="showSystemPrompt"
-            class="mt-2 rounded-md p-3"
-            style="background-color: var(--color-surface-subtle)"
-          >
-            <pre
-              class="max-h-64 overflow-y-auto whitespace-pre-wrap font-mono text-xs"
-              style="color: var(--color-text-muted)"
-              >{{ activeStep.system_prompt_template }}</pre
-            >
-          </div>
-        </div>
-      </template>
+      <div
+        v-if="isAiStep && activeStep.system_prompt_template"
+        class="rounded-[24px] border border-slate-200 bg-white p-4"
+      >
+        <UButton
+          variant="ghost"
+          color="neutral"
+          size="sm"
+          class="rounded-xl"
+          :icon="showSystemPrompt ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+          @click="showSystemPrompt = !showSystemPrompt"
+        >
+          {{ showSystemPrompt ? "Nascondi" : "Mostra" }} system prompt
+        </UButton>
 
-      <!-- Generation in progress -->
-      <div v-if="isGenerating" class="flex items-center gap-2">
-        <span
-          class="size-1.5 animate-pulse rounded-full"
-          style="background-color: var(--color-brand)"
-        />
-        <span class="text-xs" style="color: var(--color-brand-text)">
-          Generazione in corso…
-        </span>
+        <div
+          v-if="showSystemPrompt"
+          class="mt-3 rounded-2xl bg-slate-50 p-4"
+        >
+          <pre class="max-h-64 overflow-y-auto whitespace-pre-wrap font-mono text-xs leading-6 text-slate-500">{{ activeStep.system_prompt_template }}</pre>
+        </div>
       </div>
 
-      <!-- Error -->
       <UAlert
         v-if="formSaveError"
         color="error"
@@ -503,7 +460,6 @@ async function extractVisura(field: StepFormField): Promise<void> {
         size="sm"
       />
 
-      <!-- Error -->
       <UAlert
         v-if="errorMsg"
         color="error"
@@ -513,5 +469,5 @@ async function extractVisura(field: StepFormField): Promise<void> {
         size="sm"
       />
     </div>
-  </div>
+  </EditorPanel>
 </template>

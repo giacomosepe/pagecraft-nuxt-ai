@@ -91,114 +91,99 @@ async function exportWord(): Promise<void> {
 </script>
 
 <template>
-	<div class="flex h-screen overflow-hidden">
-		<!-- Loading -->
-		<div v-if="pending" class="flex flex-1 items-center justify-center">
+	<BasePageContainer size="full">
+		<div v-if="pending" class="flex min-h-[60vh] items-center justify-center">
 			<UIcon
 				name="i-lucide-loader-circle"
-				class="size-6 animate-spin"
-				style="color: var(--color-text-placeholder)"
+				class="size-6 animate-spin text-slate-400"
 			/>
 		</div>
 
-		<!-- Error -->
 		<div
 			v-else-if="error || !page"
-			class="flex flex-1 flex-col items-center justify-center gap-3"
+			class="flex min-h-[60vh] flex-col items-center justify-center gap-3 rounded-[28px] border border-slate-200 bg-white p-8 text-center shadow-sm"
 		>
-			<p class="text-sm" style="color: var(--color-text-muted)">
-				Impossibile caricare il documento.
-			</p>
+			<p class="text-sm text-slate-500">Impossibile caricare il documento.</p>
 			<UButton variant="ghost" to="/clienti">Torna ai clienti</UButton>
 		</div>
 
-		<!-- Three-panel editor -->
 		<template v-else>
-			<!-- Left panel: navigation -->
-			<aside
-				class="flex w-48 shrink-0 flex-col border-r"
-				style="
-					border-color: var(--color-border);
-					background-color: var(--color-surface);
-				"
+			<BasePageHeader
+				:title="page.title"
+				description="Lavora step per step sul documento, genera le bozze AI e salva l’output finale senza uscire dal flusso."
 			>
-				<!-- Back + page title -->
-				<div
-					class="border-b px-3 py-3"
-					style="border-color: var(--color-border-subtle)"
-				>
-					<NuxtLink
-						to="/clienti"
-						class="mb-2 flex items-center gap-1 text-xs hover:underline"
-						style="color: var(--color-text-placeholder)"
-					>
-						<UIcon name="i-lucide-arrow-left" class="size-3" />
-						Clienti
-					</NuxtLink>
-					<p
-						class="truncate text-xs font-medium"
-						style="color: var(--color-text-primary)"
-					>
-						{{ page.title }}
-					</p>
-					<p
-						class="mt-0.5 text-xs"
-						style="color: var(--color-text-muted)"
-					>
-						{{ page.framework_name }}
-					</p>
-				</div>
+				<template #meta>
+					<div class="flex flex-wrap items-center gap-2 text-xs">
+						<span class="rounded-full border border-slate-200 bg-white px-3 py-1 font-medium text-slate-600">
+							{{ page.framework_name ?? "Framework non definito" }}
+						</span>
+						<span
+							v-if="page.tax_year"
+							class="rounded-full border border-slate-200 bg-white px-3 py-1 font-medium text-slate-600"
+						>
+							Anno fiscale {{ page.tax_year }}
+						</span>
+						<span
+							v-if="!page.client_id"
+							class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 font-medium text-amber-700"
+						>
+							Nessun cliente collegato
+						</span>
+					</div>
+				</template>
 
-				<!-- No client warning -->
-				<div
-					v-if="!page.client_id"
-					class="flex items-start gap-2 border-b border-yellow-200 bg-yellow-50 px-3 py-2 dark:border-yellow-800 dark:bg-yellow-950"
-				>
-					<UIcon
-						name="i-lucide-triangle-alert"
-						class="mt-0.5 size-3 shrink-0 text-yellow-600 dark:text-yellow-400"
-					/>
-					<p class="text-xs text-yellow-700 dark:text-yellow-300">
-						Nessun cliente collegato
-					</p>
-				</div>
-
-				<!-- Step navigation -->
-				<div class="min-h-0 flex-1">
-					<StepNav
-						:steps="steps ?? []"
-						:active-index="activeStepIndex"
-						@select="activeStepIndex = $event"
-					/>
-				</div>
-
-				<!-- Export -->
-				<div
-					class="border-t p-2"
-					style="border-color: var(--color-border-subtle)"
-				>
+				<template #actions>
 					<UButton
-						variant="ghost"
+						variant="outline"
 						color="neutral"
-						size="xs"
+						size="lg"
 						icon="i-lucide-download"
-						class="w-full justify-center"
+						class="rounded-xl border-slate-300 bg-white px-5"
 						:disabled="!allCommitted || isExporting"
 						:loading="isExporting"
 						@click="exportWord"
 					>
 						Esporta Word
 					</UButton>
-				</div>
-			</aside>
+				</template>
+			</BasePageHeader>
 
-			<!-- Center + Right panels -->
-			<div
-				class="grid min-w-0 flex-1 overflow-hidden"
-				style="grid-template-columns: 2fr 1fr; grid-template-rows: 1fr"
-			>
-				<!-- Center: input + controls -->
-				<div class="min-h-0 overflow-hidden">
+			<EditorShell>
+				<template #nav>
+					<EditorPanel body-class="overflow-hidden p-0">
+						<template #header>
+							<EditorPanelHeader
+								title="Mappa del documento"
+								description="Segui i passaggi, controlla l’avanzamento e passa rapidamente allo step successivo."
+								eyebrow="Navigazione"
+							>
+								<template #meta>
+									<NuxtLink
+										to="/clienti"
+										class="inline-flex items-center gap-1 text-xs font-medium text-slate-400 transition-colors hover:text-slate-600"
+									>
+										<UIcon name="i-lucide-arrow-left" class="size-3.5" />
+										Clienti
+									</NuxtLink>
+								</template>
+							</EditorPanelHeader>
+						</template>
+
+						<StepNav
+							:steps="steps ?? []"
+							:active-index="activeStepIndex"
+							@select="activeStepIndex = $event"
+						/>
+
+						<template #footer>
+							<p class="text-xs leading-5 text-slate-500">
+								Quando tutti gli step sono completati puoi esportare il documento in Word.
+							</p>
+						</template>
+					</EditorPanel>
+				</template>
+
+				<template #main>
 					<StepEditor
 						v-if="activeStep"
 						:active-step="activeStep"
@@ -207,17 +192,19 @@ async function exportWord(): Promise<void> {
 						@generate="generate"
 						@refine="refine"
 					/>
-				</div>
-				<!-- Right: generated output -->
-				<StepOutput
-					:output="output"
-					:is-generating="isGenerating"
-					:is-committing="isCommitting"
-					:active-step="activeStep ?? null"
-					@commit="commit"
-					@discard="discard"
-				/>
-			</div>
+				</template>
+
+				<template #output>
+					<StepOutput
+						:output="output"
+						:is-generating="isGenerating"
+						:is-committing="isCommitting"
+						:active-step="activeStep ?? null"
+						@commit="commit"
+						@discard="discard"
+					/>
+				</template>
+			</EditorShell>
 		</template>
-	</div>
+	</BasePageContainer>
 </template>

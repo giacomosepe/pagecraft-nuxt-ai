@@ -7,17 +7,16 @@ defineProps<{
 </script>
 
 <template>
-  <div>
-    <label
-      class="mb-1 block text-xs font-medium"
-      style="color: var(--color-text-secondary)"
-    >
-      {{ label }}
-      <span v-if="required" class="ml-0.5 text-red-500">*</span>
-    </label>
-    <p v-if="hint" class="mb-1.5 text-xs" style="color: var(--color-text-muted)">
-      {{ hint }}
-    </p>
+  <div class="space-y-2.5">
+    <div class="space-y-1">
+      <label class="block text-sm font-semibold text-slate-800">
+        {{ label }}
+        <span v-if="required" class="ml-0.5 text-rose-500">*</span>
+      </label>
+      <p v-if="hint" class="text-xs leading-5 text-slate-500">
+        {{ hint }}
+      </p>
+    </div>
     <slot />
   </div>
 </template>
