@@ -22,7 +22,8 @@ BEGIN
     WHERE schemaname = 'public'
     AND tablename IN (
       'frameworks', 'framework_steps', 'clients', 'pages',
-      'folders', 'steps', 'generations', 'files', 'generation_files'
+      'folders', 'steps', 'generations', 'files', 'generation_files',
+      'users'
     )
   LOOP
     EXECUTE format('DROP POLICY IF EXISTS %I ON %I', r.policyname, r.tablename);
@@ -193,6 +194,11 @@ USING (generation_id IN (
 CREATE POLICY "Users can read their own user record"
 ON users FOR SELECT TO authenticated
 USING (id = auth.uid());
+
+CREATE POLICY "Users can update their own user record"
+ON users FOR UPDATE TO authenticated
+USING (id = auth.uid())
+WITH CHECK (id = auth.uid());
 
 -- ─── Verify ───────────────────────────────────────────────────────────────────
 SELECT tablename, policyname, cmd
