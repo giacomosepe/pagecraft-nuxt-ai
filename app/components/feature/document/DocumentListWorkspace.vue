@@ -4,11 +4,20 @@ import type { DocumentListItem } from "~/types/app.types";
 const props = defineProps<{
   documents?: DocumentListItem[] | null;
   pending?: boolean;
+  refreshDocuments?: () => Promise<unknown>;
 }>();
 
 const route = useRoute();
 const router = useRouter();
 const search = ref("");
+const deleteDialogOpen = ref(false);
+const deleteTarget = ref<DocumentListItem | null>(null);
+const isDeleting = ref(false);
+const feedback = ref<{
+  tone: "success" | "error";
+  title: string;
+  description: string;
+} | null>(null);
 
 const filters = [
   { key: "recenti", label: "Recenti", icon: "i-lucide-history" },
@@ -73,6 +82,11 @@ const filteredDocuments = computed(() => {
   });
 });
 
+const deleteDescription = computed(() => {
+  if (!deleteTarget.value) return "";
+  return `Il documento "${deleteTarget.value.title}" verra rimosso definitivamente. Questa azione non puo essere annullata.`;
+});
+
 const headerTitle = computed(() => {
   switch (activeFilter.value) {
     case "recenti":
@@ -111,6 +125,48 @@ async function selectFilter(
 
   await router.push({ query: {} });
 }
+
+function requestDelete(document: DocumentListItem): void {
+  feedback.value = null;
+  deleteTarget.value = document;
+  deleteDialogOpen.value = true;
+}
+
+async function confirmDelete(): Promise<void> {
+  if (!deleteTarget.value) return;
+
+  isDeleting.value = true;
+
+  try {
+    await $fetch("/api/db/delete", {
+      method: "POST",
+      body: {
+        entity: "document",
+        id: deleteTarget.value.id,
+      },
+    });
+
+    await props.refreshDocuments?.();
+
+    feedback.value = {
+      tone: "success",
+      title: "Documento eliminato",
+      description: "Il documento e stato rimosso correttamente dall'elenco.",
+    };
+    deleteDialogOpen.value = false;
+    deleteTarget.value = null;
+  }
+  catch {
+    feedback.value = {
+      tone: "error",
+      title: "Eliminazione non riuscita",
+      description: "Non siamo riusciti a eliminare il documento. Riprova tra qualche istante.",
+    };
+  }
+  finally {
+    isDeleting.value = false;
+  }
+}
 </script>
 
 <template>
@@ -130,6 +186,20 @@ async function selectFilter(
         </UButton>
       </template>
     </BasePageHeader>
+
+    <UAlert
+      v-if="feedback"
+      :color="feedback.tone === 'error' ? 'error' : 'success'"
+      variant="soft"
+      :icon="
+        feedback.tone === 'error'
+          ? 'i-lucide-circle-alert'
+          : 'i-lucide-circle-check-big'
+      "
+      :title="feedback.title"
+      :description="feedback.description"
+      class="mb-6"
+    />
 
     <BaseWorkspaceSurface>
       <template #toolbar>
@@ -172,19 +242,22 @@ async function selectFilter(
       />
 
       <div v-else class="overflow-x-auto">
-        <div class="min-w-[920px]">
-          <div class="grid grid-cols-[minmax(0,2.1fr)_minmax(180px,1.2fr)_minmax(150px,1fr)_minmax(125px,0.9fr)_minmax(120px,0.9fr)] gap-4 bg-slate-50 px-6 py-4 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+        <div class="min-w-[980px]">
+          <div class="grid grid-cols-[minmax(0,2.1fr)_minmax(180px,1.2fr)_minmax(150px,1fr)_minmax(125px,0.9fr)_minmax(120px,0.9fr)_72px] gap-4 bg-slate-50 px-6 py-4 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
             <p>Documento</p>
             <p>Progetto</p>
             <p>Cliente</p>
             <p>Stato</p>
             <p>Ultima attività</p>
+            <p class="text-right">Azioni</p>
           </div>
 
           <DocumentListRow
             v-for="document in filteredDocuments"
             :key="document.id"
             :document="document"
+            :delete-loading="isDeleting && deleteTarget?.id === document.id"
+            @delete="requestDelete"
           />
         </div>
       </div>
@@ -193,5 +266,14 @@ async function selectFilter(
     <p class="text-sm text-slate-500">
       {{ headerSubtitle }}
     </p>
+
+    <BaseConfirmDialog
+      v-model:open="deleteDialogOpen"
+      title="Eliminare il documento?"
+      :description="deleteDescription"
+      confirm-label="Elimina documento"
+      :loading="isDeleting"
+      @confirm="confirmDelete"
+    />
   </BasePageContainer>
 </template>

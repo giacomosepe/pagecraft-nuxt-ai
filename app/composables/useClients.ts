@@ -11,7 +11,7 @@ import type { ClientListItem } from "~/types/app.types";
 export function useClients() {
   const supabase = useSupabaseClient();
 
-  const { data: clients, pending } = useAsyncData<ClientListItem[]>(
+  const { data: clients, pending, refresh } = useAsyncData<ClientListItem[]>(
     "clients-list",
     async () => {
       const { data, error } = await supabase
@@ -26,5 +26,5 @@ export function useClients() {
     { server: false },
   );
 
-  return { clients, pending };
+  return { clients, pending, refresh };
 }

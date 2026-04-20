@@ -5,6 +5,11 @@ import { statusLabel } from "~/utils/status";
 
 const props = defineProps<{
 	client: ClientListItem;
+	deleteLoading?: boolean;
+}>();
+
+const emit = defineEmits<{
+	delete: [client: ClientListItem];
 }>();
 
 const router = useRouter();
@@ -72,15 +77,26 @@ const projectsLabel = computed((): string =>
 function navigate(): void {
 	router.push(`/clients/${props.client.id}`);
 }
+
+function handleDeleteClick(event: MouseEvent): void {
+	event.stopPropagation();
+	emit("delete", props.client);
+}
 </script>
 
 <template>
-	<button
-		type="button"
-		class="interactive-row grid w-full grid-cols-[minmax(0,2.4fr)_minmax(120px,1.2fr)_minmax(110px,0.9fr)_minmax(110px,0.9fr)_minmax(120px,0.9fr)] items-center gap-4 border-t border-slate-200 px-6 py-4 text-left transition-colors hover:bg-slate-50"
-		@click="navigate"
+	<div
+		class="grid w-full grid-cols-[minmax(0,2.4fr)_minmax(120px,1.2fr)_minmax(110px,0.9fr)_minmax(110px,0.9fr)_minmax(120px,0.9fr)_72px] items-center gap-4 border-t border-slate-200 px-6 py-4 transition-colors hover:bg-slate-50"
 	>
-		<div class="flex min-w-0 items-center gap-3">
+		<div
+			class="interactive-row col-span-5 grid grid-cols-[minmax(0,2.4fr)_minmax(120px,1.2fr)_minmax(110px,0.9fr)_minmax(110px,0.9fr)_minmax(120px,0.9fr)] items-center gap-4 text-left"
+			role="button"
+			tabindex="0"
+			@click="navigate"
+			@keydown.enter="navigate"
+			@keydown.space.prevent="navigate"
+		>
+			<div class="flex min-w-0 items-center gap-3">
 			<div
 				class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-xs font-semibold text-slate-500"
 			>
@@ -122,5 +138,17 @@ function navigate(): void {
 		<p class="text-sm text-slate-500">
 			{{ lastActivity }}
 		</p>
-	</button>
+		</div>
+
+		<div class="flex justify-end">
+			<UButton
+				color="error"
+				variant="soft"
+				icon="i-lucide-trash-2"
+				class="rounded-xl"
+				:loading="deleteLoading"
+				@click="handleDeleteClick"
+			/>
+		</div>
+	</div>
 </template>

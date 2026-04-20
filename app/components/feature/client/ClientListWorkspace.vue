@@ -4,11 +4,20 @@ import type { ClientListItem } from "~/types/app.types";
 const props = defineProps<{
 	clients?: ClientListItem[] | null;
 	pending?: boolean;
+	refreshClients?: () => Promise<unknown>;
 }>();
 
 const search = ref("");
 const route = useRoute();
 const router = useRouter();
+const deleteDialogOpen = ref(false);
+const deleteTarget = ref<ClientListItem | null>(null);
+const isDeleting = ref(false);
+const feedback = ref<{
+	tone: "success" | "error";
+	title: string;
+	description: string;
+} | null>(null);
 
 const activeFilter = ref<"recenti" | "attivi" | "chiusi" | "tutti">("tutti");
 
@@ -20,6 +29,17 @@ const filters = [
 ] as const;
 
 const normalizedClients = computed(() => props.clients ?? []);
+const transitionNotice = computed(() => {
+	if (route.query.deleted === "client") {
+		return {
+			title: "Cliente eliminato",
+			description: "Il cliente e stato rimosso correttamente dall'area clienti.",
+		};
+	}
+
+	return null;
+});
+const activeNotice = computed(() => feedback.value ?? transitionNotice.value);
 
 watchEffect(() => {
 	const status = route.query.status;
@@ -65,6 +85,12 @@ const filteredClients = computed(() => {
 	});
 });
 
+const deleteDescription = computed(() => {
+	if (!deleteTarget.value) return "";
+	const title = deleteTarget.value.company_name || deleteTarget.value.name;
+	return `Il cliente "${title}", i progetti collegati e tutti i documenti associati verranno eliminati definitivamente. Questa azione non puo essere annullata.`;
+});
+
 const headerTitle = computed(() => {
 	switch (activeFilter.value) {
 		case "recenti":
@@ -105,6 +131,48 @@ async function selectFilter(
 
 	await router.push({ query });
 }
+
+function requestDelete(client: ClientListItem): void {
+	feedback.value = null;
+	deleteTarget.value = client;
+	deleteDialogOpen.value = true;
+}
+
+async function confirmDelete(): Promise<void> {
+	if (!deleteTarget.value) return;
+
+	isDeleting.value = true;
+
+	try {
+		await $fetch("/api/db/delete", {
+			method: "POST",
+			body: {
+				entity: "client",
+				id: deleteTarget.value.id,
+			},
+		});
+
+		await props.refreshClients?.();
+
+		feedback.value = {
+			tone: "success",
+			title: "Cliente eliminato",
+			description: "Il cliente, i progetti collegati e i documenti associati sono stati rimossi correttamente.",
+		};
+		deleteDialogOpen.value = false;
+		deleteTarget.value = null;
+	}
+	catch {
+		feedback.value = {
+			tone: "error",
+			title: "Eliminazione non riuscita",
+			description: "Non siamo riusciti a eliminare il cliente. Riprova tra qualche istante.",
+		};
+	}
+	finally {
+		isDeleting.value = false;
+	}
+}
 </script>
 
 <template>
@@ -124,6 +192,20 @@ async function selectFilter(
 				</UButton>
 			</template>
 		</BasePageHeader>
+
+		<UAlert
+			v-if="activeNotice"
+			:color="activeNotice.tone === 'error' ? 'error' : 'success'"
+			variant="soft"
+			:icon="
+				activeNotice.tone === 'error'
+					? 'i-lucide-circle-alert'
+					: 'i-lucide-circle-check-big'
+			"
+			:title="activeNotice.title"
+			:description="activeNotice.description"
+			class="mb-6"
+		/>
 
 		<BaseWorkspaceSurface>
 			<template #toolbar>
@@ -166,19 +248,22 @@ async function selectFilter(
 			/>
 
 			<div v-else class="overflow-x-auto">
-				<div class="min-w-[760px]">
-					<div class="grid grid-cols-[minmax(0,2.4fr)_minmax(120px,1.2fr)_minmax(110px,0.9fr)_minmax(110px,0.9fr)_minmax(120px,0.9fr)] gap-4 bg-slate-50 px-6 py-4 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+				<div class="min-w-[840px]">
+					<div class="grid grid-cols-[minmax(0,2.4fr)_minmax(120px,1.2fr)_minmax(110px,0.9fr)_minmax(110px,0.9fr)_minmax(120px,0.9fr)_72px] gap-4 bg-slate-50 px-6 py-4 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
 						<p>Cliente</p>
 						<p>Settore</p>
 						<p>Stato</p>
 						<p>Programmi</p>
 						<p>Ultima attività</p>
+						<p class="text-right">Azioni</p>
 					</div>
 
 					<ClientListRow
 						v-for="client in filteredClients"
 						:key="client.id"
 						:client="client"
+						:delete-loading="isDeleting && deleteTarget?.id === client.id"
+						@delete="requestDelete"
 					/>
 				</div>
 			</div>
@@ -187,5 +272,14 @@ async function selectFilter(
 		<p class="text-sm text-slate-500">
 			{{ headerSubtitle }}
 		</p>
+
+		<BaseConfirmDialog
+			v-model:open="deleteDialogOpen"
+			title="Eliminare il cliente?"
+			:description="deleteDescription"
+			confirm-label="Elimina cliente"
+			:loading="isDeleting"
+			@confirm="confirmDelete"
+		/>
 	</BasePageContainer>
 </template>
