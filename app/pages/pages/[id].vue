@@ -92,20 +92,29 @@ async function exportWord(): Promise<void> {
 
 <template>
 	<BasePageContainer size="full">
-		<div v-if="pending" class="flex min-h-[60vh] items-center justify-center">
-			<UIcon
-				name="i-lucide-loader-circle"
-				class="size-6 animate-spin text-slate-400"
-			/>
-		</div>
+		<BaseStateMessage
+			v-if="pending"
+			loading
+			surface
+			class="min-h-[60vh]"
+			title="Caricamento documento in corso..."
+		/>
 
-		<div
+		<BaseStateMessage
 			v-else-if="error || !page"
-			class="flex min-h-[60vh] flex-col items-center justify-center gap-3 rounded-[28px] border border-slate-200 bg-white p-8 text-center shadow-sm"
+			surface
+			tone="error"
+			class="min-h-[60vh]"
+			icon="i-lucide-circle-alert"
+			title="Impossibile caricare il documento"
+			description="Controlla che il documento esista ancora oppure torna all'elenco per riprovare."
 		>
-			<p class="text-sm text-slate-500">Impossibile caricare il documento.</p>
-			<UButton variant="ghost" to="/clienti">Torna ai clienti</UButton>
-		</div>
+			<template #actions>
+				<UButton variant="ghost" color="neutral" to="/documenti">
+					Torna ai documenti
+				</UButton>
+			</template>
+		</BaseStateMessage>
 
 		<template v-else>
 			<BasePageHeader

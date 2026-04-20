@@ -7,7 +7,7 @@ const emit = defineEmits<{
 }>();
 
 // Load available frameworks — public and not deprecated
-const { data: frameworks, pending } = await useAsyncData(
+const { data: frameworks, pending, error } = await useAsyncData(
 	"frameworks",
 	async () => {
 		const { data, error } = await client
@@ -36,12 +36,29 @@ function confirm() {
 		title="Seleziona un framework"
 		description="Scegli la struttura di partenza del documento. La selezione definisce lo scheletro che verrà creato."
 	>
-		<div v-if="pending" class="flex justify-center py-10">
-			<UIcon
-				name="i-lucide-loader-circle"
-				class="size-5 animate-spin text-slate-400"
-			/>
-		</div>
+		<BaseStateMessage
+			v-if="pending"
+			loading
+			compact
+			title="Caricamento framework in corso..."
+		/>
+
+		<BaseStateMessage
+			v-else-if="error"
+			compact
+			tone="error"
+			icon="i-lucide-circle-alert"
+			title="Impossibile caricare i framework"
+			description="Chiudi la finestra e riprova tra qualche istante."
+		/>
+
+		<BaseStateMessage
+			v-else-if="!frameworks?.length"
+			compact
+			icon="i-lucide-files"
+			title="Nessun framework disponibile"
+			description="Non ci sono framework selezionabili in questo momento."
+		/>
 
 		<div v-else class="space-y-3">
 			<button
@@ -97,7 +114,7 @@ function confirm() {
 				<UButton color="neutral" variant="ghost" @click="emit('cancel')">
 					Annulla
 				</UButton>
-				<UButton :disabled="!selected" @click="confirm">
+				<UButton :disabled="!selected || !!error || !frameworks?.length" @click="confirm">
 					Continua
 				</UButton>
 			</div>

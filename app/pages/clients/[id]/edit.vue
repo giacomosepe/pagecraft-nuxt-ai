@@ -37,12 +37,10 @@ watch(clientData, (val) => {
 // ─── Save ─────────────────────────────────────────────────────────────────────
 const loading  = ref(false);
 const errorMsg = ref("");
-const success  = ref(false);
 
 async function save() {
 	loading.value  = true;
 	errorMsg.value = "";
-	success.value  = false;
 
 	try {
 		await $fetch("/api/db/mutate", {
@@ -64,8 +62,10 @@ async function save() {
 				where: { id: clientId },
 			},
 		});
-		success.value = true;
-		await navigateTo(`/clients/${clientId}`);
+		await navigateTo({
+			path: `/clients/${clientId}`,
+			query: { updated: "client" },
+		});
 	} catch (e: any) {
 		errorMsg.value = e?.data?.message ?? "Errore durante il salvataggio.";
 	} finally {
@@ -83,9 +83,11 @@ async function save() {
 		eyebrow="Modifica"
 		size="lg"
 	>
-		<div v-if="pending" class="flex justify-center py-24">
-			<UIcon name="i-lucide-loader-circle" class="size-6 animate-spin text-slate-400" />
-		</div>
+		<BaseStateMessage
+			v-if="pending"
+			loading
+			title="Caricamento cliente in corso..."
+		/>
 
 		<template v-else-if="clientData">
 			<FormSectionCard
@@ -149,13 +151,19 @@ async function save() {
 			/>
 		</template>
 
-		<div v-else class="flex flex-col items-center justify-center py-24 text-center">
-			<UIcon name="i-lucide-circle-alert" class="mb-3 size-9 text-slate-300" />
-			<p class="text-sm font-medium text-slate-900">Cliente non trovato</p>
-			<NuxtLink to="/clients" class="mt-3 text-sm text-primary-600 hover:underline">
-				Torna ai clienti
-			</NuxtLink>
-		</div>
+		<BaseStateMessage
+			v-else
+			tone="error"
+			icon="i-lucide-circle-alert"
+			title="Cliente non trovato"
+			description="Non è stato possibile recuperare i dati da modificare."
+		>
+			<template #actions>
+				<UButton variant="ghost" color="neutral" to="/clients">
+					Torna ai clienti
+				</UButton>
+			</template>
+		</BaseStateMessage>
 
 		<template #footer>
 			<FormActionsFooter v-if="clientData && !pending">

@@ -131,56 +131,48 @@ async function selectFilter(
       </template>
     </BasePageHeader>
 
-    <section class="rounded-[28px] border border-slate-200 bg-white shadow-sm">
-      <div class="flex flex-col gap-4 border-b border-slate-200 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
-        <div class="flex flex-wrap gap-2">
-          <UButton
-            v-for="filter in filters"
-            :key="filter.key"
-            :icon="filter.icon"
-            :variant="activeFilter === filter.key ? 'soft' : 'ghost'"
-            color="neutral"
-            class="rounded-xl"
-            @click="selectFilter(filter.key)"
-          >
-            {{ filter.label }}
-          </UButton>
+    <BaseWorkspaceSurface>
+      <template #toolbar>
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div class="flex flex-wrap gap-2">
+            <UButton
+              v-for="filter in filters"
+              :key="filter.key"
+              :icon="filter.icon"
+              :variant="activeFilter === filter.key ? 'soft' : 'ghost'"
+              color="neutral"
+              class="rounded-xl"
+              @click="selectFilter(filter.key)"
+            >
+              {{ filter.label }}
+            </UButton>
+          </div>
+
+          <UInput
+            v-model="search"
+            icon="i-lucide-search"
+            size="lg"
+            placeholder="Cerca documento, progetto o cliente..."
+            class="w-full lg:max-w-sm"
+          />
         </div>
+      </template>
 
-        <UInput
-          v-model="search"
-          icon="i-lucide-search"
-          size="lg"
-          placeholder="Cerca documento, progetto o cliente..."
-          class="w-full lg:max-w-sm"
-        />
-      </div>
-
-      <div
+      <BaseWorkspaceState
         v-if="pending"
-        class="flex flex-col items-center justify-center gap-3 px-6 py-20"
-      >
-        <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin text-slate-400" />
-        <p class="text-sm text-slate-500">Caricamento documenti in corso...</p>
-      </div>
+        loading
+        title="Caricamento documenti in corso..."
+      />
 
-      <div
+      <BaseWorkspaceState
         v-else-if="!filteredDocuments.length"
-        class="flex flex-col items-center justify-center gap-3 px-6 py-20 text-center"
-      >
-        <div class="flex size-14 items-center justify-center rounded-2xl bg-slate-100">
-          <UIcon name="i-lucide-file-stack" class="size-7 text-slate-400" />
-        </div>
-        <div class="space-y-1">
-          <p class="text-sm font-semibold text-slate-900">Nessun documento trovato</p>
-          <p class="text-sm text-slate-500">
-            Prova a cambiare filtro o crea un nuovo documento.
-          </p>
-        </div>
-      </div>
+        icon="i-lucide-file-stack"
+        title="Nessun documento trovato"
+        description="Prova a cambiare filtro o crea un nuovo documento."
+      />
 
       <div v-else class="overflow-x-auto">
-        <div class="min-w-[1080px]">
+        <div class="min-w-[920px]">
           <div class="grid grid-cols-[minmax(0,2.1fr)_minmax(180px,1.2fr)_minmax(150px,1fr)_minmax(125px,0.9fr)_minmax(120px,0.9fr)] gap-4 bg-slate-50 px-6 py-4 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
             <p>Documento</p>
             <p>Progetto</p>
@@ -196,7 +188,7 @@ async function selectFilter(
           />
         </div>
       </div>
-    </section>
+    </BaseWorkspaceSurface>
 
     <p class="text-sm text-slate-500">
       {{ headerSubtitle }}
