@@ -24,7 +24,7 @@ const accountInitials = computed(() => {
 
 <template>
 	<aside
-		class="hidden h-full w-64 shrink-0 flex-col border-r border-slate-200 bg-white md:flex"
+		class="hidden h-screen w-64 shrink-0 flex-col border-r border-slate-200 bg-white md:sticky md:top-0 md:flex"
 	>
 		<div class="flex h-16 items-center justify-between border-b border-slate-200 px-4">
 			<div class="flex items-center gap-3">
@@ -39,22 +39,18 @@ const accountInitials = computed(() => {
 				</div>
 			</div>
 
-			<div class="flex items-center gap-1">
-				<UButton
-					variant="ghost"
-					color="neutral"
-					icon="i-lucide-square-pen"
-					size="xs"
-					class="rounded-lg text-violet-600"
-					to="/pages/new"
-				/>
-			</div>
+			<UButton
+				variant="ghost"
+				color="neutral"
+				icon="i-lucide-square-pen"
+				size="xs"
+				class="rounded-lg text-violet-600"
+				to="/pages/new"
+			/>
 		</div>
 
 		<div class="border-b border-slate-100 px-3 py-3">
-			<div
-				class="flex items-center gap-3 rounded-xl px-2 py-2"
-			>
+			<div class="flex items-center gap-3 rounded-xl px-2 py-2">
 				<div
 					class="flex size-6 items-center justify-center rounded-full bg-violet-600 text-[10px] font-semibold text-white"
 				>

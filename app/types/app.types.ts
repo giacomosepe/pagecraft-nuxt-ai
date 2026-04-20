@@ -17,7 +17,14 @@ export interface ClientListItem {
   status: string;
   created_at: string;
   updated_at: string;
-  folders: { id: string; updated_at: string }[] | null;
+  folders: {
+    id: string;
+    updated_at: string;
+    pages?: {
+      id: string;
+      updated_at: string;
+    }[] | null;
+  }[] | null;
 }
 
 export interface ClientDetail {
@@ -60,6 +67,15 @@ export interface FolderTableRow {
   documenti: string;
   lastModified: string;
   status: string;
+}
+
+export interface ProjectListItem {
+  id: string;
+  program_name: string | null;
+  updated_at: string;
+  client_id: string | null;
+  clients: { id: string; name: string } | null;
+  pages: PageItem[] | null;
 }
 
 // ─── Framework ────────────────────────────────────────────────────────────────

@@ -24,6 +24,23 @@ async function onStatusChange(val: unknown): Promise<void> {
 	await updateStatus(val as string);
 }
 
+const summaryItems = computed(() => {
+	const foldersCount = data.value?.folders?.length ?? 0;
+	const documentsCount =
+		data.value?.folders?.reduce(
+			(total, folder) => total + (folder.pages?.length ?? 0),
+			0,
+		) ?? 0;
+
+	return [
+		{ label: "Programmi", value: String(foldersCount) },
+		{ label: "Documenti", value: String(documentsCount) },
+		{
+			label: "Ultimo aggiornamento",
+			value: data.value ? formatDate(data.value.updated_at) : "—",
+		},
+	];
+});
 </script>
 
 <template>
@@ -63,7 +80,8 @@ async function onStatusChange(val: unknown): Promise<void> {
 			>
 				<template #meta>
 					<p class="text-sm text-(--ui-text-muted)">
-						{{ data.folders?.length ?? 0 }} programmi · ultimo aggiornamento
+						{{ data.folders?.length ?? 0 }} programmi · ultimo
+						aggiornamento
 						{{ formatDate(data.updated_at) }}
 					</p>
 					<USelect
@@ -93,6 +111,29 @@ async function onStatusChange(val: unknown): Promise<void> {
 					</UButton>
 				</template>
 			</BasePageHeader>
+
+			<BaseDetailSection
+				title="Panoramica"
+				description="Metriche rapide per orientarsi prima di entrare nei singoli programmi."
+				class="mb-6"
+			>
+				<div class="grid gap-4 md:grid-cols-3">
+					<div
+						v-for="item in summaryItems"
+						:key="item.label"
+						class="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4"
+					>
+						<p
+							class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400"
+						>
+							{{ item.label }}
+						</p>
+						<p class="mt-2 text-2xl font-semibold text-slate-900">
+							{{ item.value }}
+						</p>
+					</div>
+				</div>
+			</BaseDetailSection>
 
 			<FolderTable :folders="folders" />
 		</template>

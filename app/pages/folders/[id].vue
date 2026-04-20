@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { statusColor, statusLabel } from "~/utils/status";
+import { statusLabel } from "~/utils/status";
 
 definePageMeta({ middleware: "auth" });
 
@@ -13,7 +13,9 @@ const { data, pending } = await useAsyncData(
 		const [folderRes, pagesRes] = await Promise.all([
 			supabase
 				.from("folders")
-				.select("id, program_name, client_id, created_at, clients(name)")
+				.select(
+					"id, program_name, client_id, created_at, clients(name)",
+				)
 				.eq("id", folderId)
 				.single(),
 			supabase
@@ -56,19 +58,23 @@ function formatDate(iso: string): string {
 </script>
 
 <template>
-	<BasePageContainer size="lg">
+	<BasePageContainer size="xl">
 		<!-- Loading -->
 		<div v-if="pending" class="flex justify-center py-24">
 			<UIcon
 				name="i-lucide-loader-circle"
-				class="size-6 animate-spin text-gray-400"
+				class="size-6 animate-spin text-slate-400"
 			/>
 		</div>
 
 		<template v-else-if="data">
 			<div class="mb-4">
 				<NuxtLink
-					:to="data.folder.client_id ? `/clients/${data.folder.client_id}` : '/dashboard'"
+					:to="
+						data.folder.client_id
+							? `/clients/${data.folder.client_id}`
+							: '/dashboard'
+					"
 					class="mb-3 flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-slate-700"
 				>
 					<UIcon name="i-lucide-arrow-left" class="size-4" />
@@ -83,70 +89,100 @@ function formatDate(iso: string): string {
 						<p class="text-sm text-slate-500">
 							<span v-if="clientName">{{ clientName }} · </span>
 							Creato il
-							{{ new Date(data.folder.created_at).toLocaleDateString("it-IT") }}
+							{{
+								new Date(
+									data.folder.created_at,
+								).toLocaleDateString("it-IT")
+							}}
 						</p>
 					</template>
 
 					<template #actions>
 						<UBadge color="primary" variant="soft" size="sm">
-						{{ data.pages.length }}
-						{{ data.pages.length === 1 ? "documento" : "documenti" }}
+							{{ data.pages.length }}
+							{{
+								data.pages.length === 1
+									? "documento"
+									: "documenti"
+							}}
 						</UBadge>
 					</template>
 				</BasePageHeader>
 			</div>
 
-			<div class="mb-4">
-				<h2 class="text-sm font-semibold text-slate-700">
-					Documenti
-				</h2>
-			</div>
-
-			<div
-				v-if="!data.pages.length"
-				class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 py-16 text-center"
+			<BaseDetailSection
+				title="Documenti"
+				description="Traccia i documenti collegati e apri subito quello giusto."
 			>
-				<UIcon
-					name="i-lucide-file-text"
-					class="mb-3 size-9 text-slate-300"
-				/>
-				<p class="text-sm font-medium text-slate-900">
-					Nessun documento
-				</p>
-				<p class="mt-1 text-sm text-slate-500">
-					Questo programma non contiene ancora documenti
-				</p>
-			</div>
-
-			<div v-else class="flex flex-col gap-2">
-				<NuxtLink
-					v-for="page in data.pages"
-					:key="page.id"
-					:to="`/pages/${page.id}`"
-					class="block rounded-lg border border-(--ui-border) bg-(--ui-bg) px-4 py-3 transition-colors hover:bg-(--ui-bg-elevated)"
+				<div
+					v-if="!data.pages.length"
+					class="flex flex-col items-center justify-center py-10 text-center"
 				>
-					<div class="flex items-start justify-between gap-3">
-						<p class="text-sm font-medium text-(--ui-text-highlighted)">
-							{{ page.framework_name ?? "—" }}
-						</p>
-						<UBadge
-							:color="statusColor[page.status] ?? 'neutral'"
-							variant="soft"
-							size="sm"
-							class="shrink-0"
-						>
-							{{ statusLabel[page.status] ?? page.status }}
-						</UBadge>
+					<div
+						class="mb-3 flex size-12 items-center justify-center rounded-2xl bg-slate-100"
+					>
+						<UIcon
+							name="i-lucide-file-text"
+							class="size-6 text-slate-400"
+						/>
 					</div>
-					<p class="mt-1 text-xs text-(--ui-text-muted)">
-						Ultima modifica: {{ formatDate(page.updated_at) }}
+					<p class="text-sm font-medium text-slate-900">
+						Nessun documento
 					</p>
-				</NuxtLink>
-			</div>
+					<p class="mt-1 text-sm text-slate-500">
+						Questo programma non contiene ancora documenti.
+					</p>
+				</div>
+
+				<div
+					v-else
+					class="overflow-hidden rounded-2xl border border-slate-200"
+				>
+					<div
+						class="grid grid-cols-[minmax(0,2fr)_minmax(120px,1fr)_120px] gap-4 bg-slate-50 px-5 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500"
+					>
+						<p>Documento</p>
+						<p>Stato</p>
+						<p>Ultima attività</p>
+					</div>
+
+					<NuxtLink
+						v-for="page in data.pages"
+						:key="page.id"
+						:to="`/pages/${page.id}`"
+						class="grid grid-cols-[minmax(0,2fr)_minmax(120px,1fr)_120px] items-center gap-4 border-t border-slate-200 px-5 py-4 transition-colors hover:bg-slate-50"
+					>
+						<div class="min-w-0">
+							<p
+								class="truncate text-sm font-semibold text-slate-900"
+							>
+								{{ page.title }}
+							</p>
+							<p class="truncate text-xs text-slate-500">
+								{{ page.framework_name ?? "—" }}
+							</p>
+						</div>
+
+						<div>
+							<span
+								class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
+							>
+								{{ statusLabel[page.status] ?? page.status }}
+							</span>
+						</div>
+
+						<p class="text-sm text-slate-500">
+							{{ formatDate(page.updated_at) }}
+						</p>
+					</NuxtLink>
+				</div>
+			</BaseDetailSection>
 		</template>
 
-		<!-- Not found -->
-		<div v-else class="flex flex-col items-center justify-center py-24 text-center">
+		<div
+			v-else
+			class="flex flex-col items-center justify-center py-24 text-center"
+		>
 			<UIcon
 				name="i-lucide-circle-alert"
 				class="mb-3 size-9 text-slate-300"
