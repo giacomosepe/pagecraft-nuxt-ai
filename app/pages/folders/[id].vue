@@ -70,15 +70,11 @@ function formatDate(iso: string): string {
 		<template v-else-if="data">
 			<div class="mb-4">
 				<NuxtLink
-					:to="
-						data.folder.client_id
-							? `/clients/${data.folder.client_id}`
-							: '/dashboard'
-					"
+					to="/progetti"
 					class="mb-3 flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-slate-700"
 				>
 					<UIcon name="i-lucide-arrow-left" class="size-4" />
-					{{ clientName ?? "Dashboard" }}
+					Tutti i progetti
 				</NuxtLink>
 
 				<BasePageHeader
@@ -86,15 +82,27 @@ function formatDate(iso: string): string {
 					description="Esplora i documenti collegati e il loro stato di avanzamento."
 				>
 					<template #meta>
-						<p class="text-sm text-slate-500">
-							<span v-if="clientName">{{ clientName }} · </span>
-							Creato il
-							{{
-								new Date(
-									data.folder.created_at,
-								).toLocaleDateString("it-IT")
-							}}
-						</p>
+						<div class="space-y-2">
+							<p class="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+								Progetto
+							</p>
+							<div class="flex flex-wrap items-center gap-2 text-sm">
+								<span
+									v-if="clientName"
+									class="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 font-medium text-violet-700"
+								>
+									Cliente: {{ clientName }}
+								</span>
+								<span class="text-slate-500">
+									Creato il
+									{{
+										new Date(
+											data.folder.created_at,
+										).toLocaleDateString("it-IT")
+									}}
+								</span>
+							</div>
+						</div>
 					</template>
 
 					<template #actions>
