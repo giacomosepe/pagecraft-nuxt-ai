@@ -1,5 +1,5 @@
 # PageCraft — CLAUDE.md
-# Last updated: April 18, 2026
+# Last updated: April 20, 2026
 # Read this file fully before starting any task.
 # Subdirectory CLAUDE.md files load automatically — do not @import them here.
 # For history and decisions: ~/Claude/_projects/pagecraft/changelog.md
@@ -80,6 +80,7 @@ app/
 └── utils/         ← date.ts, status.ts, folderStatus.ts
 server/api/
 ├── db/mutate.post.ts
+├── db/delete.post.ts
 ├── pages/create.post.ts
 ├── generations/create.post.ts
 └── export/word.post.ts
@@ -131,16 +132,19 @@ When writing or revising Linear issues, read `~/Claude/_skills/linear-issue-writ
 
 ---
 
-## BUILD STATUS — April 18, 2026
+## BUILD STATUS — April 20, 2026
 
 | Area | Status |
 |---|---|
 | Auth, clients, folders, pages | ✅ Full CRUD |
-| Step editor (3-panel, generate, refine, commit) | ✅ Working |
+| App shell, list/detail pages, forms, modal restyling | ✅ Completed |
+| Documents index + sidebar navigation | ✅ Completed |
+| Delete flows (client/project/document) | ✅ Completed — cascades handled in `server/api/db/delete.post.ts` |
+| Step editor (3-panel, generate, refine, commit) | ✅ Working + restyled |
 | Generation pipeline (form_data + cross-step context) | ✅ ENGNEER-93 |
 | Word export | ✅ ENGNEER-87 |
 | Step 3 visura upload + generation | ✅ ENGNEER-158, 160, 162 |
-| V0 exit test | ⬅️ ENGNEER-98 — next |
+| Prompt/content model changes | ⏸️ Not touched in the redesign sweep |
 
 **Known issues:**
 - `prisma/migrations` RLS warning in Supabase → intentional, ignore

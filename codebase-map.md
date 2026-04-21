@@ -1,5 +1,5 @@
 # PageCraft — Codebase Map
-> Last updated: 2026-04-18 (post ENGNEER-155, 156, 157, 158, 160, 161, 162)
+> Last updated: 2026-04-20 (post restyling batches + ENGNEER-195, 196, 197, 198, 199, 200, 201, 202)
 > Purpose: index of what exists and its current state. Instructions for what to change live in Linear issue spec documents.
 
 ---
@@ -16,9 +16,9 @@ app/
 ├── components/
 │   ├── AppSidebar.vue, AppBottomBar.vue  ← layout shells
 │   ├── FrameworkPickerModal.vue
-│   ├── base/                             ← pure UI, no data
+│   ├── base/                             ← pure UI, no data; includes workspace/state/form/confirm primitives
 │   └── feature/
-│       ├── client/, folder/
+│       ├── client/, document/, folder/, project/
 │       └── page/  ← StepNav, StepEditor, StepOutput
 ├── composables/   ← all data fetching + business logic
 ├── layouts/       ← default.vue (auth), publicLayout.vue (public)
@@ -28,6 +28,7 @@ app/
 └── utils/         ← date.ts, status.ts, folderStatus.ts
 server/api/
 ├── db/mutate.post.ts
+├── db/delete.post.ts
 ├── pages/create.post.ts, create-batch.post.ts
 ├── generations/create.post.ts
 ├── export/word.post.ts
@@ -56,19 +57,11 @@ Generates and streams a `.docx` from all committed steps.
 - Accepts `pageId`, fetches committed steps ordered by `order`
 - Builds title page + one `HEADING_1` per step. Uses `docx` npm package.
 
-### `server/api/visura/extract.post.ts` — 130 lines
-Extracts structured shareholder/subsidiary data from raw text.
-- Accepts `{ text: string }` (min 100, max 100000 chars)
-- Returns `{ shareholders[], subsidiaries[], missing: MissingFieldsReport }`
-- `MissingFieldsReport` interface defined inline (lines 9–15)
-
-### `server/api/visura/extract-pdf.post.ts` — ENGNEER-158 ✅
-Accepts PDF upload, sends to Claude as native document, returns same shape as extract.post.ts.
-- Accepts `multipart/form-data` with field `file` (PDF, max 10 MB)
-- Converts buffer to base64, sends as `type: "document"` — no text extraction needed
+### `server/api/visura/extract.post.ts` + `extract-pdf.post.ts`
+Structured shareholder/subsidiary extraction from raw text or uploaded PDF. PDF path sends the file natively to Claude; both routes return the same parsed shape.
 
 ### `app/components/feature/page/StepEditor.vue` — ~500 lines
-Center panel. Now acts as the step assembler rather than the all-in-one field renderer.
+Center panel. Restyled editor shell now sits around the same state-driven step assembler.
 - Reads `activeStep.step_type` + `form_schema`
 - Centralizes step behavior in `STEP_TYPE_CONFIG`
 - Computes `renderableFields` / `unsupportedFields` from step-type compatibility
@@ -77,25 +70,11 @@ Center panel. Now acts as the step assembler rather than the all-in-one field re
 - "Genera bozza AI" is gated by generation state, upload state, and extraction readiness for visible extraction fields
 - Transitional compatibility remains in code for legacy field names (`visura_upload`, `file`) and temporary `type_c` + `repeatable_group` support
 
-### `app/components/feature/page/StepFieldShell.vue`
-Shared field wrapper for label, hint, and required marker.
+### `app/components/feature/page/StepFieldShell.vue`, `StepSimpleField.vue`, `StepRepeatableGroupField.vue`
+Shared field wrappers/renderers for scalar fields and `repeatable_group`.
 
-### `app/components/feature/page/StepSimpleField.vue`
-Renders `text`, `textarea`, `number`, `select`, and `multiselect`.
-
-### `app/components/feature/page/StepRepeatableGroupField.vue`
-Renders `repeatable_group` with add/remove, collapse, and nested field rendering.
-
-### `app/components/feature/page/StepExtractionUploadField.vue`
-Renders extraction upload UI (`visura_upload` / `file_upload_extraction`).
-- PDF upload → `/api/visura/extract-pdf`
-- Persists structured extraction result in `form_data[field.key]`
-- Shows loading, success, missing-data summary, and prior saved-state notice
-
-### `app/components/feature/page/StepGenerationUploadField.vue`
-Renders generation-supporting upload UI (`file` / `file_upload_generation`).
-- Saves selected filename into `steps.form_data`
-- Used as AI prompt context, not document output
+### `app/components/feature/page/StepExtractionUploadField.vue` + `StepGenerationUploadField.vue`
+Shared upload components for extraction and generation context. Extraction upload persists parsed data into `form_data`; generation upload stores supporting filenames for prompt context only.
 
 ### `app/components/feature/page/StepOutput.vue` — 167 lines
 Right panel. Displays streamed AI output with commit/discard. Has expand modal.
@@ -104,7 +83,19 @@ Right panel. Displays streamed AI output with commit/discard. Has expand modal.
 Left sidebar. Step list with completion status and progress bar. Props-in, emits-out only.
 
 ### `app/pages/pages/[id].vue` — ~200 lines
-Three-panel editor. Thin orchestrator. Uses `usePage` + `useGeneration`. Word export via `/api/export/word`.
+Three-panel editor. Thin orchestrator. Uses `usePage` + `useGeneration`. Word export via `/api/export/word`. Current UI is the restyled shell/panels/actions version from Batch 3.
+
+### `app/components/base/BaseWorkspaceSurface.vue` + `BaseWorkspaceState.vue` + `BaseStateMessage.vue`
+Shared workspace/state primitives used across `clienti`, `progetti`, `documenti`, detail fallbacks, and form/modal loading-empty-error states.
+
+### `app/components/base/BaseConfirmDialog.vue`
+Shared destructive-action confirmation modal used by delete flows.
+
+### `app/components/feature/client|project|document/*Workspace.vue`
+List pages now use shared workspace surfaces with route-driven filters, search, success/error alerts, and inline delete actions.
+
+### `app/pages/documenti/index.vue`
+Real documents index route. Sidebar `Documenti` should point here, not to `/pages/new`.
 
 ### `app/composables/useGeneration.ts` — 165 lines
 All AI generation state. Returns `{ output, isGenerating, isCommitting, errorMsg, generate, refine, commit, discard }`.
@@ -128,6 +119,13 @@ Client-side only. Cannot be imported in server routes.
 
 ### `server/api/db/mutate.post.ts` — 115 lines
 Generic write route. Whitelisted tables: `clients`, `folders`, `pages`, `files`, `steps`, `generations`. RLS applies.
+
+### `server/api/db/delete.post.ts`
+Delete orchestration route for UI flows that need cascading behavior.
+- `document`: deletes one page
+- `project`: deletes folder + child pages
+- `client`: deletes client + child folders + child pages
+- keeps `mutate.post.ts` as the generic write path; use this route when UI intent is destructive entity removal
 
 ### `prisma/seed.sql`
 Framework steps seeded here. `ON CONFLICT DO UPDATE` includes all fields (ENGNEER-146 ✅).
@@ -153,14 +151,8 @@ Framework steps seeded here. `ON CONFLICT DO UPDATE` includes all fields (ENGNEE
 - `pages.status`: TEXT CHECK — `in_attesa | in_lavorazione | completato | archiviato` (NOT enum)
 - `generations`: `id`, `step_id`, `prompt_used`, `output`, `source`, `is_committed`, `is_sample`
 - `clients`: all company data. `shareholders` and `subsidiaries` are JSONB arrays.
+- some FK paths still use `ON DELETE SET NULL`, so UI-level cascading deletes are handled in `server/api/db/delete.post.ts`
 - RLS: no `.eq('user_id')` on browser reads — automatic
-
----
-
-## Open issues (pending)
-- Keep this section light and verify in Linear before relying on it; the issue tracker is the source of truth for active work.
-
----
 
 ## Known quirks
 - `nuxi typecheck`: `styleText requires Node v20.12+` — pre-existing, ignore
@@ -170,3 +162,4 @@ Framework steps seeded here. `ON CONFLICT DO UPDATE` includes all fields (ENGNEE
 - NuxtUI v4: USelect uses `:items`, not `:options`
 - extraction readiness checks both in-memory extraction results and persisted `form_data`, so previous-session uploads remain valid across reloads
 - code still supports legacy upload field names (`visura_upload`, `file`) for compatibility during the step-assembly transition
+- prompts and field content were not rewritten during the restyling sweep; visual refactors and delete flows are newer than prompt work
