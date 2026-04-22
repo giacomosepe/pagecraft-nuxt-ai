@@ -1,75 +1,58 @@
-# Nuxt Minimal Starter
+# PageCraft
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+AI-assisted drafting tool for structured legal and technical documents.
 
-## Setup
+PageCraft currently targets Italian Patent Box documentation. Users work step by step through a document, generate and refine content with AI, and export the final result to Word.
 
-Make sure to install dependencies:
+## Stack
+
+- Nuxt 4
+- Nuxt UI 4
+- Supabase
+- Prisma CLI for schema and migrations
+- Vercel AI SDK
+- Anthropic via `@ai-sdk/anthropic`
+
+## Local development
+
+Install dependencies:
 
 ```bash
-# npm
 npm install
-
-# pnpm
-pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
 ```
 
-## Development Server
-
-Start the development server on `http://localhost:3000`:
+Run the dev server:
 
 ```bash
-# npm
 npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
 ```
 
-## Production
-
-Build the application for production:
+Build for production:
 
 ```bash
-# npm
 npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
 ```
 
-Locally preview production build:
+Preview the production build locally:
 
 ```bash
-# npm
 npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
 ```
 
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+## Deployment
+
+PageCraft is hosted as a Node server and deployed from GitHub.
+
+Before deploying, verify:
+
+- required environment variables are present
+- the app boots locally
+- the current production-sensitive flows still work
+
+## Important local docs
+
+- `AGENTS.md` — canonical repo-local operating contract for coding agents
+- `codebase-map.md` — current code structure and known quirks
+- `TODAY.md` — current frontier and next action
+- `REFACTOR.md` — active and completed major refactors
+
