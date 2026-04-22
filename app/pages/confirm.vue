@@ -14,7 +14,7 @@ definePageMeta({ layout: "auth" });
 			class="size-8 animate-spin text-primary-500"
 		/>
 		<p class="text-sm text-gray-500 dark:text-gray-400">
-			{{ $t("auth.confirming") }}
+			Conferma dell'account in corso…
 		</p>
 	</div>
 </template>

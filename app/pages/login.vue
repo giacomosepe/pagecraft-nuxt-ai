@@ -2,7 +2,6 @@
 definePageMeta({ layout: "public-layout" });
 
 const supabase = useSupabaseClient();
-const { t } = useI18n();
 
 const mode = ref<"signin" | "signup">("signin");
 const email = ref("");
@@ -10,6 +9,20 @@ const password = ref("");
 const loading = ref(false);
 const errorMsg = ref("");
 const successMsg = ref("");
+
+const authCopy = {
+  signinTitle: "Bentornato",
+  signupTitle: "Crea il tuo account",
+  emailLabel: "Email",
+  emailPlaceholder: "tu@esempio.it",
+  passwordLabel: "Password",
+  passwordPlaceholder: "••••••••",
+  signinCta: "Accedi",
+  signupCta: "Registrati",
+  noAccount: "Non hai un account?",
+  hasAccount: "Hai già un account?",
+  checkEmail: "Controlla la tua email per confermare l'account.",
+} as const;
 
 async function handleSubmit() {
 	loading.value = true;
@@ -34,7 +47,7 @@ async function handleSubmit() {
 		if (error) {
 			errorMsg.value = error.message;
 		} else {
-			successMsg.value = t("auth.checkEmail");
+			successMsg.value = authCopy.checkEmail;
 		}
 	}
 
@@ -52,7 +65,7 @@ if (user.value) await navigateTo("/dashboard");
 </script>
 
 <template>
-  <div class="w-full" style="max-width: 22rem">
+  <div class="mx-auto w-full px-4 py-12 sm:py-16" style="max-width: 22rem">
     <!-- Form header -->
     <div class="mb-6 text-center">
       <h2
@@ -61,8 +74,8 @@ if (user.value) await navigateTo("/dashboard");
       >
         {{
           mode === "signin"
-            ? t("auth.welcomeBack")
-            : t("auth.createAccount")
+            ? authCopy.signinTitle
+            : authCopy.signupTitle
         }}
       </h2>
     </div>
@@ -70,24 +83,24 @@ if (user.value) await navigateTo("/dashboard");
     <!-- Form card -->
     <UCard>
       <div class="space-y-4">
-        <UFormField :label="t('auth.email')">
+        <UFormField :label="authCopy.emailLabel">
           <UInput
             v-model="email"
             type="email"
             autocomplete="email"
-            :placeholder="t('auth.emailPlaceholder')"
+            :placeholder="authCopy.emailPlaceholder"
             size="md"
             class="w-full"
             @keyup.enter="handleSubmit"
           />
         </UFormField>
 
-        <UFormField :label="t('auth.password')">
+        <UFormField :label="authCopy.passwordLabel">
           <UInput
             v-model="password"
             type="password"
             autocomplete="current-password"
-            :placeholder="t('auth.passwordPlaceholder')"
+            :placeholder="authCopy.passwordPlaceholder"
             size="md"
             class="w-full"
             @keyup.enter="handleSubmit"
@@ -119,8 +132,8 @@ if (user.value) await navigateTo("/dashboard");
         >
           {{
             mode === "signin"
-              ? t("auth.signIn")
-              : t("auth.signUp")
+              ? authCopy.signinCta
+              : authCopy.signupCta
           }}
         </UButton>
       </div>
@@ -132,8 +145,8 @@ if (user.value) await navigateTo("/dashboard");
         >
           {{
             mode === "signin"
-              ? t("auth.noAccount")
-              : t("auth.hasAccount")
+              ? authCopy.noAccount
+              : authCopy.hasAccount
           }}
           <button
             class="ml-1 font-medium hover:underline"
@@ -142,8 +155,8 @@ if (user.value) await navigateTo("/dashboard");
           >
             {{
               mode === "signin"
-                ? t("auth.signUp")
-                : t("auth.signIn")
+                ? authCopy.signupCta
+                : authCopy.signinCta
             }}
           </button>
         </p>
