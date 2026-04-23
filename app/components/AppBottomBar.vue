@@ -4,7 +4,7 @@ import { appBottomTabs } from "~/utils/appNavigation";
 
 <template>
 	<nav
-		class="grid grid-cols-4 border-t border-slate-200 bg-white px-2 py-2 shadow-[0_-8px_20px_rgba(15,23,42,0.04)]"
+		class="grid grid-cols-5 border-t border-slate-200 bg-white px-2 py-2 shadow-[0_-8px_20px_rgba(15,23,42,0.04)]"
 	>
 		<NuxtLink
 			v-for="tab in appBottomTabs"

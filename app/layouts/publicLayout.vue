@@ -117,13 +117,15 @@ const navLinks = computed(() =>
           </div>
         </div>
 
-        <NuxtLink
-          :to="primaryAction.to"
-          class="text-sm font-medium"
-          style="color: var(--color-brand)"
-        >
-          {{ primaryAction.label }}
-        </NuxtLink>
+        <div class="flex items-center gap-4">
+          <NuxtLink
+            :to="primaryAction.to"
+            class="text-sm font-medium"
+            style="color: var(--color-brand)"
+          >
+            {{ primaryAction.label }}
+          </NuxtLink>
+        </div>
       </div>
     </footer>
   </div>

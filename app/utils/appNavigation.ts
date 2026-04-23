@@ -18,6 +18,12 @@ export const appSidebarSections: AppNavSection[] = [
 		label: "Principale",
 		items: [
 			{
+				label: "Dashboard",
+				to: "/dashboard",
+				icon: "i-lucide-layout-dashboard",
+				match: { path: "/dashboard" },
+			},
+			{
 				label: "Clienti",
 				to: "/clienti",
 				icon: "i-lucide-users",
@@ -87,6 +93,12 @@ export const appSidebarSections: AppNavSection[] = [
 
 export const appBottomTabs: AppNavItem[] = [
 	{
+		label: "Dashboard",
+		to: "/dashboard",
+		icon: "i-lucide-layout-dashboard",
+		match: { path: "/dashboard" },
+	},
+	{
 		label: "Clienti",
 		to: "/clienti",
 		icon: "i-lucide-users",
@@ -105,9 +117,9 @@ export const appBottomTabs: AppNavItem[] = [
 		match: { path: "/pages/new" },
 	},
 	{
-		label: "Info",
-		to: "/about",
-		icon: "i-lucide-info",
-		match: { path: "/about" },
+		label: "Documenti",
+		to: "/documenti",
+		icon: "i-lucide-files",
+		match: { path: "/documenti" },
 	},
 ];
