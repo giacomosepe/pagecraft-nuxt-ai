@@ -1,15 +1,14 @@
 export const publicCopy = {
   nav: {
-    links: [
-      { label: "Come funziona", href: "/#come-funziona" },
-    ],
+    links: [{ label: "Come funziona", href: "/#come-funziona" }],
     loginLabel: "Accedi",
     dashboardLabel: "Dashboard",
   },
   hero: {
-    eyebrow: "Scrivi con AI, mantenendo la regia.",
-    title: "Scrittore AI facile da dirigere",
-    subtitle: "Usa la AI in modo preciso e ottieni documenti scritti come vuoi tu.",
+    eyebrow: "Scrivi con AI, mantenendo la regia",
+    title: "Assistente AI per scrivere senza perdere qualita'",
+    subtitle:
+      "Usa la AI in modo preciso e ottieni documenti scritti come vuoi tu, strutturati e affidabili",
     primaryCtaLoggedOut: "Accedi",
     primaryCtaLoggedIn: "Dashboard",
     secondaryCta: "Come funziona",
@@ -20,9 +19,9 @@ export const publicCopy = {
     ],
   },
   howItWorks: {
-    title: "Come funziona",
+    title: "Semplice, semplice, semplice",
     intro:
-      "PageCraft ti aiuta a impostare, completare e rifinire documenti complessi senza lasciare la struttura in mano alla AI.",
+      "PageCraft ti aiuta a impostare, completare e rifinire documenti complessi senza lasciare la struttura in mano alla AI",
     steps: [
       {
         title: "Imposti il documento",
@@ -62,7 +61,8 @@ export const publicCopy = {
     ],
   },
   footer: {
-    summary: "Scrivi documenti complessi con AI, senza perdere controllo, struttura e precisione.",
+    summary:
+      "Scrivi documenti complessi con AI, senza perdere controllo, struttura e precisione.",
   },
 } as const;
 
