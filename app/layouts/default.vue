@@ -10,4 +10,6 @@
 			<AppBottomBar class="md:hidden" />
 		</div>
 	</div>
+
+	<UToaster />
 </template>

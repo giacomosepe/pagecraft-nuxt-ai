@@ -16,6 +16,8 @@ import type {
   StepRecord,
   StepType,
 } from "~/types/app.types";
+import { assembleStruttura } from "~/utils/assembleStruttura";
+import type { Shareholder, Subsidiary } from "~/utils/assembleStruttura";
 
 // ─── Visura extraction result types ───────────────────────────────────────────
 interface VisuraExtractResult {
@@ -92,11 +94,15 @@ const props = defineProps<{
   activeStep: StepRecord;
   isGenerating: boolean;
   errorMsg?: string;
+  output: string;
 }>();
 
 const emit = defineEmits<{
   generate: [];
   refine: [];
+  formValuesChange: [values: Record<string, unknown>];
+  generatePremessa: [];
+  confermaStruttura: [text: string];
 }>();
 
 // ─── Form schema ──────────────────────────────────────────────────────────────
@@ -122,6 +128,17 @@ const {
   activeStep,
   formFields,
 });
+
+// Propagate live form values to the page shell for type_a output assembly
+watch(
+  formValues,
+  (values) => {
+    if (props.activeStep.step_type === "type_a") {
+      emit("formValuesChange", { ...values });
+    }
+  },
+  { deep: true, immediate: true },
+);
 
 // Collapsed state per group instance: Map<groupKey, Set<index>>
 const collapsedInstances = ref<Record<string, Set<number>>>({});
@@ -187,6 +204,17 @@ watch(
     showSystemPrompt.value = false;
   },
 );
+
+// ─── Visura data accessor (type_b) ────────────────────────────────────────────
+function getVisuraData(fieldKey: string): { shareholders: Shareholder[]; subsidiaries: Subsidiary[] } {
+  const v = formValues.value[fieldKey];
+  if (!v || typeof v !== "object" || Array.isArray(v)) return { shareholders: [], subsidiaries: [] };
+  const obj = v as Record<string, unknown>;
+  return {
+    shareholders: Array.isArray(obj.shareholders) ? (obj.shareholders as Shareholder[]) : [],
+    subsidiaries: Array.isArray(obj.subsidiaries) ? (obj.subsidiaries as Subsidiary[]) : [],
+  };
+}
 
 // ─── Upload state ──────────────────────────────────────────────────────────────
 
@@ -327,7 +355,7 @@ async function extractVisura(field: StepFormField): Promise<void> {
       <EditorPanelHeader
         :title="activeStep.title"
         :description="stepConfig.subtitle"
-        eyebrow="Editor step"
+        eyebrow="Step corrente"
       >
         <template #badge>
           <div
@@ -358,7 +386,7 @@ async function extractVisura(field: StepFormField): Promise<void> {
         v-if="isAiStep"
         :is-generating="isGenerating"
         :disable-generate="isGenerating || isAnyFileUploading || !isVisuraReady || areAiActionsDisabled"
-        :disable-refine="isGenerating || isAnyFileUploading || areAiActionsDisabled"
+        :disable-refine="isGenerating || isAnyFileUploading || areAiActionsDisabled || !output"
         @generate="emit('generate')"
         @refine="emit('refine')"
       />
@@ -415,9 +443,34 @@ async function extractVisura(field: StepFormField): Promise<void> {
             />
 
             <template v-else />
+
+            <template v-if="activeStep.step_type === 'type_b' && isExtractionUploadField(field)">
+              <UButton
+                icon="i-lucide-check-circle"
+                class="mt-3 w-full justify-center rounded-xl sm:w-auto"
+                :disabled="!getVisuraData(field.key).shareholders.length && !getVisuraData(field.key).subsidiaries.length"
+                @click="emit('confermaStruttura', assembleStruttura(
+                  getVisuraData(field.key).shareholders,
+                  getVisuraData(field.key).subsidiaries
+                ))"
+              >
+                Conferma struttura
+              </UButton>
+            </template>
           </div>
         </template>
       </div>
+
+      <UButton
+        v-if="activeStep.order === 2"
+        icon="i-lucide-file-text"
+        class="w-full justify-center rounded-xl sm:w-auto"
+        :loading="isGenerating"
+        :disabled="isGenerating"
+        @click="emit('generatePremessa')"
+      >
+        Genera premessa
+      </UButton>
 
       <UAlert
         v-if="unsupportedFields.length"
@@ -440,7 +493,7 @@ async function extractVisura(field: StepFormField): Promise<void> {
           :icon="showSystemPrompt ? 'i-lucide-eye-off' : 'i-lucide-eye'"
           @click="showSystemPrompt = !showSystemPrompt"
         >
-          {{ showSystemPrompt ? "Nascondi" : "Mostra" }} system prompt
+          {{ showSystemPrompt ? "Nascondi" : "Mostra" }} prompt di sistema
         </UButton>
 
         <div

@@ -32,22 +32,47 @@ export function useStepForm({ activeStep, formFields }: UseStepFormParams) {
 
   watch(
     [() => activeStep.value.id, () => activeStep.value.form_data, formFields],
-    ([, formData]) => {
+    async ([, formData]) => {
       const nextValues = { ...normalizeFormData(formData) };
 
       for (const field of formFields.value) {
-        if (field.type !== "repeatable_group") continue;
+        if (field.type === "repeatable_group") {
+          const existing = nextValues[field.key];
+          const minItems = field.minItems ?? 1;
+          if ((!Array.isArray(existing) || existing.length === 0) && minItems >= 1) {
+            nextValues[field.key] = [buildEmptyInstance(field)];
+          }
+          continue;
+        }
 
-        const existing = nextValues[field.key];
-        const minItems = field.minItems ?? 1;
-        if ((!Array.isArray(existing) || existing.length === 0) && minItems >= 1) {
-          nextValues[field.key] = [buildEmptyInstance(field)];
+        // Apply defaultValue when the field has no saved value yet
+        if (
+          field.defaultValue !== undefined &&
+          (nextValues[field.key] === null || nextValues[field.key] === undefined || nextValues[field.key] === "")
+        ) {
+          nextValues[field.key] = field.defaultValue;
         }
       }
 
       formValues.value = nextValues;
       formSaveError.value = "";
       saveQueue = Promise.resolve();
+
+      // Persist any defaults that were applied so the DB stays in sync
+      const hasNewDefaults = formFields.value.some(
+        (f) =>
+          f.defaultValue !== undefined &&
+          (normalizeFormData(formData)[f.key] === null ||
+            normalizeFormData(formData)[f.key] === undefined ||
+            normalizeFormData(formData)[f.key] === ""),
+      );
+      if (hasNewDefaults) {
+        try {
+          await persistFormData(nextValues, activeStep.value.id);
+        } catch {
+          // Non-critical — UI already shows the default value
+        }
+      }
     },
     { immediate: true },
   );

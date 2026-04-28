@@ -27,6 +27,7 @@ export function useGeneration({
   const isGenerating = ref(false);
   const isCommitting = ref(false);
   const errorMsg = ref("");
+  const commitSuccess = ref(false);
 
   // ─── Generate ───────────────────────────────────────────────────────────────
   async function generate(): Promise<void> {
@@ -47,18 +48,18 @@ export function useGeneration({
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error((err as { message?: string }).message ?? "Generation failed");
+        throw new Error((err as { message?: string }).message ?? "Generazione non riuscita");
       }
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
-      if (!reader) throw new Error("No response stream");
+      if (!reader) throw new Error("Errore nella ricezione della risposta");
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         output.value += decoder.decode(value, { stream: true });
       }
     } catch (e: unknown) {
-      errorMsg.value = e instanceof Error ? e.message : "Something went wrong";
+      errorMsg.value = e instanceof Error ? e.message : "Si è verificato un errore";
       output.value = "";
     } finally {
       isGenerating.value = false;
@@ -86,18 +87,18 @@ export function useGeneration({
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error((err as { message?: string }).message ?? "Refinement failed");
+        throw new Error((err as { message?: string }).message ?? "Raffinamento non riuscito");
       }
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
-      if (!reader) throw new Error("No response stream");
+      if (!reader) throw new Error("Errore nella ricezione della risposta");
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         output.value += decoder.decode(value, { stream: true });
       }
     } catch (e: unknown) {
-      errorMsg.value = e instanceof Error ? e.message : "Something went wrong";
+      errorMsg.value = e instanceof Error ? e.message : "Si è verificato un errore";
       output.value = previousOutput;
     } finally {
       isGenerating.value = false;
@@ -130,13 +131,39 @@ export function useGeneration({
         step.status = "COMMITTED";
         step.committed_output = output.value;
       }
+      commitSuccess.value = true;
+      await nextTick();
+      commitSuccess.value = false;
       if (activeStepIndex.value < (steps.value?.length ?? 0) - 1) {
         activeStepIndex.value++;
       }
     } catch (e: unknown) {
-      errorMsg.value = "Could not save. Please try again.";
+      errorMsg.value = "Salvataggio non riuscito. Riprova.";
     } finally {
       isCommitting.value = false;
+    }
+  }
+
+  // ─── Generate Premessa ───────────────────────────────────────────────────────
+  async function generatePremessa(taxYearStart: number, taxYearEnd: number): Promise<void> {
+    if (isGenerating.value) return;
+    isGenerating.value = true;
+    output.value = "";
+    errorMsg.value = "";
+
+    try {
+      const res = await fetch("/api/generations/premessa", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pageId, taxYearStart, taxYearEnd }),
+      });
+      if (!res.ok) throw new Error();
+      output.value = await res.text();
+    } catch {
+      errorMsg.value = "Generazione della premessa non riuscita. Riprova.";
+      output.value = "";
+    } finally {
+      isGenerating.value = false;
     }
   }
 
@@ -151,9 +178,11 @@ export function useGeneration({
     isGenerating,
     isCommitting,
     errorMsg,
+    commitSuccess,
     generate,
     refine,
     commit,
     discard,
+    generatePremessa,
   };
 }
