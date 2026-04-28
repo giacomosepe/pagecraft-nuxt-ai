@@ -22,7 +22,7 @@ const emit = defineEmits<{
           Genera o raffina la bozza partendo dal contenuto di questo step.
         </p>
         <p class="text-xs text-slate-500">
-          La logica di generazione resta invariata: qui stiamo solo migliorando il flusso visivo.
+          Genera una nuova bozza o raffina quella corrente a partire dai dati di questo step.
         </p>
       </div>
 

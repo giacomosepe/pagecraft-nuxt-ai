@@ -9,6 +9,11 @@ const MONTHS_IT = [
   "Lug", "Ago", "Set", "Ott", "Nov", "Dic",
 ];
 
+const MONTHS_IT_LONG = [
+  "gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno",
+  "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre",
+];
+
 /**
  * Formats an ISO datetime string into Italian short date.
  * e.g. "2024-03-15T10:30:00Z" → "15 Mar 2024"
@@ -16,6 +21,14 @@ const MONTHS_IT = [
 export function formatDate(iso: string): string {
   const d = new Date(iso);
   return `${d.getDate()} ${MONTHS_IT[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/**
+ * Formats a Date into long Italian date.
+ * e.g. new Date() → "28 aprile 2026"
+ */
+export function formatDateLong(d: Date = new Date()): string {
+  return `${d.getDate()} ${MONTHS_IT_LONG[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 /**

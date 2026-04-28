@@ -121,6 +121,7 @@ export interface StepFormField {
   placeholder?: string;
   hint?: string;
   required?: boolean;
+  defaultValue?: string;
   accept?: string[];
   conditional?: { key: string; value: string };
   minItems?: number;

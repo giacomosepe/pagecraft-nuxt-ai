@@ -6,14 +6,15 @@
 // All UI: StepNav, StepEditor, StepOutput.
 
 import type { Ref } from "vue";
-import type { StepRecord } from "~/types/app.types";
+import type { StepFormField, StepRecord } from "~/types/app.types";
+import { buildIntestazione } from "~/utils/buildIntestazione";
 
 definePageMeta({ middleware: "auth" });
 
 const route = useRoute();
 const pageId = route.params.id as string;
 
-const { page, steps, pending, error } = usePage(pageId);
+const { page, steps, clientData, pending, error } = usePage(pageId);
 
 // ─── Active step state ────────────────────────────────────────────────────────
 const activeStepIndex = ref(0);
@@ -28,10 +29,12 @@ const {
 	isGenerating,
 	isCommitting,
 	errorMsg,
+	commitSuccess,
 	generate,
 	refine,
 	commit,
 	discard,
+	generatePremessa,
 } = useGeneration({
 	pageId,
 	activeStep,
@@ -48,10 +51,79 @@ watch(
 	{ once: true },
 );
 
+// ─── Commit toast ─────────────────────────────────────────────────────────────
+const toast = useToast();
+
+watch(commitSuccess, (val) => {
+	if (val) {
+		toast.add({
+			title: "Step salvato",
+			description: "Il contenuto è stato salvato. Puoi continuare con lo step successivo.",
+			color: "success",
+			duration: 2000,
+		});
+	}
+});
+
+// ─── Type-A output assembly + auto-commit ────────────────────────────────────
+const typeAFormValues = ref<Record<string, unknown>>({});
+let autoCommitTimer: ReturnType<typeof setTimeout> | null = null;
+
+function onFormValuesChange(values: Record<string, unknown>): void {
+	if (activeStep.value?.step_type !== "type_a") return;
+	typeAFormValues.value = values;
+}
+
 // Reset on step navigation
 watch(activeStepIndex, () => {
 	output.value = activeStep.value?.committed_output ?? "";
 	errorMsg.value = "";
+	typeAFormValues.value = {};
+	if (autoCommitTimer) {
+		clearTimeout(autoCommitTimer);
+		autoCommitTimer = null;
+	}
+});
+
+const typeAOutput = computed<string | null>(() => {
+	if (activeStep.value?.step_type !== "type_a") return null;
+	const c = clientData.value;
+	const p = page.value;
+	return buildIntestazione({
+		programTitle: String(typeAFormValues.value.program_title ?? ""),
+		legalCitation: String(typeAFormValues.value.legal_citation ?? ""),
+		companyName: c?.company_name ?? "[RAGIONE SOCIALE]",
+		companyForm: c?.company_form ?? "",
+		legalRepresentative: c?.legal_representative ?? "[LEGALE RAPPRESENTANTE]",
+		taxYear: p?.tax_year ?? null,
+	});
+});
+
+// Push assembled text into the shared output ref so StepOutput renders it live
+watch(typeAOutput, (val) => {
+	if (val !== null) output.value = val;
+});
+
+// Auto-commit when all user-fillable fields are non-empty (debounced 800ms)
+watch(typeAOutput, (val) => {
+	if (val === null) return;
+	if (autoCommitTimer) clearTimeout(autoCommitTimer);
+
+	const schema = (activeStep.value?.form_schema as StepFormField[] | null) ?? [];
+	// Fields without a defaultValue are the ones users must fill manually
+	const userFillable = schema.filter((f) => f.defaultValue === undefined);
+	const allFilled = userFillable.every((f) => {
+		const v = typeAFormValues.value[f.key];
+		return v !== null && v !== undefined && String(v).trim() !== "";
+	});
+
+	if (!allFilled) return;
+	if (val === activeStep.value?.committed_output) return;
+
+	autoCommitTimer = setTimeout(() => {
+		commit();
+		autoCommitTimer = null;
+	}, 800);
 });
 
 // ─── Word export ──────────────────────────────────────────────────────────────
@@ -198,8 +270,12 @@ async function exportWord(): Promise<void> {
 						:active-step="activeStep"
 						:is-generating="isGenerating"
 						:error-msg="errorMsg"
+						:output="output"
 						@generate="generate"
 						@refine="refine"
+						@form-values-change="onFormValuesChange"
+						@generate-premessa="generatePremessa(page?.tax_year ?? 0, page?.tax_year ?? 0)"
+						@conferma-struttura="output = $event"
 					/>
 				</template>
 
