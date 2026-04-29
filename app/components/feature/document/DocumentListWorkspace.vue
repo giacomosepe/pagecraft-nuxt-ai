@@ -31,6 +31,9 @@ const activeFilter = ref<"recenti" | "in_lavorazione" | "completato" | "tutti">(
 );
 
 const normalizedDocuments = computed(() => props.documents ?? []);
+const showLoadingState = computed(
+  () => Boolean(props.pending) && normalizedDocuments.value.length === 0,
+);
 
 watchEffect(() => {
   const view = route.query.view as string | undefined;
@@ -229,7 +232,7 @@ async function confirmDelete(): Promise<void> {
       </template>
 
       <BaseWorkspaceState
-        v-if="pending"
+        v-if="showLoadingState"
         loading
         title="Caricamento documenti in corso..."
       />

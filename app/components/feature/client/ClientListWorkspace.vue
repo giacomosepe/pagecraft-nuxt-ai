@@ -29,6 +29,9 @@ const filters = [
 ] as const;
 
 const normalizedClients = computed(() => props.clients ?? []);
+const showLoadingState = computed(
+	() => Boolean(props.pending) && normalizedClients.value.length === 0,
+);
 const transitionNotice = computed(() => {
 	if (route.query.deleted === "client") {
 		return {
@@ -235,7 +238,7 @@ async function confirmDelete(): Promise<void> {
 			</template>
 
 			<BaseWorkspaceState
-				v-if="pending"
+				v-if="showLoadingState"
 				loading
 				title="Caricamento clienti in corso..."
 			/>
