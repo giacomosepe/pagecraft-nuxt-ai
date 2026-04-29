@@ -73,11 +73,16 @@ const tabs = [
 	{ label: "Completati", status: "completato" },
 ] as const;
 
+const normalizedProjects = computed(() => props.projects ?? []);
+const showLoadingState = computed(
+	() => Boolean(props.pending) && normalizedProjects.value.length === 0,
+);
+
 const filteredProjects = computed(() => {
 	const query = search.value.trim().toLowerCase();
 	const selectedStatus = route.query.status as string | undefined;
 
-	return (props.projects ?? []).filter((project) => {
+	return normalizedProjects.value.filter((project) => {
 		if (
 			selectedStatus &&
 			deriveFolderStatus(project.pages ?? []) !== selectedStatus
@@ -210,7 +215,7 @@ async function confirmDelete(): Promise<void> {
 			</template>
 
 			<BaseWorkspaceState
-				v-if="pending"
+				v-if="showLoadingState"
 				loading
 				title="Caricamento progetti in corso..."
 			/>
