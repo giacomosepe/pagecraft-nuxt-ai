@@ -1,5 +1,5 @@
 # PageCraft — Codebase Map
-> Last updated: 2026-04-22
+> Last updated: 2026-04-28
 > Purpose: structural map of the current codebase, key modules, and current architecture shape.
 
 ---
@@ -65,6 +65,8 @@ Owns step form state and persistence, including repeatable-group behavior and gu
 
 ### `app/composables/useGeneration.ts`
 Owns generation/refine/commit/discard state for the AI output panel.
+Also exposes `generatePremessa(pageId, taxYearStart, taxYearEnd)` for the step 2 non-AI route call.
+Exposes `commitSuccess` ref — pulses true/false on successful commit so the page layer can trigger a toast without coupling the composable to UI.
 
 ### `app/components/feature/page/StepEditor.vue`
 State-driven step assembler.
@@ -79,6 +81,12 @@ Left sidebar step navigation and completion state.
 ### `server/api/generations/create.post.ts`
 Main AI generation route.
 Handles generate/refine, form-data serialization, prior-step context assembly, and streaming output.
+
+### `app/utils/buildIntestazione.ts` _(new — 2026-04-28)_
+Pure function. Assembles the step 1 (Intestazione) heading text from form data and page context. No side effects. Input: `{ programTitle, legalCitation, companyName, legalForm, taxYear }`. Missing fields render as `[DA COMPLETARE]`.
+
+### `app/utils/assembleStruttura.ts` _(new — 2026-04-28)_
+Pure function. Assembles step 3 (Struttura Partecipativa) structured text blocks from extracted `shareholders[]` and `subsidiaries[]` arrays. No LLM call. Missing fields render as `[DA COMPLETARE]`. Omits SOCI/PARTECIPATE sections if the respective array is empty.
 
 ### `server/api/export/word.post.ts`
 Builds and streams the `.docx` export from committed steps.
@@ -119,3 +127,5 @@ Database notes:
 - `server/api/extract/` does not exist; any reference to `extract/document.post.ts` is a ghost
 - `step_type` is stored on `framework_steps`, not `steps`; the UI receives it via the `usePage.ts` join
 - some old flows still depend on `framework_step_id` backfills or title-based matching when working with legacy rows
+- `system_prompt_template` on `framework_steps` contains an AI prose prompt for `type_c` steps — it is **not** a `{{variable}}` substitution template. For `type_a` steps the column is populated but unused; output is assembled by dedicated `buildX()` utility functions instead
+- `server/api/visura/extract.post.ts` is legacy (text extraction); the current extraction route is `server/api/visura/extract-pdf.post.ts` (structured JSON returning typed `shareholders[]` and `subsidiaries[]`)

@@ -15,8 +15,16 @@ export function useProjects() {
       if (error) throw error;
       return data ?? [];
     },
-    { server: false },
+    {
+      default: () => [],
+      immediate: false,
+      server: false,
+    },
   );
+
+  onMounted(() => {
+    void refresh();
+  });
 
   return { projects, pending, refresh };
 }

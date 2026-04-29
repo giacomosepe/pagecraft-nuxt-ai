@@ -23,8 +23,16 @@ export function useClients() {
       if (error) throw error;
       return data ?? [];
     },
-    { server: false },
+    {
+      default: () => [],
+      immediate: false,
+      server: false,
+    },
   );
+
+  onMounted(() => {
+    void refresh();
+  });
 
   return { clients, pending, refresh };
 }

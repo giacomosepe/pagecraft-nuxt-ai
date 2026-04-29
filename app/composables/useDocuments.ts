@@ -16,8 +16,16 @@ export function useDocuments() {
       if (error) throw error;
       return data ?? [];
     },
-    { server: false },
+    {
+      default: () => [],
+      immediate: false,
+      server: false,
+    },
   );
+
+  onMounted(() => {
+    void refresh();
+  });
 
   return { documents, pending, refresh };
 }
