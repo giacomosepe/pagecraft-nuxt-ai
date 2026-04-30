@@ -13,14 +13,53 @@ const props = defineProps<{
   isGenerating: boolean;
   isCommitting: boolean;
   activeStep: StepRecord | null;
+  canGoNext: boolean;
 }>();
 
 const emit = defineEmits<{
   commit: [];
   discard: [];
+  next: [];
 }>();
 
 const showExpandModal = ref(false);
+
+const shouldFormatStruttura = computed(() => props.activeStep?.order === 3);
+
+function outputSections(text: string): { title: string; paragraphs: string[] }[] {
+  const sections: { title: string; paragraphs: string[] }[] = [];
+  const lines = text.split("\n");
+  let current: { title: string; paragraphs: string[] } | null = null;
+
+  for (const line of lines) {
+    const value = line.trim();
+    if (!value) continue;
+
+    if (value === value.toUpperCase() && !value.includes(".")) {
+      current = { title: value, paragraphs: [] };
+      sections.push(current);
+      continue;
+    }
+
+    if (!current) {
+      current = { title: props.activeStep?.title ?? "Output", paragraphs: [] };
+      sections.push(current);
+    }
+
+    current.paragraphs.push(value);
+  }
+
+  return sections;
+}
+
+function highlightedParts(paragraph: string): { text: string; isPlaceholder: boolean }[] {
+  return paragraph.split(/(\[DA COMPLETARE\])/g)
+    .filter(Boolean)
+    .map((text) => ({
+      text,
+      isPlaceholder: text === "[DA COMPLETARE]",
+    }));
+}
 </script>
 
 <template>
@@ -66,7 +105,43 @@ const showExpandModal = ref(false);
       v-if="output"
       class="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm"
     >
-      <p class="whitespace-pre-wrap text-sm leading-7 text-slate-700">
+      <div
+        v-if="shouldFormatStruttura"
+        class="space-y-5"
+      >
+        <section
+          v-for="section in outputSections(output)"
+          :key="section.title"
+          class="space-y-3"
+        >
+          <h3 class="border-b border-slate-200 pb-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+            {{ section.title }}
+          </h3>
+          <p
+            v-for="paragraph in section.paragraphs"
+            :key="paragraph"
+            class="text-sm leading-7 text-slate-700"
+          >
+            <template
+              v-for="(part, index) in highlightedParts(paragraph)"
+              :key="`${paragraph}-${index}`"
+            >
+              <span
+                v-if="part.isPlaceholder"
+                class="inline-flex rounded-md bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-200"
+              >
+                {{ part.text }}
+              </span>
+              <template v-else>{{ part.text }}</template>
+            </template>
+          </p>
+        </section>
+      </div>
+
+      <p
+        v-else
+        class="whitespace-pre-wrap text-sm leading-7 text-slate-700"
+      >
         {{ output }}
       </p>
     </div>
@@ -109,6 +184,16 @@ const showExpandModal = ref(false);
           @click="emit('commit')"
         >
           Salva
+        </UButton>
+        <UButton
+          v-if="canGoNext"
+          size="sm"
+          class="rounded-xl"
+          icon="i-lucide-arrow-right"
+          trailing
+          @click="emit('next')"
+        >
+          Avanti
         </UButton>
       </div>
     </template>
@@ -158,6 +243,16 @@ const showExpandModal = ref(false);
             @click="emit('commit'); showExpandModal = false"
           >
             Salva
+          </UButton>
+          <UButton
+            v-if="canGoNext"
+            size="sm"
+            class="rounded-xl"
+            icon="i-lucide-arrow-right"
+            trailing
+            @click="emit('next'); showExpandModal = false"
+          >
+            Avanti
           </UButton>
         </div>
       </div>

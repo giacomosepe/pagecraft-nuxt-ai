@@ -4,6 +4,7 @@ import {
 } from "#supabase/server";
 import { randomUUID } from "uncrypto";
 import { z } from "zod";
+import { buildInitialStepFormData } from "../../utils/initialStepFormData";
 
 // ─── Request schema ───────────────────────────────────────────────────────────
 // Zod validates the shape and content of whatever the client sends.
@@ -135,6 +136,7 @@ export default defineEventHandler(async (event) => {
     system_prompt_template: fs.system_prompt_template,
     refine_prompt_template: fs.refine_prompt_template,
     form_schema: fs.form_schema ?? null,
+    form_data: buildInitialStepFormData(fs, title),
     status: "PENDING" as const,
     user_context: null,
     committed_output: null,

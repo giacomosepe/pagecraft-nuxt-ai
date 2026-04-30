@@ -5,6 +5,7 @@
 // Mirrors the server-side buildPremessa pattern.
 
 import { formatDateLong } from "~/utils/date";
+import { renderTemplate } from "~/utils/renderTemplate";
 
 export interface IntestazioneParams {
   programTitle: string;
@@ -13,6 +14,7 @@ export interface IntestazioneParams {
   companyForm: string;
   legalRepresentative: string;
   taxYear: number | string | null;
+  templateOverride?: string | null;
 }
 
 export function buildIntestazione({
@@ -22,6 +24,7 @@ export function buildIntestazione({
   companyForm,
   legalRepresentative,
   taxYear,
+  templateOverride,
 }: IntestazioneParams): string {
   const company = companyForm ? `${companyName} ${companyForm}`.trim() : companyName;
   const year = taxYear ?? "[ANNO DI IMPOSTA]";
@@ -29,6 +32,23 @@ export function buildIntestazione({
   const citation = legalCitation || "[CITAZIONE NORMATIVA]";
   const title = programTitle || "[TITOLO DEL PROGRAMMA]";
   const date = formatDateLong();
+
+  if (templateOverride?.trim()) {
+    return renderTemplate(templateOverride, {
+      program_title: title,
+      titolo_del_programma: title,
+      legal_citation: citation,
+      citazione_normativa: citation,
+      company_name: company,
+      ragione_sociale: company,
+      tax_year: year,
+      anno_di_imposta: year,
+      legal_representative: rep,
+      legale_rappresentante: rep,
+      data_di_redazione: date,
+      draft_date: date,
+    });
+  }
 
   return `Documentazione per l'accesso al regime Patent Box — Relazione Illustrativa
 

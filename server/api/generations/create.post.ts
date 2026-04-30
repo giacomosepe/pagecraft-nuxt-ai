@@ -4,6 +4,7 @@ import {
 } from "#supabase/server";
 import { randomUUID } from "uncrypto";
 import { z } from "zod";
+import { buildGenerationPrompt, splitPromptUsed } from "../../utils/generationPrompt";
 
 // ─── Request schema ───────────────────────────────────────────────────────────
 const GenerateSchema = z.object({
@@ -11,6 +12,7 @@ const GenerateSchema = z.object({
   pageId: z.string().uuid("Invalid page ID"),
   mode: z.enum(["generate", "refine"]),
   existingOutput: z.string().optional().default(""),
+  promptRule: z.string().optional().nullable(),
 });
 
 export default defineEventHandler(async (event) => {
@@ -32,7 +34,7 @@ export default defineEventHandler(async (event) => {
       message: parsed.error.issues[0]?.message ?? "Invalid request body",
     });
   }
-  const { stepId, pageId, mode, existingOutput } = parsed.data;
+  const { stepId, pageId, mode, existingOutput, promptRule } = parsed.data;
 
   // ─── Step 3: Verify page ownership ───────────────────────────────────────
   const { error: ownerError } = await userClient
@@ -82,168 +84,16 @@ export default defineEventHandler(async (event) => {
     .not("committed_output", "is", null)
     .order("order", { ascending: true });
 
-  // ─── Step 5: Build company context string ─────────────────────────────────
-  const page = (step.page as any);
-  const c = page?.client;
-  const taxYear = page?.tax_year;
-
-  function formatShareholders(shareholders: any[]): string {
-    if (!shareholders?.length) return "Nessun azionista registrato.";
-    return shareholders.map((s: any, i: number) => {
-      if (s.type === "persona_fisica") {
-        return [
-          `Azionista ${i + 1} (persona fisica):`,
-          `  Nome: ${s.first_name ?? "[N/D]"} ${s.last_name ?? "[N/D]"}`,
-          `  Luogo di nascita: ${s.place_of_birth ?? "[N/D]"}`,
-          `  Data di nascita: ${s.date_of_birth ?? "[N/D]"}`,
-          `  Indirizzo: ${s.address ?? "[N/D]"}`,
-          `  Codice fiscale: ${s.codice_fiscale ?? "[N/D]"}`,
-          `  Quota: ${s.quota_pct != null ? `${s.quota_pct}%` : "[N/D]"}`,
-        ].join("\n");
-      } else {
-        return [
-          `Azionista ${i + 1} (persona giuridica):`,
-          `  Denominazione: ${s.company_name ?? "[N/D]"} ${s.company_form ?? ""}`,
-          `  Sede legale: ${s.registered_address ?? "[N/D]"}`,
-          `  Codice fiscale/P.IVA: ${s.codice_fiscale ?? "[N/D]"}`,
-          `  Quota: ${s.quota_pct != null ? `${s.quota_pct}%` : "[N/D]"}`,
-          `  Legale rappresentante: ${s.legal_rep ?? "[DA COMPLETARE]"}`,
-        ].join("\n");
-      }
-    }).join("\n\n");
-  }
-
-  function formatSubsidiaries(subsidiaries: any[]): string {
-    if (!subsidiaries?.length) return "Nessuna società partecipata registrata.";
-    return subsidiaries.map((s: any, i: number) => [
-      `Partecipata ${i + 1}:`,
-      `  Denominazione: ${s.company_name ?? "[N/D]"} ${s.company_form ?? ""}`,
-      `  Paese: ${s.country ?? "Italia"}`,
-      `  Quota detenuta: ${s.quota_held_pct != null ? `${s.quota_held_pct}%` : "[N/D]"}`,
-      `  Legale rappresentante: ${s.legal_rep ?? "[DA COMPLETARE]"}`,
-    ].join("\n")).join("\n\n");
-  }
-
-  function serializeFormData(
-    formData: Record<string, unknown>,
-    formSchema: any[],
-  ): string {
-    const lines: string[] = [];
-    for (const field of formSchema) {
-      const value = formData[field.key];
-      if (value === null || value === undefined || value === "") continue;
-      // File fields: only a filename is stored — skip, content not available server-side
-      if (field.type === "file") continue;
-      // visura_upload fields: stored as { filename, shareholders, subsidiaries, missing }
-      if (field.type === "visura_upload") {
-        const visura = value as {
-          filename?: string;
-          shareholders?: any[];
-          subsidiaries?: any[];
-          missing?: unknown;
-        };
-        lines.push(
-          [
-            "Struttura societaria estratta dalla visura camerale:",
-            "",
-            "Azionisti:",
-            formatShareholders(visura.shareholders ?? []),
-            "",
-            "Società partecipate:",
-            formatSubsidiaries(visura.subsidiaries ?? []),
-          ].join("\n"),
-        );
-        continue;
-      }
-      if (field.type === "repeatable_group" && Array.isArray(value)) {
-        (value as Record<string, unknown>[]).forEach((item, i) => {
-          if (item.ip_linked === "No") return;
-          const parts: string[] = [`${field.label ?? field.key} ${i + 1}:`];
-          for (const sub of field.fields ?? []) {
-            const sv = item[sub.key];
-            if (sv === null || sv === undefined || sv === "") continue;
-            parts.push(`  ${sub.label ?? sub.key}: ${sv}`);
-          }
-          lines.push(parts.join("\n"));
-        });
-        continue;
-      }
-      if (field.conditional) {
-        const condVal = formData[field.conditional.key];
-        if (condVal !== field.conditional.value) continue;
-      }
-      lines.push(`${field.label ?? field.key}: ${value}`);
-    }
-    return lines.join("\n\n");
-  }
-
-  function buildPriorContext(
-    prior: { order: number; title: string; committed_output: string | null }[],
-  ): string {
-    const blocks = prior
-      .filter((s) => s.committed_output)
-      .map(
-        (s) =>
-          `--- Sezione ${s.order} — ${s.title} ---\n${s.committed_output}`,
-      );
-    const full = blocks.join("\n\n");
-    if (full.length <= 24000) return full;
-    // Truncation strategy: keep first 3 steps + last 3 steps
-    const anchor = prior.filter((s) => s.order <= 3 && s.committed_output);
-    const rest = prior.filter((s) => s.order > 3 && s.committed_output).slice(-3);
-    return [...anchor, ...rest]
-      .map(
-        (s) =>
-          `--- Sezione ${s.order} — ${s.title} ---\n${s.committed_output}`,
-      )
-      .join("\n\n");
-  }
-
-  const companyContext = c
-    ? [
-        `Ragione sociale: ${c.company_name ?? c.name ?? "N/D"} ${c.company_form ?? ""}`.trim(),
-        c.industry_sector       ? `Settore: ${c.industry_sector}` : null,
-        c.employee_count        ? `Dipendenti: ${c.employee_count}` : null,
-        taxYear                 ? `Anno fiscale: ${taxYear}` : null,
-        c.legal_representative  ? `Legale rappresentante: ${c.legal_representative}` : null,
-        c.vat_number            ? `P.IVA: ${c.vat_number}` : null,
-        c.codice_fiscale        ? `Codice fiscale: ${c.codice_fiscale}` : null,
-        c.registered_address    ? `Sede legale: ${c.registered_address}` : null,
-        c.board_members?.length
-          ? `Membri CdA: ${(c.board_members as string[]).join(", ")}`
-          : null,
-        `\nAzionisti:\n${formatShareholders(c.shareholders)}`,
-        `\nSocietà partecipate:\n${formatSubsidiaries(c.subsidiaries)}`,
-      ].filter(Boolean).join("\n")
-    : "";
-
-  // ─── Step 6: Build the prompt ─────────────────────────────────────────────
-  const systemPrompt =
-    mode === "generate"
-      ? step.system_prompt_template
-      : step.refine_prompt_template;
-
-  const formDataBlock =
-    (step as any).form_data && (step as any).form_schema
-      ? serializeFormData(
-          (step as any).form_data as Record<string, unknown>,
-          (step as any).form_schema as any[],
-        )
-      : "";
-
-  const priorContext = buildPriorContext(priorSteps ?? []);
-
-  const userMessage = [
-    companyContext ? `Informazioni aziendali:\n${companyContext}` : "",
-    priorContext ? `Sezioni precedenti già redatte:\n${priorContext}` : "",
-    formDataBlock ? `Dati del passaggio:\n${formDataBlock}` : "",
-    mode === "refine" && existingOutput
-      ? `Bozza esistente da raffinare:\n${existingOutput}`
-      : "",
-    `Si prega di ${mode === "generate" ? "scrivere" : "raffinare"} la sezione "${step.title}" ora.`,
-  ]
-    .filter(Boolean)
-    .join("\n\n");
+  // ─── Step 5: Build or apply the generative rule ───────────────────────────
+  const builtPrompt = promptRule?.trim()
+    ? splitPromptUsed(promptRule)
+    : buildGenerationPrompt({
+        step: step as any,
+        priorSteps: priorSteps ?? [],
+        mode,
+        existingOutput,
+      });
+  const { systemPrompt, userMessage, promptUsed } = builtPrompt;
 
   // ─── Step 7: Verify AI service is configured ──────────────────────────────
   const anthropicKey = useRuntimeConfig().anthropicApiKey;
@@ -279,8 +129,6 @@ export default defineEventHandler(async (event) => {
 
   // ─── Step 9: Stream response, accumulate full output, then save ───────────
   const generationId = randomUUID();
-  const promptUsed = `${systemPrompt}\n\n---\n\n${userMessage}`;
-
   setResponseHeaders(event, {
     "Content-Type": "text/plain; charset=utf-8",
     "Transfer-Encoding": "chunked",

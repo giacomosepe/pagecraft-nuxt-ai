@@ -6,7 +6,7 @@
 // All UI: StepNav, StepEditor, StepOutput.
 
 import type { Ref } from "vue";
-import type { StepFormField, StepRecord } from "~/types/app.types";
+import type { StepRecord } from "~/types/app.types";
 import { buildIntestazione } from "~/utils/buildIntestazione";
 
 definePageMeta({ middleware: "auth" });
@@ -21,6 +21,12 @@ const activeStepIndex = ref(0);
 
 const activeStep = computed<StepRecord | undefined>(
 	() => steps.value?.[activeStepIndex.value],
+);
+
+const canGoNext = computed(
+	() =>
+		activeStep.value?.status === "COMMITTED" &&
+		activeStepIndex.value < ((steps.value?.length ?? 0) - 1),
 );
 
 // ─── Generation ───────────────────────────────────────────────────────────────
@@ -45,10 +51,11 @@ const {
 // Initialise output from DB on first load
 watch(
 	steps,
-	() => {
+	(currentSteps) => {
+		if (!currentSteps) return;
 		output.value = activeStep.value?.committed_output ?? "";
 	},
-	{ once: true },
+	{ immediate: true },
 );
 
 // ─── Commit toast ─────────────────────────────────────────────────────────────
@@ -67,7 +74,6 @@ watch(commitSuccess, (val) => {
 
 // ─── Type-A output assembly + auto-commit ────────────────────────────────────
 const typeAFormValues = ref<Record<string, unknown>>({});
-let autoCommitTimer: ReturnType<typeof setTimeout> | null = null;
 
 function onFormValuesChange(values: Record<string, unknown>): void {
 	if (activeStep.value?.step_type !== "type_a") return;
@@ -79,14 +85,17 @@ watch(activeStepIndex, () => {
 	output.value = activeStep.value?.committed_output ?? "";
 	errorMsg.value = "";
 	typeAFormValues.value = {};
-	if (autoCommitTimer) {
-		clearTimeout(autoCommitTimer);
-		autoCommitTimer = null;
-	}
 });
 
 const typeAOutput = computed<string | null>(() => {
 	if (activeStep.value?.step_type !== "type_a") return null;
+	if (activeStep.value.order !== 1) return null;
+	return buildTypeAOutput();
+});
+
+function buildTypeAOutput(templateOverride: string | null = null): string | null {
+	if (activeStep.value?.step_type !== "type_a") return null;
+	if (activeStep.value.order !== 1) return null;
 	const c = clientData.value;
 	const p = page.value;
 	return buildIntestazione({
@@ -96,35 +105,24 @@ const typeAOutput = computed<string | null>(() => {
 		companyForm: c?.company_form ?? "",
 		legalRepresentative: c?.legal_representative ?? "[LEGALE RAPPRESENTANTE]",
 		taxYear: p?.tax_year ?? null,
+		templateOverride,
 	});
-});
+}
+
+function produceTypeA(templateOverride: string | null): void {
+	const nextOutput = buildTypeAOutput(templateOverride);
+	if (nextOutput !== null) output.value = nextOutput;
+}
 
 // Push assembled text into the shared output ref so StepOutput renders it live
 watch(typeAOutput, (val) => {
 	if (val !== null) output.value = val;
 });
 
-// Auto-commit when all user-fillable fields are non-empty (debounced 800ms)
-watch(typeAOutput, (val) => {
-	if (val === null) return;
-	if (autoCommitTimer) clearTimeout(autoCommitTimer);
-
-	const schema = (activeStep.value?.form_schema as StepFormField[] | null) ?? [];
-	// Fields without a defaultValue are the ones users must fill manually
-	const userFillable = schema.filter((f) => f.defaultValue === undefined);
-	const allFilled = userFillable.every((f) => {
-		const v = typeAFormValues.value[f.key];
-		return v !== null && v !== undefined && String(v).trim() !== "";
-	});
-
-	if (!allFilled) return;
-	if (val === activeStep.value?.committed_output) return;
-
-	autoCommitTimer = setTimeout(() => {
-		commit();
-		autoCommitTimer = null;
-	}, 800);
-});
+function goNext(): void {
+	if (!canGoNext.value) return;
+	activeStepIndex.value++;
+}
 
 // ─── Word export ──────────────────────────────────────────────────────────────
 const isExporting = ref(false);
@@ -229,7 +227,7 @@ async function exportWord(): Promise<void> {
 				</template>
 			</BasePageHeader>
 
-			<EditorShell>
+			<EditorShell :hide-output="activeStep?.step_type === 'type_a'">
 				<template #nav>
 					<EditorPanel body-class="overflow-hidden p-0">
 						<template #header>
@@ -265,28 +263,39 @@ async function exportWord(): Promise<void> {
 				</template>
 
 				<template #main>
-					<StepEditor
-						v-if="activeStep"
-						:active-step="activeStep"
+						<StepEditor
+							v-if="activeStep"
+							:page-id="pageId"
+							:active-step="activeStep"
 						:is-generating="isGenerating"
+						:is-committing="isCommitting"
+						:can-go-next="canGoNext"
 						:error-msg="errorMsg"
 						:output="output"
+						:client-data="clientData"
 						@generate="generate"
 						@refine="refine"
 						@form-values-change="onFormValuesChange"
-						@generate-premessa="generatePremessa(page?.tax_year ?? 0, page?.tax_year ?? 0)"
+						@produce-type-a="produceTypeA"
+						@generate-premessa="generatePremessa"
+						@commit="commit"
+						@discard="discard"
+						@next="goNext"
 						@conferma-struttura="output = $event"
 					/>
 				</template>
 
 				<template #output>
 					<StepOutput
+						v-if="activeStep?.step_type !== 'type_a'"
 						:output="output"
 						:is-generating="isGenerating"
 						:is-committing="isCommitting"
 						:active-step="activeStep ?? null"
+						:can-go-next="canGoNext"
 						@commit="commit"
 						@discard="discard"
+						@next="goNext"
 					/>
 				</template>
 			</EditorShell>

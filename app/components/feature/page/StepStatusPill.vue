@@ -12,7 +12,7 @@ const props = withDefaults(
 const tone = computed(() => {
   if (props.status === "COMMITTED") {
     return {
-      label: "Completato",
+      label: "Salvato",
       className: "border-emerald-200 bg-emerald-50 text-emerald-700",
     };
   }

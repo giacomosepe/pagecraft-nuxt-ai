@@ -30,6 +30,15 @@ export function useStepForm({ activeStep, formFields }: UseStepFormParams) {
 
   let saveQueue: Promise<void> = Promise.resolve();
 
+  function syncActiveStepFormData(
+    payload: Record<string, unknown>,
+    stepId: string,
+  ): void {
+    if (activeStep.value.id === stepId) {
+      activeStep.value.form_data = { ...payload };
+    }
+  }
+
   watch(
     [() => activeStep.value.id, () => activeStep.value.form_data, formFields],
     async ([, formData]) => {
@@ -67,6 +76,7 @@ export function useStepForm({ activeStep, formFields }: UseStepFormParams) {
             normalizeFormData(formData)[f.key] === ""),
       );
       if (hasNewDefaults) {
+        syncActiveStepFormData(nextValues, activeStep.value.id);
         try {
           await persistFormData(nextValues, activeStep.value.id);
         } catch {
@@ -101,6 +111,7 @@ export function useStepForm({ activeStep, formFields }: UseStepFormParams) {
     const stepId = activeStep.value.id;
 
     formValues.value = updated;
+    syncActiveStepFormData(updated, stepId);
     formSaveError.value = "";
 
     const queuedSave = saveQueue
