@@ -10,20 +10,33 @@
 // so that output is shared with StepOutput on the same page.
 
 import { useStepForm } from "~/composables/useStepForm";
+import type { ClientRecord } from "~/composables/useClientFields";
 import type {
   StepFieldType,
   StepFormField,
   StepRecord,
   StepType,
 } from "~/types/app.types";
-import { assembleStruttura } from "~/utils/assembleStruttura";
-import type { Shareholder, Subsidiary } from "~/utils/assembleStruttura";
+import type { GenerativeRuleSection } from "~/types/generative-rule";
+import {
+  assembleStruttura,
+  DEFAULT_STRUTTURA_RULE,
+  type StrutturaRule,
+} from "~/utils/assembleStruttura";
+import type { ExtractionResult } from "~/utils/visuraExtraction";
+import { normalizeExtractionResult } from "~/utils/visuraExtraction";
 
 // ─── Visura extraction result types ───────────────────────────────────────────
 interface VisuraExtractResult {
+  soci?: unknown[];
+  partecipate?: unknown[];
+  board?: unknown[];
+  legale_rappresentante_societa?: string | null;
   shareholders: unknown[];
   subsidiaries: unknown[];
   missing: {
+    soci?: { index: number; name: string; missing: string[] }[];
+    partecipate?: { index: number; name: string; missing: string[] }[];
     shareholders: { index: number; name: string; missing: string[] }[];
     subsidiaries: { index: number; name: string; missing: string[] }[];
   };
@@ -91,25 +104,55 @@ const FALLBACK_ALLOWED_FIELD_TYPES: StepFieldType[] = [
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 const props = defineProps<{
+  pageId: string;
   activeStep: StepRecord;
   isGenerating: boolean;
+  isCommitting: boolean;
   errorMsg?: string;
   output: string;
+  clientData?: ClientRecord | null;
+  canGoNext: boolean;
 }>();
 
 const emit = defineEmits<{
-  generate: [];
+  generate: [promptRule?: string | null];
   refine: [];
   formValuesChange: [values: Record<string, unknown>];
-  generatePremessa: [];
+  produceTypeA: [templateOverride: string | null];
+  generatePremessa: [taxYearStart: number, taxYearEnd: number, legalRepresentative: string, templateOverride: string | null];
+  commit: [];
+  discard: [];
+  next: [];
   confermaStruttura: [text: string];
 }>();
 
 // ─── Form schema ──────────────────────────────────────────────────────────────
-const formFields = computed<StepFormField[]>(() => {
+const baseFormFields = computed<StepFormField[]>(() => {
   const schema = props.activeStep.form_schema;
   if (!schema || !Array.isArray(schema)) return [];
   return schema as StepFormField[];
+});
+
+const premessaLegalRepresentativeField = computed<StepFormField | null>(() => {
+  if (props.activeStep.order !== 2) return null;
+  if (baseFormFields.value.some((field) => field.key === "legale_rappresentante")) {
+    return null;
+  }
+
+  return {
+    key: "legale_rappresentante",
+    label: "Legale rappresentante",
+    type: "text",
+    placeholder: "Es. Mario Rossi",
+    hint: "Campo locale di questo step: non modifica la scheda cliente.",
+    required: true,
+    defaultValue: props.clientData?.legal_representative ?? undefined,
+  };
+});
+
+const formFields = computed<StepFormField[]>(() => {
+  const extraField = premessaLegalRepresentativeField.value;
+  return extraField ? [...baseFormFields.value, extraField] : baseFormFields.value;
 });
 
 const activeStep = computed(() => props.activeStep);
@@ -169,7 +212,16 @@ function instanceSummary(
 }
 
 // ─── UI state ─────────────────────────────────────────────────────────────────
-const showSystemPrompt = ref(false);
+const promptModalOpen = ref(false);
+const typeCRuleSections = ref<GenerativeRuleSection[]>([]);
+const appliedTypeCRules = ref<Record<string, GenerativeRuleSection[]>>({});
+const strutturaRuleModalOpen = ref(false);
+const activeStrutturaRuleFieldKey = ref<string | null>(null);
+const appliedStrutturaRules = ref<Record<string, StrutturaRule>>({});
+const extractionRuleModalOpen = ref(false);
+const activeExtractionRuleFieldKey = ref<string | null>(null);
+const extractionRuleSections = ref<GenerativeRuleSection[]>([]);
+const appliedExtractionRules = ref<Record<string, GenerativeRuleSection[]>>({});
 const stepConfig = computed<StepTypeConfig>(() => {
   const stepType = props.activeStep.step_type;
   if (stepType && stepType in STEP_TYPE_CONFIG) {
@@ -186,7 +238,24 @@ const stepConfig = computed<StepTypeConfig>(() => {
 });
 
 const isAiStep = computed(() => stepConfig.value.showAiActions);
+const isTypeAStep = computed(() => props.activeStep.step_type === "type_a");
 const areAiActionsDisabled = computed(() => stepConfig.value.disableAiActions);
+const premessaTaxYear = computed(() => {
+  const value = formValues.value.esercizio_fiscale;
+  const year = Number(String(value ?? "").trim());
+  return Number.isInteger(year) && year >= 2020 && year <= 2035 ? year : null;
+});
+const premessaLegalRepresentative = computed(() =>
+  String(formValues.value.legale_rappresentante ?? "").trim(),
+);
+const isPremessaReady = computed(
+  () => premessaTaxYear.value !== null && premessaLegalRepresentative.value.length > 0,
+);
+const isTypeAActionDisabled = computed(() => {
+  if (props.isGenerating) return true;
+  if (props.activeStep.order === 2) return !isPremessaReady.value;
+  return !props.output;
+});
 const unsupportedFields = computed(() =>
   formFields.value.filter(
     (field) => !stepConfig.value.allowedFieldTypes.includes(field.type),
@@ -198,22 +267,277 @@ const renderableFields = computed(() =>
   ),
 );
 
-watch(
-  () => props.activeStep.id,
-  () => {
-    showSystemPrompt.value = false;
-  },
+function isValueFilled(value: unknown): boolean {
+  if (Array.isArray(value)) return value.length > 0;
+  return value !== null && value !== undefined && String(value).trim() !== "";
+}
+
+function isFieldComplete(field: StepFormField): boolean {
+  if (!isFieldVisible(field)) return true;
+  const value = formValues.value[field.key];
+
+  if (field.type === "repeatable_group") {
+    const instances = Array.isArray(value) ? (value as Record<string, unknown>[]) : [];
+    const minItems = field.minItems ?? (field.required ? 1 : 0);
+    if (instances.length < minItems) return false;
+
+    return instances.every((instance) =>
+      (field.fields ?? [])
+        .filter((subField) => subField.required)
+        .every((subField) => isValueFilled(instance[subField.key])),
+    );
+  }
+
+  if (!field.required) return true;
+  return isValueFilled(value);
+}
+
+const areRequiredFieldsComplete = computed(() =>
+  renderableFields.value.every((field) => isFieldComplete(field)),
 );
 
-// ─── Visura data accessor (type_b) ────────────────────────────────────────────
-function getVisuraData(fieldKey: string): { shareholders: Shareholder[]; subsidiaries: Subsidiary[] } {
-  const v = formValues.value[fieldKey];
-  if (!v || typeof v !== "object" || Array.isArray(v)) return { shareholders: [], subsidiaries: [] };
-  const obj = v as Record<string, unknown>;
-  return {
-    shareholders: Array.isArray(obj.shareholders) ? (obj.shareholders as Shareholder[]) : [],
-    subsidiaries: Array.isArray(obj.subsidiaries) ? (obj.subsidiaries as Subsidiary[]) : [],
+watch(
+	  () => props.activeStep.id,
+	  () => {
+		    promptModalOpen.value = false;
+		    strutturaRuleModalOpen.value = false;
+		    activeStrutturaRuleFieldKey.value = null;
+		    extractionRuleModalOpen.value = false;
+		    activeExtractionRuleFieldKey.value = null;
+		  },
+		);
+	
+async function openPromptModal(): Promise<void> {
+  const stepId = props.activeStep.id;
+  const appliedRule = appliedTypeCRules.value[stepId];
+  if (appliedRule) {
+    typeCRuleSections.value = appliedRule;
+    promptModalOpen.value = true;
+    return;
+  }
+
+  typeCRuleSections.value = [
+    {
+      key: "prompt",
+      label: "Prompt",
+      content: "Caricamento della regola di generazione...",
+    },
+  ];
+  promptModalOpen.value = true;
+
+  try {
+    const prompt = await $fetch<string>("/api/generations/prompt-preview", {
+      method: "POST",
+      body: {
+        stepId,
+        pageId: props.pageId,
+        mode: "generate",
+      },
+    });
+    if (props.activeStep.id !== stepId) return;
+    typeCRuleSections.value = [
+      {
+        key: "prompt",
+        label: "Prompt",
+        content: prompt,
+      },
+    ];
+  } catch {
+    typeCRuleSections.value = [
+      {
+        key: "prompt",
+        label: "Prompt",
+        content: "Non siamo riusciti a caricare la regola di generazione. Riprova.",
+      },
+    ];
+  }
+}
+
+function cancelPromptEdit(): void {
+  promptModalOpen.value = false;
+}
+
+function applyTypeCRule(sections: GenerativeRuleSection[]): void {
+  appliedTypeCRules.value = {
+    ...appliedTypeCRules.value,
+    [props.activeStep.id]: sections,
   };
+}
+
+function onGenerateText(): void {
+  const appliedPrompt = appliedTypeCRules.value[props.activeStep.id]
+    ?.find((section) => section.key === "prompt")
+    ?.content ?? null;
+  emit("generate", appliedPrompt);
+}
+
+function onTypeAAction(templateOverride: string | null): void {
+  if (isTypeAActionDisabled.value) return;
+
+  if (props.activeStep.order === 2) {
+    if (premessaTaxYear.value === null || !premessaLegalRepresentative.value) return;
+    emit(
+      "generatePremessa",
+      premessaTaxYear.value,
+      premessaTaxYear.value,
+      premessaLegalRepresentative.value,
+      templateOverride,
+    );
+    return;
+  }
+
+  emit("produceTypeA", templateOverride);
+}
+
+// ─── Visura data accessor (type_b) ────────────────────────────────────────────
+function getVisuraData(fieldKey: string): ExtractionResult {
+  const v = formValues.value[fieldKey];
+  return normalizeExtractionResult(v);
+}
+
+function getStrutturaPreview(fieldKey: string): string {
+  const data = getVisuraData(fieldKey);
+  return assembleStruttura(data, appliedStrutturaRules.value[fieldKey] ?? DEFAULT_STRUTTURA_RULE, props.clientData?.company_name ?? props.clientData?.name ?? null);
+}
+
+function hasStrutturaPreview(fieldKey: string): boolean {
+  return getStrutturaPreview(fieldKey).trim().length > 0;
+}
+
+function openStrutturaRuleModal(fieldKey: string): void {
+  if (!hasStrutturaPreview(fieldKey)) return;
+  activeStrutturaRuleFieldKey.value = fieldKey;
+  strutturaRuleModalOpen.value = true;
+}
+
+const strutturaRuleSections = computed<GenerativeRuleSection[]>(() => {
+  const fieldKey = activeStrutturaRuleFieldKey.value;
+	  const rule = fieldKey ? (appliedStrutturaRules.value[fieldKey] ?? DEFAULT_STRUTTURA_RULE) : DEFAULT_STRUTTURA_RULE;
+	  return [
+    {
+      key: "intro",
+      label: "Introduzione",
+      content: rule.intro,
+    },
+	    {
+	      key: "bloccoSociPersonaFisica",
+	      label: "Socio persona fisica",
+	      content: rule.bloccoSociPersonaFisica,
+	    },
+	    {
+	      key: "bloccoSociPersonaGiuridica",
+	      label: "Socio persona giuridica",
+	      content: rule.bloccoSociPersonaGiuridica,
+	    },
+	    {
+	      key: "bloccoPartecipate",
+	      label: "Partecipata",
+	      content: rule.bloccoPartecipate,
+	    },
+	  ];
+	});
+
+function applyStrutturaRule(sections: GenerativeRuleSection[]): void {
+  const fieldKey = activeStrutturaRuleFieldKey.value;
+  if (!fieldKey) return;
+  appliedStrutturaRules.value = {
+    ...appliedStrutturaRules.value,
+	    [fieldKey]: {
+	      intro: sections.find((section) => section.key === "intro")?.content ?? "",
+	      bloccoSociPersonaFisica:
+	        sections.find((section) => section.key === "bloccoSociPersonaFisica")?.content ??
+	        DEFAULT_STRUTTURA_RULE.bloccoSociPersonaFisica,
+	      bloccoSociPersonaGiuridica:
+	        sections.find((section) => section.key === "bloccoSociPersonaGiuridica")?.content ??
+	        DEFAULT_STRUTTURA_RULE.bloccoSociPersonaGiuridica,
+	      bloccoPartecipate:
+	        sections.find((section) => section.key === "bloccoPartecipate")?.content ??
+	        DEFAULT_STRUTTURA_RULE.bloccoPartecipate,
+	    },
+	  };
+	}
+
+async function openExtractionRuleModal(fieldKey: string): Promise<void> {
+  activeExtractionRuleFieldKey.value = fieldKey;
+  const appliedRule = appliedExtractionRules.value[fieldKey];
+  if (appliedRule) {
+    extractionRuleSections.value = appliedRule;
+    extractionRuleModalOpen.value = true;
+    return;
+  }
+
+  extractionRuleSections.value = [
+    {
+      key: "prompt",
+      label: "Prompt di estrazione",
+      content: "Caricamento della regola di estrazione...",
+    },
+  ];
+  extractionRuleModalOpen.value = true;
+
+  try {
+    const prompt = await $fetch<string>("/api/visura/extraction-rule");
+    if (activeExtractionRuleFieldKey.value !== fieldKey) return;
+    extractionRuleSections.value = [
+      {
+        key: "prompt",
+        label: "Prompt di estrazione",
+        content: prompt,
+      },
+    ];
+  } catch {
+    extractionRuleSections.value = [
+      {
+        key: "prompt",
+        label: "Prompt di estrazione",
+        content: "Non siamo riusciti a caricare la regola di estrazione. Riprova.",
+      },
+    ];
+  }
+}
+
+function applyExtractionRule(sections: GenerativeRuleSection[]): void {
+  const fieldKey = activeExtractionRuleFieldKey.value;
+  if (!fieldKey) return;
+  appliedExtractionRules.value = {
+    ...appliedExtractionRules.value,
+    [fieldKey]: sections,
+  };
+}
+
+function previewSections(text: string): { title: string; paragraphs: string[] }[] {
+  const sections: { title: string; paragraphs: string[] }[] = [];
+  const lines = text.split("\n");
+  let current: { title: string; paragraphs: string[] } | null = null;
+
+  for (const line of lines) {
+    const value = line.trim();
+    if (!value) continue;
+
+    if (value === value.toUpperCase() && !value.includes(".")) {
+      current = { title: value, paragraphs: [] };
+      sections.push(current);
+      continue;
+    }
+
+    if (!current) {
+      current = { title: "Anteprima", paragraphs: [] };
+      sections.push(current);
+    }
+
+    current.paragraphs.push(value);
+  }
+
+  return sections;
+}
+
+function highlightedParts(paragraph: string): { text: string; isPlaceholder: boolean }[] {
+  return paragraph.split(/(\[DA COMPLETARE\])/g)
+    .filter(Boolean)
+    .map((text) => ({
+      text,
+      isPlaceholder: text === "[DA COMPLETARE]",
+    }));
 }
 
 // ─── Upload state ──────────────────────────────────────────────────────────────
@@ -319,8 +643,14 @@ async function extractVisura(field: StepFormField): Promise<void> {
   visuraResult.value = { ...visuraResult.value, [field.key]: null };
 
   try {
-    const formData = new FormData();
-    formData.append("file", file);
+	    const formData = new FormData();
+	    formData.append("file", file);
+	    const extractionRule = appliedExtractionRules.value[field.key]
+	      ?.find((section) => section.key === "prompt")
+	      ?.content;
+	    if (extractionRule?.trim()) {
+	      formData.append("extractionRule", extractionRule);
+	    }
 
     const result = await $fetch<VisuraExtractResult>("/api/visura/extract-pdf", {
       method: "POST",
@@ -331,11 +661,15 @@ async function extractVisura(field: StepFormField): Promise<void> {
 
     // Persist extracted data to form_data under the field key
     clearFormSaveError();
-    await saveFormField(field.key, {
-      filename: file.name,
-      shareholders: result.shareholders,
-      subsidiaries: result.subsidiaries,
-      missing: result.missing,
+	    await saveFormField(field.key, {
+	      filename: file.name,
+	      soci: result.soci ?? [],
+	      partecipate: result.partecipate ?? [],
+	      board: result.board ?? [],
+	      legale_rappresentante_societa: result.legale_rappresentante_societa ?? null,
+	      shareholders: result.shareholders,
+	      subsidiaries: result.subsidiaries,
+	      missing: result.missing,
       extracted_at: new Date().toISOString(),
     }, { throwOnError: true });
   } catch (err: unknown) {
@@ -365,32 +699,16 @@ async function extractVisura(field: StepFormField): Promise<void> {
           </div>
         </template>
 
-        <template #meta>
-          <div class="flex flex-wrap items-center gap-2 text-xs">
-            <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-medium text-slate-600">
-              {{ activeStep.step_type ?? "step generico" }}
-            </span>
-            <span
-              v-if="isAiStep"
-              class="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 font-medium text-violet-700"
-            >
-              Supporto AI attivo
-            </span>
-          </div>
+        <template v-if="isAiStep" #meta>
+          <span class="inline-flex rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700">
+            Supporto AI attivo
+          </span>
         </template>
+
       </EditorPanelHeader>
     </template>
 
     <div class="flex flex-col gap-5">
-      <GenerationActionBar
-        v-if="isAiStep"
-        :is-generating="isGenerating"
-        :disable-generate="isGenerating || isAnyFileUploading || !isVisuraReady || areAiActionsDisabled"
-        :disable-refine="isGenerating || isAnyFileUploading || areAiActionsDisabled || !output"
-        @generate="emit('generate')"
-        @refine="emit('refine')"
-      />
-
       <div
         v-if="formFields.length"
         class="space-y-5 rounded-[24px] border border-slate-200 bg-slate-50/60 p-4 sm:p-5"
@@ -427,10 +745,11 @@ async function extractVisura(field: StepFormField): Promise<void> {
               :error="visuraError[field.key]"
               :result="visuraResult[field.key]"
               :saved-value="formValues[field.key]"
-              :show-required-hint="isVisuraRequired && !isVisuraReady"
-              @select-file="onVisuraFileChange(field.key, $event)"
-              @extract="extractVisura(field)"
-            />
+	              :show-required-hint="isVisuraRequired && !isVisuraReady"
+	              @select-file="onVisuraFileChange(field.key, $event)"
+	              @extract="extractVisura(field)"
+	              @edit-extraction-rule="openExtractionRuleModal(field.key)"
+	            />
 
             <StepGenerationUploadField
               v-else-if="isGenerationUploadField(field)"
@@ -445,32 +764,132 @@ async function extractVisura(field: StepFormField): Promise<void> {
             <template v-else />
 
             <template v-if="activeStep.step_type === 'type_b' && isExtractionUploadField(field)">
-              <UButton
-                icon="i-lucide-check-circle"
-                class="mt-3 w-full justify-center rounded-xl sm:w-auto"
-                :disabled="!getVisuraData(field.key).shareholders.length && !getVisuraData(field.key).subsidiaries.length"
-                @click="emit('confermaStruttura', assembleStruttura(
-                  getVisuraData(field.key).shareholders,
-                  getVisuraData(field.key).subsidiaries
-                ))"
+              <div
+                v-if="hasStrutturaPreview(field.key)"
+                class="mt-5 rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm"
               >
-                Conferma struttura
-              </UButton>
-            </template>
+                <div class="mb-4 flex items-start justify-between gap-4">
+                  <div>
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                      Anteprima documento
+                    </p>
+                    <h3 class="mt-1 text-sm font-semibold text-slate-900">
+                      Struttura partecipativa
+                    </h3>
+                  </div>
+                  <span class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+                    Estrazione completata
+                  </span>
+                </div>
+
+                <div class="space-y-5">
+                  <section
+                    v-for="section in previewSections(getStrutturaPreview(field.key))"
+                    :key="section.title"
+                    class="space-y-3"
+                  >
+                    <h4 class="border-b border-slate-200 pb-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                      {{ section.title }}
+                    </h4>
+                    <p
+                      v-for="paragraph in section.paragraphs"
+                      :key="paragraph"
+                      class="text-sm leading-7 text-slate-700"
+                    >
+                      <template
+                        v-for="(part, index) in highlightedParts(paragraph)"
+                        :key="`${paragraph}-${index}`"
+                      >
+                        <span
+                          v-if="part.isPlaceholder"
+                          class="inline-flex rounded-md bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-200"
+                        >
+                          {{ part.text }}
+                        </span>
+                        <template v-else>{{ part.text }}</template>
+                      </template>
+                    </p>
+                  </section>
+                </div>
+              </div>
+
+	              <UButton
+	                icon="i-lucide-check-circle"
+	                class="mt-3 w-full justify-center rounded-xl sm:w-auto"
+	                :disabled="!hasStrutturaPreview(field.key)"
+	                @click="emit('confermaStruttura', getStrutturaPreview(field.key))"
+	              >
+	                Conferma struttura
+	              </UButton>
+	              <UButton
+	                variant="link"
+	                color="neutral"
+	                size="sm"
+	                icon="i-lucide-eye"
+	                class="mt-2 w-fit px-0 text-slate-600 hover:text-slate-900"
+	                :disabled="!hasStrutturaPreview(field.key)"
+	                @click="openStrutturaRuleModal(field.key)"
+	              >
+	                Regola di generazione
+	              </UButton>
+	            </template>
           </div>
         </template>
+
+        <StepTypeAWorkspace
+          v-if="isTypeAStep"
+          :step-id="activeStep.id"
+          :template-content="activeStep.system_prompt_template ?? ''"
+          :is-generating="isGenerating"
+          :action-disabled="isTypeAActionDisabled"
+          @produce="onTypeAAction"
+        />
       </div>
 
-      <UButton
-        v-if="activeStep.order === 2"
-        icon="i-lucide-file-text"
-        class="w-full justify-center rounded-xl sm:w-auto"
-        :loading="isGenerating"
-        :disabled="isGenerating"
-        @click="emit('generatePremessa')"
+      <div
+        v-if="isAiStep"
+        class="space-y-3"
       >
-        Genera premessa
-      </UButton>
+        <GenerationActionBar
+	          :is-generating="isGenerating"
+	          :disable-generate="isGenerating || isAnyFileUploading || !isVisuraReady || areAiActionsDisabled || !areRequiredFieldsComplete"
+	          :disable-refine="isGenerating || isAnyFileUploading || areAiActionsDisabled || !output"
+	          @generate="onGenerateText"
+	          @refine="emit('refine')"
+	        />
+
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <UButton
+            variant="link"
+            color="neutral"
+            size="sm"
+            icon="i-lucide-eye"
+            class="w-fit px-0 text-slate-600 hover:text-slate-900"
+	            @click="openPromptModal"
+	          >
+	            Regola di generazione
+	          </UButton>
+
+          <p
+            v-if="!areRequiredFieldsComplete"
+            class="text-xs font-medium text-slate-500"
+          >
+            Compila i campi obbligatori per abilitare la generazione.
+          </p>
+        </div>
+      </div>
+
+      <StepInlineOutput
+        v-if="isTypeAStep && output"
+        :output="output"
+        :status="activeStep.status"
+        :is-generating="isGenerating"
+        :is-committing="isCommitting"
+        :can-go-next="canGoNext"
+        @discard="emit('discard')"
+        @commit="emit('commit')"
+        @next="emit('next')"
+      />
 
       <UAlert
         v-if="unsupportedFields.length"
@@ -480,29 +899,6 @@ async function extractVisura(field: StepFormField): Promise<void> {
         :description="`Alcuni campi di questo step non sono compatibili con ${activeStep.step_type ?? 'il tipo corrente'} e non vengono mostrati.`"
         size="sm"
       />
-
-      <div
-        v-if="isAiStep && activeStep.system_prompt_template"
-        class="rounded-[24px] border border-slate-200 bg-white p-4"
-      >
-        <UButton
-          variant="ghost"
-          color="neutral"
-          size="sm"
-          class="rounded-xl"
-          :icon="showSystemPrompt ? 'i-lucide-eye-off' : 'i-lucide-eye'"
-          @click="showSystemPrompt = !showSystemPrompt"
-        >
-          {{ showSystemPrompt ? "Nascondi" : "Mostra" }} prompt di sistema
-        </UButton>
-
-        <div
-          v-if="showSystemPrompt"
-          class="mt-3 rounded-2xl bg-slate-50 p-4"
-        >
-          <pre class="max-h-64 overflow-y-auto whitespace-pre-wrap font-mono text-xs leading-6 text-slate-500">{{ activeStep.system_prompt_template }}</pre>
-        </div>
-      </div>
 
       <UAlert
         v-if="formSaveError"
@@ -523,4 +919,29 @@ async function extractVisura(field: StepFormField): Promise<void> {
       />
     </div>
   </EditorPanel>
-</template>
+
+	  <GenerativeRuleModal
+	    v-model:open="promptModalOpen"
+	    title="Regola di generazione"
+	    :sections="typeCRuleSections"
+	    confirm-label="Applica"
+	    @cancel="cancelPromptEdit"
+	    @save="applyTypeCRule"
+	  />
+	  <GenerativeRuleModal
+	    v-model:open="strutturaRuleModalOpen"
+	    title="Regola di generazione"
+	    :sections="strutturaRuleSections"
+	    confirm-label="Applica"
+	    @cancel="strutturaRuleModalOpen = false"
+	    @save="applyStrutturaRule"
+	  />
+	  <GenerativeRuleModal
+	    v-model:open="extractionRuleModalOpen"
+	    title="Regola di estrazione"
+	    :sections="extractionRuleSections"
+	    confirm-label="Applica"
+	    @cancel="extractionRuleModalOpen = false"
+	    @save="applyExtractionRule"
+	  />
+	</template>

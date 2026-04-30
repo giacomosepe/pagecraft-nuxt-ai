@@ -44,7 +44,7 @@ const emit = defineEmits<{
         :disabled="disableGenerate"
         @click="emit('generate')"
       >
-        Genera bozza AI
+	        Genera testo
       </UButton>
 
       <UButton

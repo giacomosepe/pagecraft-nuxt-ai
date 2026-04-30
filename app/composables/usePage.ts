@@ -47,7 +47,7 @@ export function usePage(pageId: string) {
           })) as StepRecord[],
       };
     },
-    { server: false },
+    { server: true },
   );
 
   // Decompose combined data into separate computed refs for consumers
@@ -72,7 +72,7 @@ export function usePage(pageId: string) {
         .single();
       clientData.value = c as ClientRecord | null;
     },
-    { once: true },
+    { immediate: true },
   );
 
   return { page, steps, clientData, pending, error };

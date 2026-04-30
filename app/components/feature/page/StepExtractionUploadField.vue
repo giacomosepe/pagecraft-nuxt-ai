@@ -7,12 +7,16 @@ interface UploadField {
 }
 
 interface VisuraExtractResult {
-  shareholders: unknown[];
-  subsidiaries: unknown[];
-  missing: {
-    shareholders: { index: number; name: string; missing: string[] }[];
-    subsidiaries: { index: number; name: string; missing: string[] }[];
-  };
+	  soci?: unknown[];
+	  partecipate?: unknown[];
+	  shareholders: unknown[];
+	  subsidiaries: unknown[];
+	  missing: {
+	    soci?: { index: number; name: string; missing: string[] }[];
+	    partecipate?: { index: number; name: string; missing: string[] }[];
+	    shareholders: { index: number; name: string; missing: string[] }[];
+	    subsidiaries: { index: number; name: string; missing: string[] }[];
+	  };
 }
 
 const props = defineProps<{
@@ -27,9 +31,10 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  selectFile: [file: File | null];
-  extract: [];
-}>();
+	  selectFile: [file: File | null];
+	  extract: [];
+	  editExtractionRule: [];
+	}>();
 
 const inputRef = ref<HTMLInputElement | null>(null);
 
@@ -49,6 +54,14 @@ const savedFilename = computed(() => {
 
   return "file.pdf";
 });
+
+const missingEntries = computed(() => [
+	  ...(props.result?.missing?.soci ?? props.result?.missing?.shareholders ?? []),
+	  ...(props.result?.missing?.partecipate ?? props.result?.missing?.subsidiaries ?? []),
+	]);
+
+const sociCount = computed(() => (props.result?.soci ?? props.result?.shareholders ?? []).length);
+const partecipateCount = computed(() => (props.result?.partecipate ?? props.result?.subsidiaries ?? []).length);
 </script>
 
 <template>
@@ -68,7 +81,7 @@ const savedFilename = computed(() => {
           @change="onChange"
         />
 
-        <UButton
+	      <UButton
           type="button"
           variant="outline"
           color="neutral"
@@ -91,16 +104,29 @@ const savedFilename = computed(() => {
 
       <UButton
         size="sm"
-        variant="outline"
-        color="neutral"
+        :variant="selectedFile ? 'solid' : 'outline'"
+        :color="selectedFile ? 'primary' : 'neutral'"
         icon="i-lucide-scan-text"
-        class="rounded-xl border-slate-300 bg-white sm:w-fit"
+        class="rounded-xl sm:w-fit"
+        :class="selectedFile ? '' : 'border-slate-300 bg-white'"
         :loading="isExtracting"
         :disabled="!selectedFile || disabled || isExtracting"
         @click="emit('extract')"
       >
-        Estrai dalla visura
-      </UButton>
+	        Estrai dalla visura
+	      </UButton>
+	      <UButton
+	        v-if="selectedFile"
+	        variant="link"
+	        color="neutral"
+	        size="sm"
+	        icon="i-lucide-eye"
+	        class="w-fit px-0 text-slate-600 hover:text-slate-900"
+	        :disabled="disabled || isExtracting"
+	        @click="emit('editExtractionRule')"
+	      >
+	        Regola di estrazione
+	      </UButton>
 
       <UAlert
         v-if="error"
@@ -126,31 +152,37 @@ const savedFilename = computed(() => {
         </div>
         <ul class="space-y-1 text-xs text-emerald-800/90">
           <li>
-            {{ (result.shareholders ?? []).length }} soci estratti
+	            {{ sociCount }} soci estratti
           </li>
           <li>
-            {{ (result.subsidiaries ?? []).length }} partecipate estratte
+	            {{ partecipateCount }} partecipate estratte
           </li>
         </ul>
 
         <div
-          v-if="
-            (result.missing?.shareholders?.length ?? 0) > 0 ||
-            (result.missing?.subsidiaries?.length ?? 0) > 0
-          "
-          class="mt-3 text-xs leading-5 text-emerald-700"
+          v-if="missingEntries.length"
+          class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3"
         >
-          <span class="font-medium">Dati mancanti:</span>
-          <span
-            v-for="entry in [
-              ...(result.missing?.shareholders ?? []),
-              ...(result.missing?.subsidiaries ?? []),
-            ]"
-            :key="`${entry.name}-${entry.index}`"
-            class="block"
-          >
-            {{ entry.name }}: {{ entry.missing.join(', ') }}
-          </span>
+          <div class="flex items-start gap-2">
+            <UIcon
+              name="i-lucide-triangle-alert"
+              class="mt-0.5 size-4 shrink-0 text-amber-600"
+            />
+            <div class="space-y-2">
+              <p class="text-xs font-semibold uppercase tracking-[0.08em] text-amber-800">
+                Dati da completare
+              </p>
+              <ul class="space-y-1 text-xs leading-5 text-amber-800">
+                <li
+                  v-for="entry in missingEntries"
+                  :key="`${entry.name}-${entry.index}`"
+                >
+                  <span class="font-semibold">{{ entry.name }}:</span>
+                  {{ entry.missing.join(', ') }}
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
 
         <p

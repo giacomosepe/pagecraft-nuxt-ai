@@ -30,7 +30,7 @@ export function useGeneration({
   const commitSuccess = ref(false);
 
   // ─── Generate ───────────────────────────────────────────────────────────────
-  async function generate(): Promise<void> {
+  async function generate(promptRule: string | null = null): Promise<void> {
     if (!activeStep.value || isGenerating.value) return;
     isGenerating.value = true;
     output.value = "";
@@ -40,11 +40,12 @@ export function useGeneration({
       const res = await fetch("/api/generations/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          stepId: activeStep.value.id,
-          pageId,
-          mode: "generate",
-        }),
+	        body: JSON.stringify({
+	          stepId: activeStep.value.id,
+	          pageId,
+	          mode: "generate",
+	          promptRule,
+	        }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -106,7 +107,7 @@ export function useGeneration({
   }
 
   // ─── Commit ─────────────────────────────────────────────────────────────────
-  // Persists committed_output + user_context to the step, then advances the step index.
+  // Persists committed_output to the step. Navigation is handled explicitly by the page.
   async function commit(): Promise<void> {
     if (!activeStep.value || !output.value || isGenerating.value) return;
     isCommitting.value = true;
@@ -134,9 +135,6 @@ export function useGeneration({
       commitSuccess.value = true;
       await nextTick();
       commitSuccess.value = false;
-      if (activeStepIndex.value < (steps.value?.length ?? 0) - 1) {
-        activeStepIndex.value++;
-      }
     } catch (e: unknown) {
       errorMsg.value = "Salvataggio non riuscito. Riprova.";
     } finally {
@@ -145,7 +143,12 @@ export function useGeneration({
   }
 
   // ─── Generate Premessa ───────────────────────────────────────────────────────
-  async function generatePremessa(taxYearStart: number, taxYearEnd: number): Promise<void> {
+  async function generatePremessa(
+    taxYearStart: number,
+    taxYearEnd: number,
+    legalRepresentative: string,
+    templateOverride: string | null = null,
+  ): Promise<void> {
     if (isGenerating.value) return;
     isGenerating.value = true;
     output.value = "";
@@ -155,12 +158,22 @@ export function useGeneration({
       const res = await fetch("/api/generations/premessa", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pageId, taxYearStart, taxYearEnd }),
+        body: JSON.stringify({ pageId, taxYearStart, taxYearEnd, legalRepresentative, templateOverride }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(
+          (err as { message?: string; statusMessage?: string } | null)?.message ??
+          (err as { message?: string; statusMessage?: string } | null)?.statusMessage ??
+          "Generazione della premessa non riuscita. Riprova.",
+        );
+      }
       output.value = await res.text();
-    } catch {
-      errorMsg.value = "Generazione della premessa non riuscita. Riprova.";
+    } catch (err: unknown) {
+      errorMsg.value =
+        err instanceof Error
+          ? err.message
+          : "Generazione della premessa non riuscita. Riprova.";
       output.value = "";
     } finally {
       isGenerating.value = false;
