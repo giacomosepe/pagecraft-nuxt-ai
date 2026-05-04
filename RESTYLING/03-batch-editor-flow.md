@@ -87,3 +87,9 @@ Reason:
 - Accidentally coupling visual refactors to generation logic changes
 - Under-designing loading and error states
 - Leaving panel spacing and typography inconsistent across the three panes
+
+## Follow-Up Notes
+
+- Type A steps are deterministic template steps. Their Prompt tab should stay disabled in the UI.
+- Remove unused type_a prompt text from seed/live DB once the Wave 1 UI behavior is settled; templates should live in deterministic builders, not in `framework_steps.system_prompt_template`.
+- Step 3 expects a `visura_pdf` `file_upload_extraction` field. Backfill existing `steps.form_schema` rows if older documents were created before that field existed.

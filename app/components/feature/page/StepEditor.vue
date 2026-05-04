@@ -111,6 +111,7 @@ const props = defineProps<{
   errorMsg?: string;
   output: string;
   clientData?: ClientRecord | null;
+  taxYear?: number | null;
   canGoNext: boolean;
 }>();
 
@@ -150,12 +151,77 @@ const premessaLegalRepresentativeField = computed<StepFormField | null>(() => {
   };
 });
 
+const defaultVisuraField: StepFormField = {
+  key: "visura_pdf",
+  label: "Visura Camerale (PDF)",
+  type: "file_upload_extraction",
+  hint: "Carica la visura camerale per estrarre soci, partecipazioni e legale rappresentante.",
+  required: false,
+  accept: [".pdf"],
+};
+
+function hasExtractionUploadField(fields: StepFormField[]): boolean {
+  return fields.some(
+    (field) => field.type === "visura_upload" || field.type === "file_upload_extraction",
+  );
+}
+
+function ensureStepThreeVisuraField(fields: StepFormField[]): StepFormField[] {
+  const isStrutturaStep =
+    props.activeStep.step_type === "type_b" || props.activeStep.order === 3;
+
+  if (!isStrutturaStep || hasExtractionUploadField(fields)) {
+    return fields;
+  }
+
+  return [defaultVisuraField, ...fields];
+}
+
+const clientVariableMap = computed(() => {
+  const { variableMap } = useClientFields(props.clientData ?? null, props.taxYear ?? null);
+  return variableMap.value;
+});
+
+function prefillValueForField(field: StepFormField): string | undefined {
+  const variableValue = clientVariableMap.value[field.key];
+  if (variableValue) return variableValue;
+
+  if (field.key === "esercizio_fiscale" && props.taxYear) {
+    return String(props.taxYear);
+  }
+
+  if (field.key === "legale_rappresentante") {
+    return props.clientData?.legal_representative ?? undefined;
+  }
+
+  return undefined;
+}
+
+function applyFieldPrefill(field: StepFormField): StepFormField {
+  const nestedFields = field.fields?.map(applyFieldPrefill);
+  const defaultValue = field.defaultValue ?? prefillValueForField(field);
+
+  return {
+    ...field,
+    ...(defaultValue !== undefined ? { defaultValue } : {}),
+    ...(nestedFields ? { fields: nestedFields } : {}),
+  };
+}
+
 const formFields = computed<StepFormField[]>(() => {
   const extraField = premessaLegalRepresentativeField.value;
-  return extraField ? [...baseFormFields.value, extraField] : baseFormFields.value;
+  const fields = extraField ? [...baseFormFields.value, extraField] : baseFormFields.value;
+  return ensureStepThreeVisuraField(fields).map(applyFieldPrefill);
 });
 
 const activeStep = computed(() => props.activeStep);
+
+const effectiveStepType = computed<StepType>(() => {
+  if (props.activeStep.step_type) return props.activeStep.step_type;
+  if (props.activeStep.order <= 2) return "type_a";
+  if (props.activeStep.order === 3) return "type_b";
+  return "type_c";
+});
 
 const {
   formValues,
@@ -176,9 +242,7 @@ const {
 watch(
   formValues,
   (values) => {
-    if (props.activeStep.step_type === "type_a") {
-      emit("formValuesChange", { ...values });
-    }
+    emit("formValuesChange", { ...values });
   },
   { deep: true, immediate: true },
 );
@@ -223,7 +287,7 @@ const activeExtractionRuleFieldKey = ref<string | null>(null);
 const extractionRuleSections = ref<GenerativeRuleSection[]>([]);
 const appliedExtractionRules = ref<Record<string, GenerativeRuleSection[]>>({});
 const stepConfig = computed<StepTypeConfig>(() => {
-  const stepType = props.activeStep.step_type;
+  const stepType = effectiveStepType.value;
   if (stepType && stepType in STEP_TYPE_CONFIG) {
     return STEP_TYPE_CONFIG[stepType];
   }
@@ -238,7 +302,7 @@ const stepConfig = computed<StepTypeConfig>(() => {
 });
 
 const isAiStep = computed(() => stepConfig.value.showAiActions);
-const isTypeAStep = computed(() => props.activeStep.step_type === "type_a");
+const isTypeAStep = computed(() => effectiveStepType.value === "type_a");
 const areAiActionsDisabled = computed(() => stepConfig.value.disableAiActions);
 const premessaTaxYear = computed(() => {
   const value = formValues.value.esercizio_fiscale;
@@ -563,6 +627,67 @@ function isSimpleField(field: StepFormField): boolean {
   return ["multiselect", "textarea", "select", "number", "text"].includes(field.type);
 }
 
+type PaneTab = "variables" | "file" | "prompt";
+
+const activePaneTab = ref<PaneTab>("variables");
+
+const variableFields = computed(() =>
+  renderableFields.value.filter((field) =>
+    field.type === "repeatable_group" || isSimpleField(field),
+  ),
+);
+
+const fileFields = computed(() =>
+  renderableFields.value.filter(
+    (field) => isExtractionUploadField(field) || isGenerationUploadField(field),
+  ),
+);
+
+const paneTabs = computed<{ key: PaneTab; label: string; disabled: boolean }[]>(() => [
+  {
+    key: "variables",
+    label: "Variabili",
+    disabled: variableFields.value.length === 0 && !isTypeAStep.value && !isAiStep.value,
+  },
+  {
+    key: "file",
+    label: "File",
+    disabled: fileFields.value.length === 0,
+  },
+  {
+    key: "prompt",
+    label: "Prompt",
+    disabled: isTypeAStep.value,
+  },
+]);
+
+const activeFields = computed(() =>
+  activePaneTab.value === "file" ? fileFields.value : variableFields.value,
+);
+
+const promptTabDescription = computed(() => {
+  if (effectiveStepType.value === "type_c") {
+    return "Leggi o modifica la regola usata per generare il testo con AI.";
+  }
+
+  if (effectiveStepType.value === "type_a") {
+    return "Questo step usa un template fisso: i campi compilati vengono inseriti nel testo senza intervento AI.";
+  }
+
+  return "Questo step usa una regola controllata dal sistema. Puoi leggerla senza modificare il flusso.";
+});
+
+watch(
+  () => props.activeStep.id,
+  () => {
+    activePaneTab.value =
+      effectiveStepType.value === "type_b" && fileFields.value.length
+        ? "file"
+        : "variables";
+  },
+  { immediate: true },
+);
+
 // ─── Extraction gate computeds ─────────────────────────────────────────────────
 // Only renderable extraction fields should participate in the AI readiness gate.
 const renderableExtractionFields = computed(() =>
@@ -684,7 +809,7 @@ async function extractVisura(field: StepFormField): Promise<void> {
 </script>
 
 <template>
-  <EditorPanel body-class="overflow-y-auto px-5 py-5">
+  <EditorPanel flush body-class="overflow-y-auto px-4 py-4">
     <template #header>
       <EditorPanelHeader
         :title="activeStep.title"
@@ -708,12 +833,35 @@ async function extractVisura(field: StepFormField): Promise<void> {
       </EditorPanelHeader>
     </template>
 
-    <div class="flex flex-col gap-5">
+    <div class="flex flex-col gap-4">
+      <div class="grid grid-cols-3 gap-1 border-b border-slate-200 pb-3">
+        <button
+          v-for="tab in paneTabs"
+          :key="tab.key"
+          type="button"
+          class="min-h-9 rounded-lg px-2 text-xs font-medium transition-colors"
+          :class="
+            activePaneTab === tab.key
+              ? 'bg-violet-600 text-white shadow-sm'
+              : tab.disabled
+                ? 'cursor-not-allowed text-slate-300'
+                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+          "
+          :disabled="tab.disabled"
+          @click="activePaneTab = tab.key"
+        >
+          {{ tab.label }}
+        </button>
+      </div>
+
       <div
-        v-if="formFields.length"
-        class="space-y-5 rounded-[24px] border border-slate-200 bg-slate-50/60 p-4 sm:p-5"
+        v-if="activePaneTab !== 'prompt'"
+        class="space-y-5"
       >
-        <template v-for="field in renderableFields" :key="field.key">
+        <template
+          v-if="activeFields.length || (activePaneTab === 'variables' && isTypeAStep)"
+        >
+        <template v-for="field in activeFields" :key="field.key">
           <div v-if="isFieldVisible(field)">
             <StepRepeatableGroupField
               v-if="field.type === 'repeatable_group'"
@@ -763,7 +911,7 @@ async function extractVisura(field: StepFormField): Promise<void> {
 
             <template v-else />
 
-            <template v-if="activeStep.step_type === 'type_b' && isExtractionUploadField(field)">
+            <template v-if="effectiveStepType === 'type_b' && isExtractionUploadField(field)">
               <div
                 v-if="hasStrutturaPreview(field.key)"
                 class="mt-5 rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm"
@@ -837,59 +985,72 @@ async function extractVisura(field: StepFormField): Promise<void> {
         </template>
 
         <StepTypeAWorkspace
-          v-if="isTypeAStep"
+          v-if="activePaneTab === 'variables' && isTypeAStep"
           :step-id="activeStep.id"
           :template-content="activeStep.system_prompt_template ?? ''"
           :is-generating="isGenerating"
           :action-disabled="isTypeAActionDisabled"
           @produce="onTypeAAction"
         />
-      </div>
+        </template>
 
-      <div
-        v-if="isAiStep"
-        class="space-y-3"
-      >
-        <GenerationActionBar
-	          :is-generating="isGenerating"
-	          :disable-generate="isGenerating || isAnyFileUploading || !isVisuraReady || areAiActionsDisabled || !areRequiredFieldsComplete"
-	          :disable-refine="isGenerating || isAnyFileUploading || areAiActionsDisabled || !output"
-	          @generate="onGenerateText"
-	          @refine="emit('refine')"
-	        />
-
-        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <UButton
-            variant="link"
-            color="neutral"
-            size="sm"
-            icon="i-lucide-eye"
-            class="w-fit px-0 text-slate-600 hover:text-slate-900"
-	            @click="openPromptModal"
-	          >
-	            Regola di generazione
-	          </UButton>
-
-          <p
-            v-if="!areRequiredFieldsComplete"
-            class="text-xs font-medium text-slate-500"
-          >
-            Compila i campi obbligatori per abilitare la generazione.
-          </p>
+        <div
+          v-else
+          class="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm leading-6 text-slate-500"
+        >
+          Nessun contenuto in questa scheda per lo step corrente.
         </div>
       </div>
 
-      <StepInlineOutput
-        v-if="isTypeAStep && output"
-        :output="output"
-        :status="activeStep.status"
-        :is-generating="isGenerating"
-        :is-committing="isCommitting"
-        :can-go-next="canGoNext"
-        @discard="emit('discard')"
-        @commit="emit('commit')"
-        @next="emit('next')"
-      />
+      <div v-else class="space-y-4">
+        <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4">
+          <p class="text-sm font-semibold text-slate-900">
+            Regola dello step
+          </p>
+          <p class="mt-2 text-sm leading-6 text-slate-500">
+            {{ promptTabDescription }}
+          </p>
+        </div>
+
+        <div
+          v-if="activeStep.system_prompt_template"
+          class="max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white p-4 text-xs leading-6 text-slate-600"
+        >
+          {{ activeStep.system_prompt_template }}
+        </div>
+
+        <UButton
+          v-if="isAiStep"
+          variant="outline"
+          color="neutral"
+          size="sm"
+          icon="i-lucide-expand"
+          class="w-full justify-center rounded-xl border-slate-300 bg-white"
+          @click="openPromptModal"
+        >
+          Apri e modifica prompt
+        </UButton>
+      </div>
+
+      <div
+        v-if="isAiStep && activePaneTab === 'variables'"
+        class="space-y-3 border-t border-slate-200 pt-4"
+      >
+        <GenerationActionBar
+          :is-generating="isGenerating"
+          :disable-generate="isGenerating || isAnyFileUploading || !isVisuraReady || areAiActionsDisabled || !areRequiredFieldsComplete"
+          :disable-refine="isGenerating || isAnyFileUploading || areAiActionsDisabled || !output"
+          @generate="onGenerateText"
+          @refine="emit('refine')"
+        />
+
+        <p
+          v-if="!areRequiredFieldsComplete"
+          class="text-xs font-medium text-slate-500"
+        >
+          Compila i campi obbligatori per abilitare la generazione.
+        </p>
+      </div>
 
       <UAlert
         v-if="unsupportedFields.length"
