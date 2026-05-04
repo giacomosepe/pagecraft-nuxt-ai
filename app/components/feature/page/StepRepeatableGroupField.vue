@@ -23,6 +23,7 @@ const emit = defineEmits<{
       :label="field.label"
       :hint="field.hint"
       :required="field.required"
+      :variable-key="field.key"
     />
 
     <div

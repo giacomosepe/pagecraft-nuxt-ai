@@ -3,18 +3,23 @@ withDefaults(
   defineProps<{
     tone?: "surface" | "subtle";
     bodyClass?: string;
+    flush?: boolean;
   }>(),
   {
     tone: "surface",
     bodyClass: "overflow-y-auto px-5 py-5",
+    flush: false,
   },
 );
 </script>
 
 <template>
   <section
-    class="flex h-full min-h-0 flex-col overflow-hidden rounded-[28px] border border-slate-200 shadow-sm"
-    :class="tone === 'subtle' ? 'bg-slate-50/70' : 'bg-white'"
+    class="flex h-full min-h-0 flex-col overflow-hidden"
+    :class="[
+      tone === 'subtle' ? 'bg-slate-50/70' : 'bg-white',
+      flush ? '' : 'rounded-[28px] border border-slate-200 shadow-sm',
+    ]"
   >
     <div
       v-if="$slots.header"

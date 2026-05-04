@@ -7,9 +7,11 @@
 // Emits commit and discard up to the page.
 
 import type { StepRecord } from "~/types/app.types";
+import type { StepPreview } from "~/utils/buildStepPreview";
 
 const props = defineProps<{
   output: string;
+  preview: StepPreview;
   isGenerating: boolean;
   isCommitting: boolean;
   activeStep: StepRecord | null;
@@ -63,12 +65,12 @@ function highlightedParts(paragraph: string): { text: string; isPlaceholder: boo
 </script>
 
 <template>
-  <EditorPanel tone="subtle" body-class="overflow-y-auto px-6 py-5">
+  <EditorPanel flush body-class="overflow-y-auto px-6 py-5">
     <template #header>
       <EditorPanelHeader
         title="Output generato"
-        description="Qui trovi la bozza corrente del contenuto prodotto per lo step attivo."
-        eyebrow="Bozza AI"
+        :description="activeStep?.title ?? 'Contenuto dello step attivo'"
+        :eyebrow="output ? 'Documento' : preview.eyebrow"
       >
         <template #badge>
           <StepStatusPill
@@ -103,7 +105,7 @@ function highlightedParts(paragraph: string): { text: string; isPlaceholder: boo
 
     <div
       v-if="output"
-      class="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm"
+      class="mx-auto w-full max-w-3xl bg-white px-1 py-2 sm:px-4"
     >
       <div
         v-if="shouldFormatStruttura"
@@ -148,18 +150,62 @@ function highlightedParts(paragraph: string): { text: string; isPlaceholder: boo
 
     <div
       v-else
-      class="flex h-full min-h-[320px] items-center justify-center rounded-[24px] border border-dashed border-slate-300 bg-white/70 p-8 text-center"
+      class="mx-auto flex min-h-[320px] w-full max-w-3xl flex-col justify-center bg-white px-1 py-2 sm:px-4"
     >
-      <div class="max-w-xs">
-        <div class="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-violet-50 text-violet-600">
-          <UIcon name="i-lucide-sparkles" class="size-7" />
+      <div class="space-y-6 border-l-2 border-violet-200 pl-5">
+        <p class="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+          {{ preview.eyebrow }}
+        </p>
+        <h3 class="mt-2 text-base font-semibold text-slate-900">
+          {{ preview.title }}
+        </h3>
+
+        <section
+          v-for="(section, sectionIndex) in preview.sections"
+          :key="`${section.title ?? 'preview'}-${sectionIndex}`"
+          class="space-y-3"
+        >
+          <h4
+            v-if="section.title"
+            class="border-b border-slate-200 pb-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500"
+          >
+            {{ section.title }}
+          </h4>
+          <p class="whitespace-pre-wrap text-sm leading-7 text-slate-600">
+            <template
+              v-for="(part, partIndex) in section.parts"
+              :key="`${sectionIndex}-${partIndex}`"
+            >
+              <span
+                v-if="part.isToken"
+                class="inline-flex rounded-md bg-violet-50 px-1.5 py-0.5 text-xs font-semibold text-violet-700 ring-1 ring-violet-100"
+              >
+                {{ "{\u007b " }}{{ part.text }}{{ " \u007d}" }}
+              </span>
+              <template v-else>{{ part.text }}</template>
+            </template>
+          </p>
+        </section>
+
+        <div
+          v-if="preview.tokens.length"
+          class="mt-6 flex flex-wrap gap-2"
+        >
+          <span
+            v-for="field in preview.tokens"
+            :key="field.key"
+            class="inline-flex items-center rounded-md bg-violet-50 px-2 py-1 text-xs font-semibold text-violet-700 ring-1 ring-violet-100"
+          >
+            {{ field.label }}
+          </span>
         </div>
-        <p class="text-sm font-medium text-slate-900">
-          Nessuna bozza disponibile
-        </p>
-        <p class="mt-2 text-sm leading-6 text-slate-500">
-          Avvia la generazione dal pannello centrale per vedere qui il contenuto proposto.
-        </p>
+
+        <div
+          v-else
+          class="mt-6 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-500"
+        >
+          Nessuna variabile richiesta per questo step.
+        </div>
       </div>
     </div>
 

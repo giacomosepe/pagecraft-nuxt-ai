@@ -8,6 +8,7 @@
 import type { Ref } from "vue";
 import type { StepRecord } from "~/types/app.types";
 import { buildIntestazione } from "~/utils/buildIntestazione";
+import { buildStepPreview } from "~/utils/buildStepPreview";
 
 definePageMeta({ middleware: "auth" });
 
@@ -73,18 +74,17 @@ watch(commitSuccess, (val) => {
 });
 
 // ─── Type-A output assembly + auto-commit ────────────────────────────────────
-const typeAFormValues = ref<Record<string, unknown>>({});
+const stepFormValues = ref<Record<string, unknown>>({});
 
 function onFormValuesChange(values: Record<string, unknown>): void {
-	if (activeStep.value?.step_type !== "type_a") return;
-	typeAFormValues.value = values;
+	stepFormValues.value = values;
 }
 
 // Reset on step navigation
 watch(activeStepIndex, () => {
 	output.value = activeStep.value?.committed_output ?? "";
 	errorMsg.value = "";
-	typeAFormValues.value = {};
+	stepFormValues.value = {};
 });
 
 const typeAOutput = computed<string | null>(() => {
@@ -99,8 +99,8 @@ function buildTypeAOutput(templateOverride: string | null = null): string | null
 	const c = clientData.value;
 	const p = page.value;
 	return buildIntestazione({
-		programTitle: String(typeAFormValues.value.program_title ?? ""),
-		legalCitation: String(typeAFormValues.value.legal_citation ?? ""),
+		programTitle: String(stepFormValues.value.program_title ?? ""),
+		legalCitation: String(stepFormValues.value.legal_citation ?? ""),
 		companyName: c?.company_name ?? "[RAGIONE SOCIALE]",
 		companyForm: c?.company_form ?? "",
 		legalRepresentative: c?.legal_representative ?? "[LEGALE RAPPRESENTANTE]",
@@ -108,6 +108,15 @@ function buildTypeAOutput(templateOverride: string | null = null): string | null
 		templateOverride,
 	});
 }
+
+const stepPreview = computed(() =>
+	buildStepPreview({
+		step: activeStep.value ?? null,
+		client: clientData.value,
+		taxYear: page.value?.tax_year ?? null,
+		formValues: stepFormValues.value,
+	}),
+);
 
 function produceTypeA(templateOverride: string | null): void {
 	const nextOutput = buildTypeAOutput(templateOverride);
@@ -189,7 +198,7 @@ async function exportWord(): Promise<void> {
 		<template v-else>
 			<BasePageHeader
 				:title="page.title"
-				description="Lavora step per step sul documento, genera le bozze AI e salva l’output finale senza uscire dal flusso."
+				description="Lavora step per step sul documento, compila i dati necessari e salva l’output finale senza uscire dal flusso."
 			>
 				<template #meta>
 					<div class="flex flex-wrap items-center gap-2 text-xs">
@@ -227,10 +236,10 @@ async function exportWord(): Promise<void> {
 				</template>
 			</BasePageHeader>
 
-			<EditorShell :hide-output="activeStep?.step_type === 'type_a'">
+			<EditorShell>
 				<template #nav>
-					<EditorPanel body-class="overflow-hidden p-0">
-						<template #header>
+					<div class="flex h-full min-h-0 flex-col">
+						<div class="border-b border-slate-200 px-4 py-4">
 							<EditorPanelHeader
 								title="Mappa del documento"
 								description="Segui i passaggi, controlla l’avanzamento e passa rapidamente allo step successivo."
@@ -246,7 +255,7 @@ async function exportWord(): Promise<void> {
 									</NuxtLink>
 								</template>
 							</EditorPanelHeader>
-						</template>
+						</div>
 
 						<StepNav
 							:steps="steps ?? []"
@@ -254,25 +263,40 @@ async function exportWord(): Promise<void> {
 							@select="activeStepIndex = $event"
 						/>
 
-						<template #footer>
+						<div class="border-t border-slate-200 px-4 py-4">
 							<p class="text-xs leading-5 text-slate-500">
 								Quando tutti gli step sono completati puoi esportare il documento in Word.
 							</p>
-						</template>
-					</EditorPanel>
+						</div>
+					</div>
 				</template>
 
-				<template #main>
-						<StepEditor
-							v-if="activeStep"
-							:page-id="pageId"
-							:active-step="activeStep"
+				<template #document>
+					<StepOutput
+						:output="output"
+						:preview="stepPreview"
+						:is-generating="isGenerating"
+						:is-committing="isCommitting"
+						:active-step="activeStep ?? null"
+						:can-go-next="canGoNext"
+						@commit="commit"
+						@discard="discard"
+						@next="goNext"
+					/>
+				</template>
+
+				<template #work>
+					<StepEditor
+						v-if="activeStep"
+						:page-id="pageId"
+						:active-step="activeStep"
 						:is-generating="isGenerating"
 						:is-committing="isCommitting"
 						:can-go-next="canGoNext"
 						:error-msg="errorMsg"
 						:output="output"
 						:client-data="clientData"
+						:tax-year="page.tax_year"
 						@generate="generate"
 						@refine="refine"
 						@form-values-change="onFormValuesChange"
@@ -282,20 +306,6 @@ async function exportWord(): Promise<void> {
 						@discard="discard"
 						@next="goNext"
 						@conferma-struttura="output = $event"
-					/>
-				</template>
-
-				<template #output>
-					<StepOutput
-						v-if="activeStep?.step_type !== 'type_a'"
-						:output="output"
-						:is-generating="isGenerating"
-						:is-committing="isCommitting"
-						:active-step="activeStep ?? null"
-						:can-go-next="canGoNext"
-						@commit="commit"
-						@discard="discard"
-						@next="goNext"
 					/>
 				</template>
 			</EditorShell>

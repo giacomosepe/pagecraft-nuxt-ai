@@ -54,6 +54,7 @@ function cancelRuleEdit(): void {
 <template>
 	<div class="flex flex-col items-end gap-2 border-t border-slate-200 pt-5">
 		<StepTypeAActionButton
+			label="Aggiorna documento"
 			:loading="isGenerating"
 			:disabled="actionDisabled"
 			@click="emit('produce', appliedRuleContent)"
@@ -66,12 +67,12 @@ function cancelRuleEdit(): void {
 			class="px-0 text-slate-600 hover:text-slate-900"
 			@click="modalOpen = true"
 		>
-			Regola di generazione
+			Template documento
 		</UButton>
 
 		<GenerativeRuleModal
 			v-model:open="modalOpen"
-			title="Regola di generazione"
+			title="Template documento"
 			:sections="activeRuleSections"
 			confirm-label="Applica"
 			@cancel="cancelRuleEdit"
