@@ -19,29 +19,8 @@ import type {
   StepType,
 } from "~/types/app.types";
 import type { GenerativeRuleSection } from "~/types/generative-rule";
-import {
-  assembleStruttura,
-  DEFAULT_STRUTTURA_RULE,
-  type StrutturaRule,
-} from "~/utils/assembleStruttura";
 import type { ExtractionResult } from "~/utils/visuraExtraction";
 import { normalizeExtractionResult } from "~/utils/visuraExtraction";
-
-// ─── Visura extraction result types ───────────────────────────────────────────
-interface VisuraExtractResult {
-  soci?: unknown[];
-  partecipate?: unknown[];
-  board?: unknown[];
-  legale_rappresentante_societa?: string | null;
-  shareholders: unknown[];
-  subsidiaries: unknown[];
-  missing: {
-    soci?: { index: number; name: string; missing: string[] }[];
-    partecipate?: { index: number; name: string; missing: string[] }[];
-    shareholders: { index: number; name: string; missing: string[] }[];
-    subsidiaries: { index: number; name: string; missing: string[] }[];
-  };
-}
 
 interface StepTypeConfig {
   subtitle: string;
@@ -217,6 +196,7 @@ const formFields = computed<StepFormField[]>(() => {
 });
 
 const activeStep = computed(() => props.activeStep);
+const activeStepId = computed(() => props.activeStep.id);
 
 const effectiveStepType = computed<StepType>(() => {
   if (props.activeStep.step_type) return props.activeStep.step_type;
@@ -278,12 +258,6 @@ function instanceSummary(
 }
 
 // ─── UI state ─────────────────────────────────────────────────────────────────
-const promptModalOpen = ref(false);
-const typeCRuleSections = ref<GenerativeRuleSection[]>([]);
-const appliedTypeCRules = ref<Record<string, GenerativeRuleSection[]>>({});
-const strutturaRuleModalOpen = ref(false);
-const activeStrutturaRuleFieldKey = ref<string | null>(null);
-const appliedStrutturaRules = ref<Record<string, StrutturaRule>>({});
 const extractionRuleModalOpen = ref(false);
 const activeExtractionRuleFieldKey = ref<string | null>(null);
 const extractionRuleSections = ref<GenerativeRuleSection[]>([]);
@@ -305,6 +279,7 @@ const stepConfig = computed<StepTypeConfig>(() => {
 
 const isAiStep = computed(() => stepConfig.value.showAiActions);
 const isTypeAStep = computed(() => effectiveStepType.value === "type_a");
+const isPromptEditable = computed(() => effectiveStepType.value === "type_c");
 const areAiActionsDisabled = computed(() => stepConfig.value.disableAiActions);
 const premessaTaxYear = computed(() => {
   const value = formValues.value.esercizio_fiscale;
@@ -365,77 +340,24 @@ const areRequiredFieldsComplete = computed(() =>
 watch(
 	  () => props.activeStep.id,
 	  () => {
-		    promptModalOpen.value = false;
-		    strutturaRuleModalOpen.value = false;
-		    activeStrutturaRuleFieldKey.value = null;
 		    extractionRuleModalOpen.value = false;
 		    activeExtractionRuleFieldKey.value = null;
 		  },
 		);
-	
-async function openPromptModal(): Promise<void> {
-  const stepId = props.activeStep.id;
-  const appliedRule = appliedTypeCRules.value[stepId];
-  if (appliedRule) {
-    typeCRuleSections.value = appliedRule;
-    promptModalOpen.value = true;
-    return;
-  }
 
-  typeCRuleSections.value = [
-    {
-      key: "prompt",
-      label: "Prompt",
-      content: "Caricamento della regola di generazione...",
-    },
-  ];
-  promptModalOpen.value = true;
-
-  try {
-    const prompt = await $fetch<string>("/api/generations/prompt-preview", {
-      method: "POST",
-      body: {
-        stepId,
-        pageId: props.pageId,
-        mode: "generate",
-      },
-    });
-    if (props.activeStep.id !== stepId) return;
-    typeCRuleSections.value = [
-      {
-        key: "prompt",
-        label: "Prompt",
-        content: prompt,
-      },
-    ];
-  } catch {
-    typeCRuleSections.value = [
-      {
-        key: "prompt",
-        label: "Prompt",
-        content: "Non siamo riusciti a caricare la regola di generazione. Riprova.",
-      },
-    ];
-  }
-}
-
-function cancelPromptEdit(): void {
-  promptModalOpen.value = false;
-}
-
-function applyTypeCRule(sections: GenerativeRuleSection[]): void {
-  appliedTypeCRules.value = {
-    ...appliedTypeCRules.value,
-    [props.activeStep.id]: sections,
-  };
-}
-
-function onGenerateText(): void {
-  const appliedPrompt = appliedTypeCRules.value[props.activeStep.id]
-    ?.find((section) => section.key === "prompt")
-    ?.content ?? null;
-  emit("generate", appliedPrompt);
-}
+const {
+  promptModalOpen,
+  promptReadOnlyValue,
+  editablePrompt,
+  openPromptModal,
+  cancelPromptEdit,
+  savePromptEdit,
+  onGenerateText,
+} = useStepPromptOverride({
+  activeStep,
+  isEditable: isPromptEditable,
+  onGenerate: (promptOverride) => emit("generate", promptOverride),
+});
 
 function onTypeAAction(templateOverride: string | null): void {
   if (isTypeAActionDisabled.value) return;
@@ -461,67 +383,21 @@ function getVisuraData(fieldKey: string): ExtractionResult {
   return normalizeExtractionResult(v);
 }
 
-function getStrutturaPreview(fieldKey: string): string {
-  const data = getVisuraData(fieldKey);
-  return assembleStruttura(data, appliedStrutturaRules.value[fieldKey] ?? DEFAULT_STRUTTURA_RULE, props.clientData?.company_name ?? props.clientData?.name ?? null);
-}
+const clientForStruttura = computed(() => props.clientData);
 
-function hasStrutturaPreview(fieldKey: string): boolean {
-  return getStrutturaPreview(fieldKey).trim().length > 0;
-}
-
-function openStrutturaRuleModal(fieldKey: string): void {
-  if (!hasStrutturaPreview(fieldKey)) return;
-  activeStrutturaRuleFieldKey.value = fieldKey;
-  strutturaRuleModalOpen.value = true;
-}
-
-const strutturaRuleSections = computed<GenerativeRuleSection[]>(() => {
-  const fieldKey = activeStrutturaRuleFieldKey.value;
-	  const rule = fieldKey ? (appliedStrutturaRules.value[fieldKey] ?? DEFAULT_STRUTTURA_RULE) : DEFAULT_STRUTTURA_RULE;
-	  return [
-    {
-      key: "intro",
-      label: "Introduzione",
-      content: rule.intro,
-    },
-	    {
-	      key: "bloccoSociPersonaFisica",
-	      label: "Socio persona fisica",
-	      content: rule.bloccoSociPersonaFisica,
-	    },
-	    {
-	      key: "bloccoSociPersonaGiuridica",
-	      label: "Socio persona giuridica",
-	      content: rule.bloccoSociPersonaGiuridica,
-	    },
-	    {
-	      key: "bloccoPartecipate",
-	      label: "Partecipata",
-	      content: rule.bloccoPartecipate,
-	    },
-	  ];
-	});
-
-function applyStrutturaRule(sections: GenerativeRuleSection[]): void {
-  const fieldKey = activeStrutturaRuleFieldKey.value;
-  if (!fieldKey) return;
-  appliedStrutturaRules.value = {
-    ...appliedStrutturaRules.value,
-	    [fieldKey]: {
-	      intro: sections.find((section) => section.key === "intro")?.content ?? "",
-	      bloccoSociPersonaFisica:
-	        sections.find((section) => section.key === "bloccoSociPersonaFisica")?.content ??
-	        DEFAULT_STRUTTURA_RULE.bloccoSociPersonaFisica,
-	      bloccoSociPersonaGiuridica:
-	        sections.find((section) => section.key === "bloccoSociPersonaGiuridica")?.content ??
-	        DEFAULT_STRUTTURA_RULE.bloccoSociPersonaGiuridica,
-	      bloccoPartecipate:
-	        sections.find((section) => section.key === "bloccoPartecipate")?.content ??
-	        DEFAULT_STRUTTURA_RULE.bloccoPartecipate,
-	    },
-	  };
-	}
+const {
+  strutturaRuleModalOpen,
+  strutturaRuleSections,
+  getStrutturaPreview,
+  hasStrutturaPreview,
+  openStrutturaRuleModal,
+  applyStrutturaRule,
+  buildStrutturaText,
+} = useStrutturaRule({
+  activeStepId,
+  clientData: clientForStruttura,
+  getVisuraData,
+});
 
 async function openExtractionRuleModal(fieldKey: string): Promise<void> {
   activeExtractionRuleFieldKey.value = fieldKey;
@@ -606,16 +482,16 @@ function highlightedParts(paragraph: string): { text: string; isPlaceholder: boo
     }));
 }
 
-// ─── Upload state ──────────────────────────────────────────────────────────────
-
-// Per-field loading and error state keyed by field.key
-const fileUploading = ref<Record<string, boolean>>({});
-const fileUploadError = ref<Record<string, string | null>>({});
-
-// Derived: true when any file field is currently saving
-const isAnyFileUploading = computed(() =>
-  Object.values(fileUploading.value).some(Boolean),
-);
+const {
+  fileUploading,
+  fileUploadError,
+  isAnyFileUploading,
+  onFileChange,
+} = useStepUploadFields({
+  activeStepId,
+  clearFormSaveError,
+  saveFormField,
+});
 
 function isExtractionUploadField(field: StepFormField): boolean {
   return field.type === "visura_upload" || field.type === "file_upload_extraction";
@@ -659,7 +535,7 @@ const paneTabs = computed<{ key: PaneTab; label: string; disabled: boolean }[]>(
   {
     key: "prompt",
     label: "Prompt",
-    disabled: isTypeAStep.value,
+    disabled: false,
   },
 ]);
 
@@ -669,14 +545,10 @@ const activeFields = computed(() =>
 
 const promptTabDescription = computed(() => {
   if (effectiveStepType.value === "type_c") {
-    return "Leggi o modifica la regola usata per generare il testo con AI.";
+    return "Questo prompt guida la prossima generazione AI per lo step corrente.";
   }
 
-  if (effectiveStepType.value === "type_a") {
-    return "Questo step usa un template fisso: i campi compilati vengono inseriti nel testo senza intervento AI.";
-  }
-
-  return "Questo step usa una regola controllata dal sistema. Puoi leggerla senza modificare il flusso.";
+  return "Questo step non usa AI: il contenuto viene costruito dai dati inseriti o estratti.";
 });
 
 watch(
@@ -701,6 +573,42 @@ const isVisuraRequired = computed(() =>
   renderableExtractionFields.value.length > 0,
 );
 
+const isSavingClientProfile = ref(false);
+const clientProfileSaved = ref(false);
+
+const {
+  visuraFile,
+  visuraExtracting,
+  visuraError,
+  visuraResult,
+  visuraReviewResult,
+  extractionReviewOpen,
+  activeExtractionReviewFieldKey,
+  extractionReviewFilename,
+  onVisuraFileChange,
+  clearVisuraFile,
+  extractVisura,
+  insertReviewedVisura,
+} = useVisuraExtractionReview({
+  activeStepId,
+  clearFormSaveError,
+  saveFormField,
+  getExtractionRule: (fieldKey) =>
+    appliedExtractionRules.value[fieldKey]
+      ?.find((section) => section.key === "prompt")
+      ?.content ?? null,
+  onReset: () => {
+    isSavingClientProfile.value = false;
+    clientProfileSaved.value = false;
+  },
+  onInsert: (fieldKey, payload) => {
+    emit(
+      "confermaStruttura",
+      buildStrutturaText(fieldKey, payload),
+    );
+  },
+});
+
 // isVisuraReady: true when no extraction is required, OR when every visible
 // extraction field has either a fresh extraction result or a previously saved value.
 const isVisuraReady = computed(() => {
@@ -709,183 +617,6 @@ const isVisuraReady = computed(() => {
     (field) => visuraResult.value[field.key] != null || formValues.value[field.key] != null,
   );
 });
-
-// Reset file upload state when the step changes
-watch(
-  () => props.activeStep.id,
-  () => {
-    fileUploading.value = {};
-    fileUploadError.value = {};
-  },
-);
-
-async function onFileChange(fieldKey: string, file: File | null): Promise<void> {
-  const filename = file?.name ?? "";
-  fileUploading.value = { ...fileUploading.value, [fieldKey]: true };
-  fileUploadError.value = { ...fileUploadError.value, [fieldKey]: null };
-  try {
-    clearFormSaveError();
-    await saveFormField(fieldKey, filename, { throwOnError: true });
-  } catch (err: unknown) {
-    const msg =
-      err instanceof Error ? err.message : "Errore durante il salvataggio del file";
-    fileUploadError.value = { ...fileUploadError.value, [fieldKey]: msg };
-    console.error("[StepEditor] file save error:", err);
-  } finally {
-    fileUploading.value = { ...fileUploading.value, [fieldKey]: false };
-  }
-}
-
-// ─── Extraction upload state ───────────────────────────────────────────────────
-
-// Per-field state keyed by field.key
-const visuraFile = ref<Record<string, File | null>>({});
-const visuraExtracting = ref<Record<string, boolean>>({});
-const visuraError = ref<Record<string, string | null>>({});
-const visuraResult = ref<Record<string, VisuraExtractResult | null>>({});
-const visuraReviewResult = ref<Record<string, ExtractionResult | null>>({});
-const extractionReviewOpen = ref(false);
-const activeExtractionReviewFieldKey = ref<string | null>(null);
-const extractionReviewFilename = ref<string | null>(null);
-const isSavingClientProfile = ref(false);
-const clientProfileSaved = ref(false);
-
-// Reset visura state when the step changes
-watch(
-  () => props.activeStep.id,
-  () => {
-    visuraFile.value = {};
-    visuraExtracting.value = {};
-    visuraError.value = {};
-    visuraResult.value = {};
-    visuraReviewResult.value = {};
-    extractionReviewOpen.value = false;
-    activeExtractionReviewFieldKey.value = null;
-    extractionReviewFilename.value = null;
-    isSavingClientProfile.value = false;
-    clientProfileSaved.value = false;
-  },
-);
-
-function onVisuraFileChange(fieldKey: string, file: File | null): void {
-  visuraFile.value = { ...visuraFile.value, [fieldKey]: file };
-  visuraError.value = { ...visuraError.value, [fieldKey]: null };
-  visuraResult.value = { ...visuraResult.value, [fieldKey]: null };
-  visuraReviewResult.value = { ...visuraReviewResult.value, [fieldKey]: null };
-  clientProfileSaved.value = false;
-}
-
-async function clearVisuraFile(fieldKey: string): Promise<void> {
-  onVisuraFileChange(fieldKey, null);
-  extractionReviewOpen.value = false;
-  activeExtractionReviewFieldKey.value = null;
-  extractionReviewFilename.value = null;
-  try {
-    clearFormSaveError();
-    await saveFormField(fieldKey, null, { throwOnError: true });
-  } catch (err: unknown) {
-    const msg =
-      err instanceof Error ? err.message : "Errore durante la cancellazione del file";
-    visuraError.value = { ...visuraError.value, [fieldKey]: msg };
-    console.error("[StepEditor] visura clear error:", err);
-  }
-}
-
-async function extractVisura(field: StepFormField): Promise<void> {
-  const file = visuraFile.value[field.key];
-  if (!file) return;
-
-  visuraExtracting.value = { ...visuraExtracting.value, [field.key]: true };
-  visuraError.value = { ...visuraError.value, [field.key]: null };
-  visuraResult.value = { ...visuraResult.value, [field.key]: null };
-
-  try {
-	    const formData = new FormData();
-	    formData.append("file", file);
-	    const extractionRule = appliedExtractionRules.value[field.key]
-	      ?.find((section) => section.key === "prompt")
-	      ?.content;
-	    if (extractionRule?.trim()) {
-	      formData.append("extractionRule", extractionRule);
-	    }
-
-    const result = await $fetch<VisuraExtractResult>("/api/visura/extract-pdf", {
-      method: "POST",
-      body: formData,
-    });
-
-    visuraResult.value = { ...visuraResult.value, [field.key]: result };
-    visuraReviewResult.value = {
-      ...visuraReviewResult.value,
-      [field.key]: normalizeExtractionResult(result),
-    };
-    activeExtractionReviewFieldKey.value = field.key;
-    extractionReviewFilename.value = file.name;
-    clientProfileSaved.value = false;
-    extractionReviewOpen.value = true;
-  } catch (err: unknown) {
-    const msg =
-      err instanceof Error ? err.message : "Errore durante l''estrazione dalla visura";
-    visuraError.value = { ...visuraError.value, [field.key]: msg };
-    console.error("[StepEditor] visura extraction error:", err);
-  } finally {
-    visuraExtracting.value = { ...visuraExtracting.value, [field.key]: false };
-  }
-}
-
-function buildReviewedVisuraPayload(
-  result: ExtractionResult,
-  filename: string | null,
-): VisuraExtractResult & { filename: string; extracted_at: string } {
-  return {
-    filename: filename ?? "visura.pdf",
-    soci: result.soci,
-    partecipate: result.partecipate,
-    board: result.board,
-    legale_rappresentante_societa: result.legale_rappresentante_societa,
-    shareholders: result.soci,
-    subsidiaries: result.partecipate,
-    missing: {
-      soci: result.missing?.soci ?? [],
-      partecipate: result.missing?.partecipate ?? [],
-      shareholders: result.missing?.shareholders ?? result.missing?.soci ?? [],
-      subsidiaries: result.missing?.subsidiaries ?? result.missing?.partecipate ?? [],
-    },
-    extracted_at: new Date().toISOString(),
-  };
-}
-
-async function insertReviewedVisura(result: ExtractionResult): Promise<void> {
-  const fieldKey = activeExtractionReviewFieldKey.value;
-  if (!fieldKey) return;
-
-  const payload = buildReviewedVisuraPayload(result, extractionReviewFilename.value);
-
-  try {
-    clearFormSaveError();
-    await saveFormField(fieldKey, payload, { throwOnError: true });
-    visuraResult.value = { ...visuraResult.value, [fieldKey]: payload };
-    visuraReviewResult.value = {
-      ...visuraReviewResult.value,
-      [fieldKey]: normalizeExtractionResult(payload),
-    };
-
-    emit(
-      "confermaStruttura",
-      assembleStruttura(
-        payload,
-        appliedStrutturaRules.value[fieldKey] ?? DEFAULT_STRUTTURA_RULE,
-        props.clientData?.company_name ?? props.clientData?.name ?? null,
-      ),
-    );
-    extractionReviewOpen.value = false;
-  } catch (err: unknown) {
-    const msg =
-      err instanceof Error ? err.message : "Errore durante il salvataggio dei dati estratti";
-    visuraError.value = { ...visuraError.value, [fieldKey]: msg };
-    console.error("[StepEditor] visura insert error:", err);
-  }
-}
 
 const canSaveExtractionToClientProfile = computed(() => Boolean(props.clientData?.id));
 
@@ -1154,7 +885,7 @@ async function saveReviewedVisuraToClientProfile(result: ExtractionResult): Prom
       <div v-else class="space-y-4">
         <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4">
           <p class="text-sm font-semibold text-slate-900">
-            Regola dello step
+            Prompt dello step
           </p>
           <p class="mt-2 text-sm leading-6 text-slate-500">
             {{ promptTabDescription }}
@@ -1162,23 +893,34 @@ async function saveReviewedVisuraToClientProfile(result: ExtractionResult): Prom
         </div>
 
         <div
-          v-if="activeStep.system_prompt_template"
-          class="max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white p-4 text-xs leading-6 text-slate-600"
+          v-if="!isPromptEditable"
+          class="rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm leading-6 text-slate-500"
         >
-          {{ activeStep.system_prompt_template }}
+          {{ promptReadOnlyValue }}
         </div>
 
-        <UButton
-          v-if="isAiStep"
-          variant="outline"
-          color="neutral"
-          size="sm"
-          icon="i-lucide-expand"
-          class="w-full justify-center rounded-xl border-slate-300 bg-white"
-          @click="openPromptModal"
+        <div
+          v-else
+          class="relative"
         >
-          Apri e modifica prompt
-        </UButton>
+          <UTextarea
+            v-model="editablePrompt"
+            :rows="10"
+            class="w-full"
+            :ui="{
+              base: 'w-full resize-y rounded-xl border-slate-200 bg-white px-4 py-3 pr-12 font-mono text-xs leading-6 text-slate-700 focus:border-violet-300 focus:ring-violet-200',
+            }"
+          />
+          <UButton
+            variant="ghost"
+            color="neutral"
+            size="sm"
+            icon="i-lucide-expand"
+            class="absolute right-2 top-2 rounded-lg"
+            aria-label="Espandi prompt"
+            @click="openPromptModal"
+          />
+        </div>
       </div>
 
       <div
@@ -1230,13 +972,11 @@ async function saveReviewedVisuraToClientProfile(result: ExtractionResult): Prom
     </div>
   </EditorPanel>
 
-	  <GenerativeRuleModal
+	  <PromptExpandModal
 	    v-model:open="promptModalOpen"
-	    title="Regola di generazione"
-	    :sections="typeCRuleSections"
-	    confirm-label="Applica"
+	    :prompt="editablePrompt"
 	    @cancel="cancelPromptEdit"
-	    @save="applyTypeCRule"
+	    @save="savePromptEdit"
 	  />
 	  <GenerativeRuleModal
 	    v-model:open="strutturaRuleModalOpen"

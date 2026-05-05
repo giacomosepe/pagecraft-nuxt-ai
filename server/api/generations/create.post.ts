@@ -13,6 +13,7 @@ const GenerateSchema = z.object({
   mode: z.enum(["generate", "refine"]),
   existingOutput: z.string().optional().default(""),
   promptRule: z.string().optional().nullable(),
+  promptOverride: z.string().optional().nullable(),
 });
 
 export default defineEventHandler(async (event) => {
@@ -34,7 +35,7 @@ export default defineEventHandler(async (event) => {
       message: parsed.error.issues[0]?.message ?? "Invalid request body",
     });
   }
-  const { stepId, pageId, mode, existingOutput, promptRule } = parsed.data;
+  const { stepId, pageId, mode, existingOutput, promptRule, promptOverride } = parsed.data;
 
   // ─── Step 3: Verify page ownership ───────────────────────────────────────
   const { error: ownerError } = await userClient
@@ -92,6 +93,7 @@ export default defineEventHandler(async (event) => {
         priorSteps: priorSteps ?? [],
         mode,
         existingOutput,
+        promptOverride,
       });
   const { systemPrompt, userMessage, promptUsed } = builtPrompt;
 
