@@ -13,6 +13,99 @@ const BodySchema = z.object({
   pageId: z.string().uuid("Invalid page ID"),
 });
 
+const RICH_TEXT_TAG_RE = /<(p|ul|ol|li|strong|b|em|i|br)(\s|>|\/)/i;
+
+function isRichTextHtml(value: string): boolean {
+  return RICH_TEXT_TAG_RE.test(value);
+}
+
+function decodeHtml(value: string): string {
+  return value
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'");
+}
+
+function textRunsFromRichHtml(value: string): TextRun[] {
+  const runs: TextRun[] = [];
+  let bold = false;
+  let italics = false;
+  const tokens = value.split(/(<\/?(?:strong|b|em|i)[^>]*>|<br\s*\/?>)/gi);
+
+  for (const token of tokens) {
+    if (!token) continue;
+    if (/^<br\s*\/?>$/i.test(token)) {
+      runs.push(new TextRun({ text: "", break: 1 }));
+      continue;
+    }
+    if (/^<(strong|b)\b/i.test(token)) {
+      bold = true;
+      continue;
+    }
+    if (/^<\/(strong|b)>$/i.test(token)) {
+      bold = false;
+      continue;
+    }
+    if (/^<(em|i)\b/i.test(token)) {
+      italics = true;
+      continue;
+    }
+    if (/^<\/(em|i)>$/i.test(token)) {
+      italics = false;
+      continue;
+    }
+
+    const text = decodeHtml(token.replace(/<[^>]+>/g, ""));
+    if (!text) continue;
+    runs.push(new TextRun({ text, bold, italics }));
+  }
+
+  return runs.length ? runs : [new TextRun("")];
+}
+
+function plainTextParagraphs(value: string): Paragraph[] {
+  const paragraphs: Paragraph[] = [];
+  for (const block of value.split(/\n\n+/)) {
+    if (!block.trim()) continue;
+    paragraphs.push(
+      new Paragraph({
+        children: block.split("\n").flatMap((line, i, arr) =>
+          i < arr.length - 1
+            ? [new TextRun(line), new TextRun({ text: "", break: 1 })]
+            : [new TextRun(line)],
+        ),
+      }),
+    );
+  }
+  return paragraphs;
+}
+
+function richTextParagraphs(value: string): Paragraph[] {
+  const paragraphs: Paragraph[] = [];
+  const blockRe = /<(p|li)[^>]*>([\s\S]*?)<\/\1>/gi;
+  let match: RegExpExecArray | null;
+
+  while ((match = blockRe.exec(value))) {
+    const [, tag, content] = match;
+    if (!content?.replace(/<[^>]+>/g, "").trim()) continue;
+    paragraphs.push(
+      new Paragraph({
+        children: textRunsFromRichHtml(content),
+        ...(tag.toLowerCase() === "li" ? { bullet: { level: 0 } } : {}),
+      }),
+    );
+  }
+
+  return paragraphs.length ? paragraphs : plainTextParagraphs(value.replace(/<[^>]+>/g, ""));
+}
+
+function outputParagraphs(value: string): Paragraph[] {
+  return isRichTextHtml(value) ? richTextParagraphs(value) : plainTextParagraphs(value);
+}
+
 export default defineEventHandler(async (event) => {
   // ─── Step 1: Authenticate ─────────────────────────────────────────────────
   const userClient = await serverSupabaseClient(event);
@@ -96,18 +189,7 @@ export default defineEventHandler(async (event) => {
     children.push(
       new Paragraph({ text: step.title, heading: HeadingLevel.HEADING_1 }),
     );
-    for (const block of step.committed_output.split(/\n\n+/)) {
-      if (!block.trim()) continue;
-      children.push(
-        new Paragraph({
-          children: block.split("\n").flatMap((line, i, arr) =>
-            i < arr.length - 1
-              ? [new TextRun(line), new TextRun({ text: "", break: 1 })]
-              : [new TextRun(line)],
-          ),
-        }),
-      );
-    }
+    children.push(...outputParagraphs(step.committed_output));
     children.push(new Paragraph({ text: "" }));
   }
 

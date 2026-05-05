@@ -9,6 +9,7 @@
 
 import type { Ref, ComputedRef } from "vue";
 import type { StepRecord } from "~/types/app.types";
+import { isRichTextHtml, richHtmlToPlainText } from "~/utils/richText";
 
 export interface UseGenerationParams {
   pageId: string;
@@ -73,6 +74,9 @@ export function useGeneration({
     isGenerating.value = true;
     errorMsg.value = "";
     const previousOutput = output.value;
+    const existingOutput = isRichTextHtml(previousOutput)
+      ? richHtmlToPlainText(previousOutput)
+      : previousOutput;
     output.value = "";
 
     try {
@@ -83,7 +87,7 @@ export function useGeneration({
           stepId: activeStep.value.id,
           pageId,
           mode: "refine",
-          existingOutput: previousOutput,
+          existingOutput,
         }),
       });
       if (!res.ok) {

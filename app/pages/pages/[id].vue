@@ -24,12 +24,6 @@ const activeStep = computed<StepRecord | undefined>(
 	() => steps.value?.[activeStepIndex.value],
 );
 
-const canGoNext = computed(
-	() =>
-		activeStep.value?.status === "COMMITTED" &&
-		activeStepIndex.value < ((steps.value?.length ?? 0) - 1),
-);
-
 // ─── Generation ───────────────────────────────────────────────────────────────
 const {
 	output,
@@ -48,6 +42,17 @@ const {
 	steps: steps as Ref<StepRecord[] | null | undefined>,
 	activeStepIndex,
 });
+
+const hasUnsavedOutputChanges = computed(
+	() => Boolean(output.value) && output.value !== (activeStep.value?.committed_output ?? ""),
+);
+
+const canGoNext = computed(
+	() =>
+		activeStep.value?.status === "COMMITTED" &&
+		!hasUnsavedOutputChanges.value &&
+		activeStepIndex.value < ((steps.value?.length ?? 0) - 1),
+);
 
 // Initialise output from DB on first load
 watch(
@@ -291,8 +296,11 @@ async function exportWord(): Promise<void> {
 						:is-committing="isCommitting"
 						:active-step="activeStep ?? null"
 						:can-go-next="canGoNext"
+						:has-unsaved-changes="hasUnsavedOutputChanges"
 						@commit="commit"
 						@discard="discardOutput"
+						@refine="refine"
+						@update-output="output = $event"
 						@next="goNext"
 					/>
 				</template>

@@ -8,6 +8,7 @@
 
 import type { StepRecord } from "~/types/app.types";
 import type { StepPreview } from "~/utils/buildStepPreview";
+import { isRichTextHtml, sanitizeRichTextHtml } from "~/utils/richText";
 
 const props = defineProps<{
   output: string;
@@ -16,17 +17,40 @@ const props = defineProps<{
   isCommitting: boolean;
   activeStep: StepRecord | null;
   canGoNext: boolean;
+  hasUnsavedChanges?: boolean;
 }>();
 
 const emit = defineEmits<{
   commit: [];
   discard: [];
+  refine: [];
+  updateOutput: [value: string];
   next: [];
 }>();
 
 const showExpandModal = ref(false);
+const showEditorModal = ref(false);
 
 const shouldFormatStruttura = computed(() => props.activeStep?.order === 3);
+const outputIsRichHtml = computed(() => isRichTextHtml(props.output));
+const safeOutputHtml = computed(() => sanitizeRichTextHtml(props.output));
+const canRefineWithAi = computed(() =>
+  props.activeStep?.step_type === "type_c" && Boolean(props.output) && !props.isGenerating,
+);
+
+function confirmEditedOutput(value: string): void {
+  emit("updateOutput", value);
+  showEditorModal.value = false;
+}
+
+function openEditor(): void {
+  showExpandModal.value = false;
+  showEditorModal.value = true;
+}
+
+function cancelEditOutput(): void {
+  showEditorModal.value = false;
+}
 
 function outputSections(text: string): { title: string; paragraphs: string[] }[] {
   const sections: { title: string; paragraphs: string[] }[] = [];
@@ -108,7 +132,13 @@ function highlightedParts(paragraph: string): { text: string; isPlaceholder: boo
       class="mx-auto w-full max-w-3xl bg-white px-1 py-2 sm:px-4"
     >
       <div
-        v-if="shouldFormatStruttura"
+        v-if="outputIsRichHtml"
+        class="rich-output text-sm leading-7 text-slate-700"
+        v-html="safeOutputHtml"
+      />
+
+      <div
+        v-else-if="shouldFormatStruttura"
         class="space-y-5"
       >
         <section
@@ -214,6 +244,12 @@ function highlightedParts(paragraph: string): { text: string; isPlaceholder: boo
         v-if="output && !isGenerating"
         class="flex items-center justify-end gap-2"
       >
+        <span
+          v-if="hasUnsavedChanges"
+          class="mr-auto text-xs font-medium text-amber-700"
+        >
+          Modifiche da salvare
+        </span>
         <UButton
           color="neutral"
           variant="ghost"
@@ -222,6 +258,29 @@ function highlightedParts(paragraph: string): { text: string; isPlaceholder: boo
           @click="emit('discard')"
         >
           Scarta
+        </UButton>
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="sm"
+          icon="i-lucide-pencil"
+          class="rounded-xl bg-white"
+          @click="openEditor"
+        >
+          Modifica testo
+        </UButton>
+        <UButton
+          v-if="activeStep?.step_type === 'type_c'"
+          color="neutral"
+          variant="outline"
+          size="sm"
+          icon="i-lucide-sparkles"
+          class="rounded-xl bg-white"
+          :loading="isGenerating"
+          :disabled="!canRefineWithAi"
+          @click="emit('refine')"
+        >
+          Affina con AI
         </UButton>
         <UButton
           size="sm"
@@ -268,7 +327,15 @@ function highlightedParts(paragraph: string): { text: string; isPlaceholder: boo
           />
         </div>
         <div class="flex-1 overflow-y-auto px-6 py-6">
-          <p class="whitespace-pre-wrap text-sm leading-7 text-slate-700">
+          <div
+            v-if="outputIsRichHtml"
+            class="rich-output text-sm leading-7 text-slate-700"
+            v-html="safeOutputHtml"
+          />
+          <p
+            v-else
+            class="whitespace-pre-wrap text-sm leading-7 text-slate-700"
+          >
             {{ output }}
           </p>
         </div>
@@ -281,6 +348,29 @@ function highlightedParts(paragraph: string): { text: string; isPlaceholder: boo
             @click="showExpandModal = false"
           >
             Chiudi
+          </UButton>
+          <UButton
+            color="neutral"
+            variant="outline"
+            size="sm"
+            icon="i-lucide-pencil"
+            class="rounded-xl bg-white"
+            @click="openEditor"
+          >
+            Modifica testo
+          </UButton>
+          <UButton
+            v-if="activeStep?.step_type === 'type_c'"
+            color="neutral"
+            variant="outline"
+            size="sm"
+            icon="i-lucide-sparkles"
+            class="rounded-xl bg-white"
+            :loading="isGenerating"
+            :disabled="!canRefineWithAi"
+            @click="emit('refine'); showExpandModal = false"
+          >
+            Affina con AI
           </UButton>
           <UButton
             size="sm"
@@ -304,4 +394,37 @@ function highlightedParts(paragraph: string): { text: string; isPlaceholder: boo
       </div>
     </template>
   </UModal>
+
+  <TextEditorModal
+    v-if="showEditorModal"
+    title="Modifica testo"
+    :content="output"
+    confirm-label="Applica modifiche"
+    :on-confirm="confirmEditedOutput"
+    :on-cancel="cancelEditOutput"
+  />
 </template>
+
+<style scoped>
+.rich-output :deep(p) {
+  margin: 0 0 1rem;
+}
+
+.rich-output :deep(ul),
+.rich-output :deep(ol) {
+  margin: 0 0 1rem 1.25rem;
+  list-style-position: outside;
+}
+
+.rich-output :deep(ul) {
+  list-style-type: disc;
+}
+
+.rich-output :deep(ol) {
+  list-style-type: decimal;
+}
+
+.rich-output :deep(li) {
+  margin: 0.25rem 0;
+}
+</style>
