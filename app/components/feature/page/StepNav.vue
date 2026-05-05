@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { StepRecord } from "~/types/app.types";
+import { isRichTextHtml, richHtmlToPlainText } from "~/utils/richText";
 
 const props = defineProps<{
   steps: StepRecord[];
@@ -19,6 +20,19 @@ const progressPct = computed(() =>
     ? Math.round((committedCount.value / props.steps.length) * 100)
     : 0,
 );
+
+function stepState(step: StepRecord, index: number): "saved" | "active" | "todo" {
+  if (index === props.activeIndex) return "active";
+  return step.status === "COMMITTED" ? "saved" : "todo";
+}
+
+function previewText(step: StepRecord, index: number): string {
+  if (stepState(step, index) === "todo" || !step.committed_output) return "";
+  const plainText = isRichTextHtml(step.committed_output)
+    ? richHtmlToPlainText(step.committed_output)
+    : step.committed_output;
+  return plainText.replace(/\s+/g, " ").trim().slice(0, 80);
+}
 </script>
 
 <template>
@@ -57,41 +71,27 @@ const progressPct = computed(() =>
         <button
           v-for="(step, index) in steps"
           :key="step.id"
-          class="flex w-full items-start gap-3 rounded-2xl border px-3 py-3 text-left transition-all"
-          :class="
-            index === activeIndex
-              ? 'border-violet-200 bg-violet-50 shadow-sm'
-              : 'border-transparent bg-white hover:border-slate-200 hover:bg-slate-50'
-          "
+          class="step-row"
+          :class="`step-row--${stepState(step, index)}`"
           @click="emit('select', index)"
         >
-          <div
-            class="flex size-9 shrink-0 items-center justify-center rounded-2xl text-sm font-semibold"
-            :class="
-              step.status === 'COMMITTED'
-                ? 'bg-emerald-100 text-emerald-700'
-                : index === activeIndex
-                  ? 'bg-violet-600 text-white'
-                  : 'border border-slate-200 bg-white text-slate-400'
-            "
-          >
-            <UIcon v-if="step.status === 'COMMITTED'" name="i-lucide-check" class="size-4" />
-            <span v-else>{{ step.order }}</span>
+          <div class="step-row__index">
+            <span class="step-row__dot" />
+            <span class="step-row__number">{{ step.order }}</span>
           </div>
 
           <div class="min-w-0 flex-1 space-y-1">
             <div class="flex items-start justify-between gap-2">
-              <p
-                class="line-clamp-2 text-sm font-medium"
-                :class="index === activeIndex ? 'text-slate-900' : 'text-slate-700'"
-              >
+              <p class="step-row__title">
                 {{ step.title }}
               </p>
-              <StepStatusPill :status="step.status" :active="index === activeIndex" />
             </div>
 
-            <p class="text-xs text-slate-500">
-              Step {{ step.order }} di {{ steps.length }}
+            <p
+              v-if="previewText(step, index)"
+              class="step-row__preview"
+            >
+              {{ previewText(step, index) }}
             </p>
           </div>
         </button>
@@ -99,3 +99,102 @@ const progressPct = computed(() =>
     </nav>
   </div>
 </template>
+
+<style scoped>
+.step-row {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: 0.75rem;
+  border-left: 2px solid transparent;
+  border-radius: 0;
+  padding: 0.75rem 0.75rem 0.75rem 0.875rem;
+  text-align: left;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.step-row:hover {
+  background: var(--color-surface-subtle);
+}
+
+.step-row--saved {
+  background: var(--color-surface);
+}
+
+.step-row--active {
+  border-left-color: var(--purple, var(--color-brand));
+  background: var(--color-brand-bg);
+}
+
+.step-row--todo {
+  background: var(--color-surface);
+}
+
+.step-row__index {
+  display: flex;
+  width: 1.5rem;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.375rem;
+  padding-top: 0.25rem;
+}
+
+.step-row__dot {
+  display: block;
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+
+.step-row--saved .step-row__dot {
+  background: #639922;
+}
+
+.step-row--active .step-row__dot {
+  background: var(--purple, var(--color-brand));
+}
+
+.step-row--todo .step-row__dot {
+  background: var(--border-md, var(--color-border));
+}
+
+.step-row__number {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-text-placeholder);
+}
+
+.step-row__title {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.step-row--saved .step-row__title {
+  opacity: 0.68;
+}
+
+.step-row--active .step-row__title {
+  opacity: 1;
+}
+
+.step-row--todo .step-row__title {
+  opacity: 0.42;
+}
+
+.step-row__preview {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--text-3, var(--color-text-muted));
+  font-size: 11px;
+  line-height: 1.25rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+</style>

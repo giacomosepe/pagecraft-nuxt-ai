@@ -31,7 +31,7 @@ export function useGeneration({
   const commitSuccess = ref(false);
 
   // ─── Generate ───────────────────────────────────────────────────────────────
-  async function generate(promptRule: string | null = null): Promise<void> {
+  async function generate(promptOverride: string | null = null): Promise<void> {
     if (!activeStep.value || isGenerating.value) return;
     isGenerating.value = true;
     output.value = "";
@@ -45,7 +45,7 @@ export function useGeneration({
 	          stepId: activeStep.value.id,
 	          pageId,
 	          mode: "generate",
-	          promptRule,
+	          promptOverride,
 	        }),
       });
       if (!res.ok) {

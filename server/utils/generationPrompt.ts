@@ -18,6 +18,7 @@ export interface BuildGenerationPromptParams {
 	priorSteps: PriorStep[];
 	mode: "generate" | "refine";
 	existingOutput?: string;
+	promptOverride?: string | null;
 }
 
 export interface BuiltGenerationPrompt {
@@ -174,6 +175,7 @@ export function buildGenerationPrompt({
 	priorSteps,
 	mode,
 	existingOutput = "",
+	promptOverride = null,
 }: BuildGenerationPromptParams): BuiltGenerationPrompt {
 	const page = step.page;
 	const c = page?.client;
@@ -198,10 +200,9 @@ export function buildGenerationPrompt({
 		].filter(Boolean).join("\n")
 		: "";
 
-	const systemPrompt =
-		mode === "generate"
-			? step.system_prompt_template
-			: step.refine_prompt_template;
+	const defaultSystemPrompt =
+		mode === "generate" ? step.system_prompt_template : step.refine_prompt_template;
+	const systemPrompt = promptOverride?.trim() ? promptOverride : defaultSystemPrompt;
 	const formDataBlock =
 		step.form_data && step.form_schema
 			? serializeFormData(step.form_data, step.form_schema)
