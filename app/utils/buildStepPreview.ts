@@ -7,6 +7,7 @@ import { formatDateLong } from "~/utils/date";
 export interface StepPreviewParams {
 	step: StepRecord | null;
 	client: ClientRecord | null;
+	pageTitle?: string | null;
 	taxYear: number | null;
 	formValues: Record<string, unknown>;
 	showTokensOnly?: boolean;
@@ -45,12 +46,20 @@ function textValue(value: unknown): string {
 	return value === null || value === undefined ? "" : String(value).trim();
 }
 
+function firstTextValue(...values: unknown[]): string {
+	for (const value of values) {
+		const text = textValue(value);
+		if (text) return text;
+	}
+	return "";
+}
+
 function fieldTokens(step: StepRecord | null): { key: string; label: string }[] {
 	const schema = step?.form_schema;
 	if (!Array.isArray(schema)) return [];
 	return (schema as StepFormField[])
 		.filter((field) =>
-			["text", "textarea", "number", "select", "multiselect", "repeatable_group"].includes(field.type),
+			["text", "textarea", "number", "select", "multiselect", "repeatable_group", "client_detail", "project_detail"].includes(field.type),
 		)
 		.map((field) => ({ key: field.key, label: field.label }));
 }
@@ -70,14 +79,36 @@ function clientCompanyName(client: ClientRecord | null): string {
 }
 
 function buildStepOnePreview(params: StepPreviewParams): StepPreview {
-	const companyName = params.showTokensOnly ? token("company_name") : clientCompanyName(params.client);
+	const companyName = params.showTokensOnly
+		? token("company_name")
+		: firstTextValue(
+			params.formValues.company_name,
+			params.formValues.ragione_sociale,
+			clientCompanyName(params.client),
+		);
 	const rendered = buildIntestazione({
-		programTitle: params.showTokensOnly ? token("program_title") : textValue(params.formValues.program_title) || token("program_title"),
-		legalCitation: params.showTokensOnly ? token("legal_citation") : textValue(params.formValues.legal_citation) || token("legal_citation"),
+		programTitle: params.showTokensOnly
+			? token("program_title")
+			: firstTextValue(params.formValues.program_title, params.pageTitle, token("program_title")),
 		companyName,
 		companyForm: "",
-		legalRepresentative: params.showTokensOnly ? token("legal_representative") : params.client?.legal_representative ?? token("legal_representative"),
-		taxYear: params.showTokensOnly ? token("tax_year") : params.taxYear ?? token("tax_year"),
+		legalRepresentative: params.showTokensOnly
+			? token("legal_representative")
+			: firstTextValue(
+				params.formValues.legal_representative,
+				params.formValues.legale_rappresentante,
+				params.client?.legal_representative,
+				token("legal_representative"),
+			),
+		taxYear: params.showTokensOnly
+			? token("tax_year")
+			: firstTextValue(
+				params.formValues.tax_year,
+				params.formValues.anno_di_imposta,
+				params.formValues.esercizio_fiscale,
+				params.taxYear,
+				token("tax_year"),
+			),
 	});
 
 	return {
@@ -86,7 +117,6 @@ function buildStepOnePreview(params: StepPreviewParams): StepPreview {
 		sections: [{ parts: tokenizeTemplate(rendered) }],
 		tokens: [
 			{ key: "program_title", label: "Titolo del programma" },
-			{ key: "legal_citation", label: "Citazione normativa" },
 			{ key: "company_name", label: "Ragione sociale" },
 			{ key: "tax_year", label: "Anno fiscale" },
 			{ key: "legal_representative", label: "Legale rappresentante" },
@@ -97,11 +127,11 @@ function buildStepOnePreview(params: StepPreviewParams): StepPreview {
 function buildStepTwoPreview(params: StepPreviewParams): StepPreview {
 	const companyName = params.showTokensOnly ? token("company_name") : clientCompanyName(params.client);
 	const taxYear = params.showTokensOnly
-		? token("esercizio_fiscale")
-		: textValue(params.formValues.esercizio_fiscale) || String(params.taxYear ?? token("esercizio_fiscale"));
+		? token("tax_year")
+		: firstTextValue(params.formValues.tax_year, params.formValues.esercizio_fiscale, params.taxYear, token("tax_year"));
 	const legalRepresentative = params.showTokensOnly
 		? token("legal_representative")
-		: textValue(params.formValues.legale_rappresentante) ||
+		: firstTextValue(params.formValues.legal_representative, params.formValues.legale_rappresentante) ||
 		params.client?.legal_representative ||
 		token("legal_representative");
 	const date = formatDateLong();
@@ -125,7 +155,7 @@ Il sottoscritto ${legalRepresentative}, in qualità di legale rappresentante del
 		],
 		tokens: [
 			{ key: "company_name", label: "Ragione sociale" },
-			{ key: "esercizio_fiscale", label: "Esercizio fiscale" },
+			{ key: "tax_year", label: "Anno di imposta" },
 			{ key: "legal_representative", label: "Legale rappresentante" },
 		],
 	};

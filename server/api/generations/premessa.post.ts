@@ -60,7 +60,7 @@ export default defineEventHandler(async (event) => {
 	const { data: page, error: pageError } = await userClient
 		.from("pages")
 		.select(
-			"id, client:clients(company_name, name, legal_representative)",
+			"id, title, client:clients(company_name, name, legal_representative)",
 		)
 		.eq("id", pageId)
 		.single();
@@ -94,11 +94,15 @@ export default defineEventHandler(async (event) => {
 		legal_representative?: string | null;
 	} | null;
 
-	const programTitle = cleanString(step1FormData.program_title);
+	const programTitle = cleanString(step1FormData.program_title) || cleanString(page.title);
 	const companyName = cleanString(client?.company_name) || cleanString(client?.name);
-	const taxYear = taxYearStart ?? readTaxYear(step2FormData.esercizio_fiscale);
+	const taxYear =
+		taxYearStart ??
+		readTaxYear(step2FormData.tax_year) ??
+		readTaxYear(step2FormData.esercizio_fiscale);
 	const representative =
 		cleanString(legalRepresentative) ||
+		cleanString(step2FormData.legal_representative) ||
 		cleanString(step2FormData.legale_rappresentante) ||
 		cleanString(client?.legal_representative);
 

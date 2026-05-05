@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { EditorContent, useEditor } from "@tiptap/vue-3";
 import StarterKit from "@tiptap/starter-kit";
+import { VariableTokenHighlight } from "~/utils/tiptapVariableTokens";
 import { normalizeToRichHtml } from "~/utils/richText";
 
 const props = withDefaults(defineProps<{
@@ -22,11 +23,12 @@ const editor = useEditor({
 			heading: false,
 			horizontalRule: false,
 		}),
+		VariableTokenHighlight,
 	],
 	editorProps: {
 		attributes: {
 			class:
-				"min-h-[420px] max-h-[58vh] overflow-y-auto px-5 py-4 text-sm leading-7 text-slate-700 outline-none",
+				"min-h-[420px] max-h-[58vh] overflow-y-auto px-5 py-4 text-justify text-[12px] leading-7 text-slate-700 outline-none",
 		},
 	},
 });
@@ -141,5 +143,16 @@ function confirm(): void {
 
 .rich-text-editor :deep(.ProseMirror li) {
 	margin: 0.25rem 0;
+}
+
+.rich-text-editor :deep(.variable-token-highlight) {
+	border-radius: 0.375rem;
+	background: rgb(245 243 255);
+	padding: 0.125rem 0.25rem;
+	color: rgb(109 40 217);
+	font-weight: 600;
+	cursor: default;
+	user-select: all;
+	box-shadow: inset 0 0 0 1px rgb(221 214 254);
 }
 </style>

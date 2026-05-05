@@ -25,6 +25,8 @@ const CreateBatchSchema = z
     clientId: z.string().uuid("Please select a valid client"),
     folderId: z.string().uuid().optional().nullable(),
     newFolderName: z.string().min(1).max(200).optional(),
+    taxYear: z.number().int().min(2020).max(2035),
+    referente: z.string().max(200).optional().nullable(),
   })
   .refine((d) => d.folderId || d.newFolderName, {
     message: "Please select or create a program folder",
@@ -51,7 +53,8 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const { pages: frameworks, clientId, folderId, newFolderName } = parsed.data;
+  const { pages: frameworks, clientId, folderId, newFolderName, taxYear, referente } = parsed.data;
+  const trimmedReferente = referente?.trim() || null;
 
   // ─── Step 3: Get service role client ─────────────────────────────────────
   const supabase = serverSupabaseServiceRole(event);
@@ -174,6 +177,8 @@ export default defineEventHandler(async (event) => {
       status: "in_lavorazione",
       client_id: clientId,
       folder_id: resolvedFolderId,
+      tax_year: taxYear,
+      referente: trimmedReferente,
       created_at: now,
       updated_at: now,
     });
@@ -198,7 +203,10 @@ export default defineEventHandler(async (event) => {
       system_prompt_template: fs.system_prompt_template,
       refine_prompt_template: fs.refine_prompt_template,
       form_schema: fs.form_schema ?? null,
-      form_data: buildInitialStepFormData(fs, entry.title),
+      form_data: buildInitialStepFormData(fs, {
+        documentTitle: entry.title,
+        taxYear,
+      }),
       status: "PENDING" as const,
       user_context: null,
       committed_output: null,

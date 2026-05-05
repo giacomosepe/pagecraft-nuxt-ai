@@ -2,10 +2,12 @@ import type { DocumentListItem } from "~/types/app.types";
 
 export function useDocuments() {
   const supabase = useSupabaseClient();
+  const errorMsg = ref("");
 
   const { data: documents, pending, refresh } = useAsyncData<DocumentListItem[]>(
     "documents-list",
     async () => {
+      errorMsg.value = "";
       const { data, error } = await supabase
         .from("pages")
         .select(
@@ -13,7 +15,11 @@ export function useDocuments() {
         )
         .order("updated_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("[useDocuments] pages query error:", error);
+        errorMsg.value = error.message;
+        return [];
+      }
       return data ?? [];
     },
     {
@@ -27,5 +33,5 @@ export function useDocuments() {
     void refresh();
   });
 
-  return { documents, pending, refresh };
+  return { documents, pending, refresh, errorMsg };
 }

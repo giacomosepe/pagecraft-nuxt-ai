@@ -161,6 +161,7 @@ model Page {
   frameworkName String     @map("framework_name")
   clientId      String?    @map("client_id") @db.Uuid
   taxYear       Int?       @map("tax_year")
+  referente     String?
   title         String
   status        String     @default("in_lavorazione")
   createdAt     DateTime   @default(now()) @map("created_at")

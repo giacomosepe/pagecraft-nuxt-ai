@@ -34,7 +34,7 @@ const STEP_TYPE_CONFIG: Record<StepType, StepTypeConfig> = {
     subtitle: "Compila i campi — il contenuto verrà inserito automaticamente nel documento.",
     showAiActions: false,
     disableAiActions: true,
-    allowedFieldTypes: ["text", "textarea", "number", "select", "multiselect"],
+    allowedFieldTypes: ["text", "textarea", "number", "select", "multiselect", "client_detail", "project_detail"],
   },
   type_b: {
     subtitle: "Compila o aggiorna i dati strutturati del passaggio prima di procedere.",
@@ -44,11 +44,14 @@ const STEP_TYPE_CONFIG: Record<StepType, StepTypeConfig> = {
       "text",
       "textarea",
       "number",
+      "client_detail",
+      "project_detail",
       "select",
       "multiselect",
       "repeatable_group",
       "visura_upload",
       "file_upload_extraction",
+      "document_reference",
     ],
   },
   type_c: {
@@ -62,6 +65,8 @@ const STEP_TYPE_CONFIG: Record<StepType, StepTypeConfig> = {
       "number",
       "select",
       "multiselect",
+      "client_detail",
+      "project_detail",
       "repeatable_group",
       "file",
       "file_upload_generation",
@@ -75,9 +80,12 @@ const FALLBACK_ALLOWED_FIELD_TYPES: StepFieldType[] = [
   "number",
   "select",
   "multiselect",
+  "client_detail",
+  "project_detail",
   "repeatable_group",
   "visura_upload",
   "file_upload_extraction",
+  "document_reference",
   "file",
   "file_upload_generation",
 ];
@@ -91,6 +99,7 @@ const props = defineProps<{
   errorMsg?: string;
   output: string;
   clientData?: ClientRecord | null;
+  pageTitle?: string | null;
   taxYear?: number | null;
   typeATemplateContent?: string;
   canGoNext: boolean;
@@ -106,18 +115,117 @@ const emit = defineEmits<{
   discard: [];
   next: [];
   confermaStruttura: [text: string];
+  projectDetailChange: [patch: { title?: string; tax_year?: number | null; referente?: string | null }];
 }>();
 
 // ─── Form schema ──────────────────────────────────────────────────────────────
+const STEP_ONE_FRAMEWORK_FIELDS: StepFormField[] = [
+  {
+    key: "program_title",
+    label: "Titolo del programma",
+    type: "project_detail",
+    placeholder: "es. Nuovo Patent Box 2025",
+    required: true,
+    hint: "Collegato al titolo del documento.",
+  },
+  {
+    key: "company_name",
+    label: "Ragione sociale",
+    type: "client_detail",
+    placeholder: "es. Acme S.r.l.",
+    required: true,
+    hint: "Collegato alla scheda cliente.",
+  },
+  {
+    key: "tax_year",
+    label: "Anno di imposta",
+    type: "project_detail",
+    placeholder: "es. 2026",
+    required: true,
+    hint: "Collegato ai dettagli progetto.",
+  },
+  {
+    key: "legal_representative",
+    label: "Legale rappresentante",
+    type: "client_detail",
+    placeholder: "es. Mario Rossi",
+    required: true,
+    hint: "Collegato alla scheda cliente.",
+  },
+];
+
+const STEP_TWO_FRAMEWORK_FIELDS: StepFormField[] = [
+  {
+    key: "tax_year",
+    label: "Anno di imposta",
+    type: "project_detail",
+    placeholder: "es. 2026",
+    required: true,
+    hint: "Collegato ai dettagli progetto.",
+  },
+  {
+    key: "legal_representative",
+    label: "Legale rappresentante",
+    type: "client_detail",
+    placeholder: "es. Mario Rossi",
+    required: true,
+    hint: "Collegato alla scheda cliente.",
+  },
+];
+
+const STEP_THREE_DOCUMENT_REFERENCE_FIELD: StepFormField = {
+  key: "document_reference",
+  label: "Documento di riferimento",
+  type: "document_reference",
+  hint: "Collegamento a un documento di riferimento. La visualizzazione del link verrà gestita in un passaggio successivo.",
+  required: false,
+};
+
+function normalizeFrameworkFields(fields: StepFormField[]): StepFormField[] {
+  const fieldKeys = new Set(fields.map((field) => field.key));
+  const fieldTypes = new Set(fields.map((field) => field.type));
+
+  if (
+    props.activeStep.order === 1 &&
+    (fieldKeys.has("legal_citation") ||
+      fieldKeys.has("ragione_sociale") ||
+      !fieldTypes.has("client_detail") ||
+      !fieldTypes.has("project_detail"))
+  ) {
+    return STEP_ONE_FRAMEWORK_FIELDS;
+  }
+
+  if (
+    props.activeStep.order === 2 &&
+    (fieldKeys.has("esercizio_fiscale") ||
+      fieldKeys.has("legale_rappresentante") ||
+      !fieldTypes.has("client_detail") ||
+      !fieldTypes.has("project_detail"))
+  ) {
+    return STEP_TWO_FRAMEWORK_FIELDS;
+  }
+
+  if (props.activeStep.order === 3 && !fieldKeys.has("document_reference")) {
+    return [STEP_THREE_DOCUMENT_REFERENCE_FIELD, ...fields];
+  }
+
+  return fields;
+}
+
 const baseFormFields = computed<StepFormField[]>(() => {
   const schema = props.activeStep.form_schema;
   if (!schema || !Array.isArray(schema)) return [];
-  return schema as StepFormField[];
+  return normalizeFrameworkFields(schema as StepFormField[]);
 });
 
 const premessaLegalRepresentativeField = computed<StepFormField | null>(() => {
   if (props.activeStep.order !== 2) return null;
-  if (baseFormFields.value.some((field) => field.key === "legale_rappresentante")) {
+  if (
+    baseFormFields.value.some((field) =>
+      field.key === "legale_rappresentante" ||
+      field.key === "legal_representative",
+    )
+  ) {
     return null;
   }
 
@@ -167,7 +275,20 @@ function prefillValueForField(field: StepFormField): string | undefined {
   const variableValue = clientVariableMap.value[field.key];
   if (variableValue) return variableValue;
 
-  if (field.key === "esercizio_fiscale" && props.taxYear) {
+  if (field.type === "client_detail") {
+    return clientVariableMap.value[field.key] || undefined;
+  }
+
+  if (field.key === "program_title" || field.key === "title") {
+    return props.pageTitle ?? undefined;
+  }
+
+  if (
+    (field.key === "tax_year" ||
+      field.key === "anno_di_imposta" ||
+      field.key === "esercizio_fiscale") &&
+    props.taxYear
+  ) {
     return String(props.taxYear);
   }
 
@@ -262,6 +383,7 @@ const extractionRuleModalOpen = ref(false);
 const activeExtractionRuleFieldKey = ref<string | null>(null);
 const extractionRuleSections = ref<GenerativeRuleSection[]>([]);
 const appliedExtractionRules = ref<Record<string, GenerativeRuleSection[]>>({});
+const connectedDetailSaveError = ref("");
 const stepConfig = computed<StepTypeConfig>(() => {
   const stepType = effectiveStepType.value;
   if (stepType && stepType in STEP_TYPE_CONFIG) {
@@ -282,12 +404,19 @@ const isTypeAStep = computed(() => effectiveStepType.value === "type_a");
 const isPromptEditable = computed(() => effectiveStepType.value === "type_c");
 const areAiActionsDisabled = computed(() => stepConfig.value.disableAiActions);
 const premessaTaxYear = computed(() => {
-  const value = formValues.value.esercizio_fiscale;
+  const value =
+    formValues.value.tax_year ??
+    formValues.value.anno_di_imposta ??
+    formValues.value.esercizio_fiscale;
   const year = Number(String(value ?? "").trim());
   return Number.isInteger(year) && year >= 2020 && year <= 2035 ? year : null;
 });
 const premessaLegalRepresentative = computed(() =>
-  String(formValues.value.legale_rappresentante ?? "").trim(),
+  String(
+    formValues.value.legal_representative ??
+    formValues.value.legale_rappresentante ??
+    "",
+  ).trim(),
 );
 const isPremessaReady = computed(
   () => premessaTaxYear.value !== null && premessaLegalRepresentative.value.length > 0,
@@ -501,8 +630,101 @@ function isGenerationUploadField(field: StepFormField): boolean {
   return field.type === "file" || field.type === "file_upload_generation";
 }
 
+function isDocumentReferenceField(field: StepFormField): boolean {
+  return field.type === "document_reference";
+}
+
 function isSimpleField(field: StepFormField): boolean {
-  return ["multiselect", "textarea", "select", "number", "text"].includes(field.type);
+  return ["multiselect", "textarea", "select", "number", "text", "client_detail", "project_detail"].includes(field.type);
+}
+
+function isConnectedDetailField(field: StepFormField): boolean {
+  return field.type === "client_detail" || field.type === "project_detail";
+}
+
+function normalizeConnectedDetailPayload(field: StepFormField, value: unknown): string | number | null {
+  const text = String(value ?? "").trim();
+  if (!text) return null;
+
+  if (
+    field.key === "tax_year" ||
+    field.key === "anno_di_imposta" ||
+    field.key === "esercizio_fiscale" ||
+    field.type === "number"
+  ) {
+    const numeric = Number(text);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
+  return text;
+}
+
+function clientDetailColumn(fieldKey: string): string {
+  const aliases: Record<string, string> = {
+    ragione_sociale: "company_name",
+    legale_rappresentante: "legal_representative",
+    partita_iva: "vat_number",
+    sede_legale: "registered_address",
+  };
+  return aliases[fieldKey] ?? fieldKey;
+}
+
+function projectDetailColumn(fieldKey: string): string {
+  const aliases: Record<string, string> = {
+    program_title: "title",
+    anno_di_imposta: "tax_year",
+    esercizio_fiscale: "tax_year",
+  };
+  return aliases[fieldKey] ?? fieldKey;
+}
+
+async function saveConnectedDetailField(field: StepFormField, value: unknown): Promise<void> {
+  clearFormSaveError();
+  connectedDetailSaveError.value = "";
+  const payloadValue = normalizeConnectedDetailPayload(field, value);
+
+  try {
+    await saveFormField(field.key, value, { throwOnError: true });
+
+    const saved = await $fetch<{
+      fieldType: "client_detail" | "project_detail";
+      column: string;
+      value: string | number | null;
+      client?: Record<string, unknown>;
+      page?: { title?: string; tax_year?: number | null; referente?: string | null };
+    }>("/api/pages/detail-field", {
+      method: "POST",
+      body: {
+        pageId: props.pageId,
+        fieldType: field.type,
+        fieldKey: field.key,
+        value: payloadValue,
+      },
+    });
+
+    if (saved.value !== value) {
+      await saveFormField(field.key, saved.value, { throwOnError: true });
+    }
+
+    if (saved.fieldType === "client_detail" && props.clientData) {
+      const column = clientDetailColumn(field.key);
+      Object.assign(props.clientData, saved.client ?? { [column]: saved.value });
+      return;
+    }
+
+    if (saved.fieldType === "project_detail") {
+      const column = projectDetailColumn(field.key);
+      emit("projectDetailChange", {
+        [column]: saved.value,
+      } as { title?: string; tax_year?: number | null; referente?: string | null });
+    }
+  } catch (err: unknown) {
+    console.error("[StepEditor] connected detail save error:", err);
+    connectedDetailSaveError.value =
+      err instanceof Error
+        ? err.message
+        : "Non siamo riusciti a salvare il campo collegato.";
+  }
 }
 
 type PaneTab = "variables" | "file" | "prompt";
@@ -517,7 +739,10 @@ const variableFields = computed(() =>
 
 const fileFields = computed(() =>
   renderableFields.value.filter(
-    (field) => isExtractionUploadField(field) || isGenerationUploadField(field),
+    (field) =>
+      isExtractionUploadField(field) ||
+      isGenerationUploadField(field) ||
+      isDocumentReferenceField(field),
   ),
 );
 
@@ -541,6 +766,15 @@ const paneTabs = computed<{ key: PaneTab; label: string; disabled: boolean }[]>(
 
 const activeFields = computed(() =>
   activePaneTab.value === "file" ? fileFields.value : variableFields.value,
+);
+
+const visibleActiveFields = computed(() =>
+  activeFields.value.filter((field) => isFieldVisible(field)),
+);
+
+const hasPaneContent = computed(() =>
+  visibleActiveFields.value.length > 0 ||
+  (activePaneTab.value === "variables" && isTypeAStep.value),
 );
 
 const promptTabDescription = computed(() => {
@@ -736,11 +970,11 @@ async function saveReviewedVisuraToClientProfile(result: ExtractionResult): Prom
         v-if="activePaneTab !== 'prompt'"
         class="space-y-5"
       >
-        <template
-          v-if="activeFields.length || (activePaneTab === 'variables' && isTypeAStep)"
-        >
-        <template v-for="field in activeFields" :key="field.key">
-          <div v-if="isFieldVisible(field)">
+        <div v-if="hasPaneContent" class="space-y-5">
+          <div
+            v-for="field in visibleActiveFields"
+            :key="`${activeStep.id}-${activePaneTab}-${field.key}`"
+          >
             <StepRepeatableGroupField
               v-if="field.type === 'repeatable_group'"
               :field="field"
@@ -759,7 +993,11 @@ async function saveReviewedVisuraToClientProfile(result: ExtractionResult): Prom
               :field="field"
               :model-value="formValues[field.key]"
               :disabled="isGenerating"
-              @update:model-value="saveFormField(field.key, $event)"
+              @update:model-value="
+                isConnectedDetailField(field)
+                  ? saveConnectedDetailField(field, $event)
+                  : saveFormField(field.key, $event)
+              "
             />
 
             <StepExtractionUploadField
@@ -789,7 +1027,11 @@ async function saveReviewedVisuraToClientProfile(result: ExtractionResult): Prom
               @clear-file="onFileChange(field.key, null)"
             />
 
-            <template v-else />
+            <StepDocumentReferenceField
+              v-else-if="isDocumentReferenceField(field)"
+              :field="field"
+              :value="formValues[field.key]"
+            />
 
             <template v-if="effectiveStepType === 'type_b' && isExtractionUploadField(field)">
               <div
@@ -822,7 +1064,7 @@ async function saveReviewedVisuraToClientProfile(result: ExtractionResult): Prom
                     <p
                       v-for="paragraph in section.paragraphs"
                       :key="paragraph"
-                      class="text-sm leading-7 text-slate-700"
+                      class="text-justify text-[12px] leading-7 text-slate-700"
                     >
                       <template
                         v-for="(part, index) in highlightedParts(paragraph)"
@@ -860,19 +1102,18 @@ async function saveReviewedVisuraToClientProfile(result: ExtractionResult): Prom
 	              >
 	                Regola di generazione
 	              </UButton>
-	            </template>
+		            </template>
           </div>
-        </template>
 
-        <StepTypeAWorkspace
-          v-if="activePaneTab === 'variables' && isTypeAStep"
-          :step-id="activeStep.id"
-          :template-content="typeATemplateContent ?? ''"
-          :is-generating="isGenerating"
-          :action-disabled="isTypeAActionDisabled"
-          @produce="onTypeAAction"
-        />
-        </template>
+          <StepTypeAWorkspace
+            v-if="activePaneTab === 'variables' && isTypeAStep"
+            :step-id="activeStep.id"
+            :template-content="typeATemplateContent ?? ''"
+            :is-generating="isGenerating"
+            :action-disabled="isTypeAActionDisabled"
+            @produce="onTypeAAction"
+          />
+        </div>
 
         <div
           v-else
@@ -949,6 +1190,15 @@ async function saveReviewedVisuraToClientProfile(result: ExtractionResult): Prom
         variant="soft"
         icon="i-lucide-triangle-alert"
         :description="`Alcuni campi di questo step non sono compatibili con ${activeStep.step_type ?? 'il tipo corrente'} e non vengono mostrati.`"
+        size="sm"
+      />
+
+      <UAlert
+        v-if="connectedDetailSaveError"
+        color="error"
+        variant="soft"
+        :description="connectedDetailSaveError"
+        icon="i-lucide-circle-alert"
         size="sm"
       />
 

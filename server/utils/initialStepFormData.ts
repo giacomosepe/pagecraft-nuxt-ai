@@ -3,7 +3,12 @@ interface FrameworkStepSnapshot {
   form_schema: unknown;
 }
 
-function hasProgramTitleField(formSchema: unknown): boolean {
+interface InitialStepFormContext {
+  documentTitle: string;
+  taxYear?: number | null;
+}
+
+function hasField(formSchema: unknown, key: string): boolean {
   if (!Array.isArray(formSchema)) return false;
 
   return formSchema.some(
@@ -11,19 +16,40 @@ function hasProgramTitleField(formSchema: unknown): boolean {
       field &&
       typeof field === "object" &&
       "key" in field &&
-      field.key === "program_title",
+      field.key === key,
   );
 }
 
 export function buildInitialStepFormData(
   step: FrameworkStepSnapshot,
-  documentTitle: string,
+  contextOrTitle: InitialStepFormContext | string,
 ): Record<string, string> | null {
-  if (step.order !== 1 || !hasProgramTitleField(step.form_schema)) {
+  const context =
+    typeof contextOrTitle === "string"
+      ? { documentTitle: contextOrTitle }
+      : contextOrTitle;
+
+  if (step.order !== 1) {
     return null;
   }
 
-  return {
-    program_title: documentTitle,
-  };
+  const data: Record<string, string> = {};
+
+  if (hasField(step.form_schema, "program_title")) {
+    data.program_title = context.documentTitle;
+  }
+
+  if (context.taxYear && hasField(step.form_schema, "tax_year")) {
+    data.tax_year = String(context.taxYear);
+  }
+
+  if (context.taxYear && hasField(step.form_schema, "anno_di_imposta")) {
+    data.anno_di_imposta = String(context.taxYear);
+  }
+
+  if (context.taxYear && hasField(step.form_schema, "esercizio_fiscale")) {
+    data.esercizio_fiscale = String(context.taxYear);
+  }
+
+  return Object.keys(data).length ? data : null;
 }

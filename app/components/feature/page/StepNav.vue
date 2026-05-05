@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { StepRecord } from "~/types/app.types";
-import { isRichTextHtml, richHtmlToPlainText } from "~/utils/richText";
 
 const props = defineProps<{
   steps: StepRecord[];
@@ -21,17 +20,16 @@ const progressPct = computed(() =>
     : 0,
 );
 
+function stepTypeLabel(step: StepRecord): string {
+  if (step.step_type === "type_a") return "Inserimento variabili";
+  if (step.step_type === "type_b") return "Generazione testo con info";
+  if (step.step_type === "type_c") return "Generazione testo con AI";
+  return "Step documento";
+}
+
 function stepState(step: StepRecord, index: number): "saved" | "active" | "todo" {
   if (index === props.activeIndex) return "active";
   return step.status === "COMMITTED" ? "saved" : "todo";
-}
-
-function previewText(step: StepRecord, index: number): string {
-  if (stepState(step, index) === "todo" || !step.committed_output) return "";
-  const plainText = isRichTextHtml(step.committed_output)
-    ? richHtmlToPlainText(step.committed_output)
-    : step.committed_output;
-  return plainText.replace(/\s+/g, " ").trim().slice(0, 80);
 }
 </script>
 
@@ -87,11 +85,8 @@ function previewText(step: StepRecord, index: number): string {
               </p>
             </div>
 
-            <p
-              v-if="previewText(step, index)"
-              class="step-row__preview"
-            >
-              {{ previewText(step, index) }}
+            <p class="step-row__type">
+              {{ stepTypeLabel(step) }}
             </p>
           </div>
         </button>
@@ -108,7 +103,7 @@ function previewText(step: StepRecord, index: number): string {
   gap: 0.75rem;
   border-left: 2px solid transparent;
   border-radius: 0;
-  padding: 0.75rem 0.75rem 0.75rem 0.875rem;
+  padding: 0.625rem 0.625rem 0.625rem 0.75rem;
   text-align: left;
   transition: background-color 160ms ease, border-color 160ms ease;
 }
@@ -169,9 +164,9 @@ function previewText(step: StepRecord, index: number): string {
   display: -webkit-box;
   overflow: hidden;
   color: var(--color-text-primary);
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   font-weight: 500;
-  line-height: 1.25rem;
+  line-height: 1.05rem;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -188,12 +183,12 @@ function previewText(step: StepRecord, index: number): string {
   opacity: 0.42;
 }
 
-.step-row__preview {
+.step-row__type {
   max-width: 100%;
   overflow: hidden;
-  color: var(--text-3, var(--color-text-muted));
+  color: var(--color-text-muted);
   font-size: 11px;
-  line-height: 1.25rem;
+  line-height: 1rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

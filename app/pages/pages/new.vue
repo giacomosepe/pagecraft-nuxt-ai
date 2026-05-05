@@ -81,6 +81,8 @@ watch(selectedClientId, async (clientId) => {
 // Folder resolution: either pick existing or type a new name
 const selectedFolderIdFromExisting = ref<string | null>(null);
 const projectName = ref("");
+const taxYear = ref<string | number>(new Date().getFullYear());
+const referente = ref("");
 
 function selectExistingFolder(id: string) {
 	selectedFolderIdFromExisting.value = id;
@@ -116,10 +118,12 @@ const canAdvance = computed(() => {
 	if (currentStep.value === 2) {
 		const folderOk =
 			!!selectedFolderIdFromExisting.value || projectName.value.trim().length > 0;
+		const year = Number(String(taxYear.value).trim());
+		const projectDetailsOk = Number.isInteger(year) && year >= 2020 && year <= 2035;
 		const titlesOk = selectedFrameworkIds.value.every(
 			(id) => documentTitles.value[id]?.trim().length > 0,
 		);
-		return folderOk && titlesOk;
+		return folderOk && projectDetailsOk && titlesOk;
 	}
 	return false;
 });
@@ -146,6 +150,8 @@ async function submit() {
 				newFolderName: selectedFolderIdFromExisting.value
 					? undefined
 					: projectName.value.trim(),
+				taxYear: Number(String(taxYear.value).trim()),
+				referente: referente.value.trim() || undefined,
 				pages: selectedFrameworkIds.value.map((id) => ({
 					frameworkId: id,
 					title: documentTitles.value[id]?.trim(),
@@ -330,7 +336,7 @@ async function submit() {
 		<FormSectionCard
 			v-else-if="currentStep === 2"
 			title="Progetto"
-			description="Dai un nome al programma e definisci i titoli dei documenti da generare."
+			description="Dai un nome al programma, compila i dettagli progetto e definisci i titoli dei documenti."
 		>
 			<div class="space-y-5">
 				<div v-if="foldersLoading" class="flex items-center gap-2">
@@ -385,6 +391,35 @@ async function submit() {
 						</span>
 					</template>
 				</UFormField>
+
+				<div class="space-y-3">
+					<FormSectionHeader
+						title="Dettagli progetto"
+						description="Questi dati alimentano le variabili del template nei documenti creati."
+					/>
+
+					<div class="grid gap-4 md:grid-cols-2">
+						<UFormField label="Anno di imposta *">
+							<UInput
+								v-model="taxYear"
+								type="number"
+								min="2020"
+								max="2035"
+								step="1"
+								placeholder="es. 2026"
+								class="w-full"
+							/>
+						</UFormField>
+
+						<UFormField label="Referente">
+							<UInput
+								v-model="referente"
+								placeholder="es. Mario Rossi"
+								class="w-full"
+							/>
+						</UFormField>
+					</div>
+				</div>
 
 				<div class="space-y-3">
 					<FormSectionHeader

@@ -23,6 +23,8 @@ const CreatePageSchema = z.object({
     .max(200)
     .transform((s) => s.trim()),
   clientId: nullable_uuid,
+  taxYear: z.number().int().min(2020).max(2035).optional().nullable(),
+  referente: z.string().max(200).optional().nullable(),
 });
 
 export default defineEventHandler(async (event) => {
@@ -53,7 +55,8 @@ export default defineEventHandler(async (event) => {
   }
 
   // From here on, parsed.data is fully typed and guaranteed valid
-  const { frameworkId, title, clientId } = parsed.data;
+  const { frameworkId, title, clientId, taxYear, referente } = parsed.data;
+  const trimmedReferente = referente?.trim() || null;
 
   // ─── Step 3: Get service role client ─────────────────────────────────────
   // The service role client bypasses Row Level Security. We need it here
@@ -115,6 +118,8 @@ export default defineEventHandler(async (event) => {
     status: "in_lavorazione",
     client_id: clientId ?? null,
     folder_id: null,
+    tax_year: taxYear ?? null,
+    referente: trimmedReferente,
     created_at: now,
     updated_at: now,
   });
@@ -136,7 +141,10 @@ export default defineEventHandler(async (event) => {
     system_prompt_template: fs.system_prompt_template,
     refine_prompt_template: fs.refine_prompt_template,
     form_schema: fs.form_schema ?? null,
-    form_data: buildInitialStepFormData(fs, title),
+    form_data: buildInitialStepFormData(fs, {
+      documentTitle: title,
+      taxYear: taxYear ?? null,
+    }),
     status: "PENDING" as const,
     user_context: null,
     committed_output: null,

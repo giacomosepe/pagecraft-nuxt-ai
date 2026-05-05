@@ -117,6 +117,9 @@ export type StepFieldType =
   | "textarea"
   | "select"
   | "number"
+  | "client_detail"
+  | "project_detail"
+  | "document_reference"
   | "file"
   | "file_upload_generation"
   | "multiselect"
@@ -159,8 +162,10 @@ export interface PageRecord {
   title: string;
   status: string;
   framework_name: string | null;
+  folder_id: string | null;
   client_id: string | null;
   tax_year: number | null;
+  referente: string | null;
 }
 
 export interface PageWithSteps {

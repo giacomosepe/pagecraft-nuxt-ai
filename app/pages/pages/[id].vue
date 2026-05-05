@@ -15,7 +15,7 @@ definePageMeta({ middleware: "auth" });
 const route = useRoute();
 const pageId = route.params.id as string;
 
-const { page, steps, clientData, pending, error } = usePage(pageId);
+const { page, steps, clientData, pending, error, patchPage } = usePage(pageId);
 
 // ─── Active step state ────────────────────────────────────────────────────────
 const activeStepIndex = ref(0);
@@ -85,6 +85,14 @@ function onFormValuesChange(values: Record<string, unknown>): void {
 	stepFormValues.value = values;
 }
 
+function firstFormText(...values: unknown[]): string {
+	for (const value of values) {
+		const text = String(value ?? "").trim();
+		if (text) return text;
+	}
+	return "";
+}
+
 // Reset on step navigation
 watch(activeStepIndex, () => {
 	output.value = activeStep.value?.committed_output ?? "";
@@ -98,12 +106,26 @@ function buildTypeAOutput(templateOverride: string | null = null): string | null
 	const c = clientData.value;
 	const p = page.value;
 	return buildIntestazione({
-		programTitle: String(stepFormValues.value.program_title ?? ""),
-		legalCitation: String(stepFormValues.value.legal_citation ?? ""),
-		companyName: c?.company_name ?? "[RAGIONE SOCIALE]",
+		programTitle: firstFormText(stepFormValues.value.program_title, p?.title),
+		companyName: firstFormText(
+			stepFormValues.value.company_name,
+			stepFormValues.value.ragione_sociale,
+			c?.company_name,
+			"[RAGIONE SOCIALE]",
+		),
 		companyForm: c?.company_form ?? "",
-		legalRepresentative: c?.legal_representative ?? "[LEGALE RAPPRESENTANTE]",
-		taxYear: p?.tax_year ?? null,
+		legalRepresentative: firstFormText(
+			stepFormValues.value.legal_representative,
+			stepFormValues.value.legale_rappresentante,
+			c?.legal_representative,
+			"[LEGALE RAPPRESENTANTE]",
+		),
+		taxYear: firstFormText(
+			stepFormValues.value.tax_year,
+			stepFormValues.value.anno_di_imposta,
+			stepFormValues.value.esercizio_fiscale,
+			p?.tax_year,
+		) || null,
 		templateOverride,
 	});
 }
@@ -112,6 +134,7 @@ const stepPreview = computed(() =>
 	buildStepPreview({
 		step: activeStep.value ?? null,
 		client: clientData.value,
+		pageTitle: page.value?.title ?? null,
 		taxYear: page.value?.tax_year ?? null,
 		formValues: stepFormValues.value,
 		showTokensOnly: activeStep.value?.step_type === "type_a" && !output.value,
@@ -123,11 +146,16 @@ const typeATemplateText = computed(() =>
 		buildStepPreview({
 			step: activeStep.value ?? null,
 			client: clientData.value,
+			pageTitle: page.value?.title ?? null,
 			taxYear: page.value?.tax_year ?? null,
 			formValues: {},
 			showTokensOnly: activeStep.value?.step_type === "type_a",
 		}),
 	),
+);
+
+const projectBackTo = computed(() =>
+	page.value?.folder_id ? `/folders/${page.value.folder_id}` : "/progetti",
 );
 
 function produceTypeA(templateOverride: string | null): void {
@@ -256,22 +284,14 @@ async function exportWord(): Promise<void> {
 			<EditorShell>
 				<template #nav>
 					<div class="flex h-full min-h-0 flex-col">
-						<div class="border-b border-slate-200 px-4 py-4">
-							<EditorPanelHeader
-								title="Mappa del documento"
-								description="Segui i passaggi, controlla l’avanzamento e passa rapidamente allo step successivo."
-								eyebrow="Navigazione"
+						<div class="border-b border-slate-200 px-4 py-3">
+							<NuxtLink
+								:to="projectBackTo"
+								class="inline-flex items-center gap-1 text-xs font-medium text-slate-500 transition-colors hover:text-slate-900"
 							>
-								<template #meta>
-									<NuxtLink
-										to="/clienti"
-										class="inline-flex items-center gap-1 text-xs font-medium text-slate-400 transition-colors hover:text-slate-600"
-									>
-										<UIcon name="i-lucide-arrow-left" class="size-3.5" />
-										Clienti
-									</NuxtLink>
-								</template>
-							</EditorPanelHeader>
+								<UIcon name="i-lucide-arrow-left" class="size-3.5" />
+								Progetto
+							</NuxtLink>
 						</div>
 
 						<StepNav
@@ -316,6 +336,7 @@ async function exportWord(): Promise<void> {
 						:error-msg="errorMsg"
 						:output="output"
 						:client-data="clientData"
+						:page-title="page.title"
 						:tax-year="page.tax_year"
 						:type-a-template-content="typeATemplateText"
 						@generate="generate"
@@ -327,6 +348,7 @@ async function exportWord(): Promise<void> {
 						@discard="discardOutput"
 						@next="goNext"
 						@conferma-struttura="output = $event"
+						@project-detail-change="patchPage"
 					/>
 				</template>
 			</EditorShell>
