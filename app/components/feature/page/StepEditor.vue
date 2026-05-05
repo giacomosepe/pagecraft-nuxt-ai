@@ -11,6 +11,7 @@
 
 import { useStepForm } from "~/composables/useStepForm";
 import type { ClientRecord } from "~/composables/useClientFields";
+import type { ClientProfilePartecipata, ClientProfileSocio } from "~/types/company.types";
 import type {
   StepFieldType,
   StepFormField,
@@ -112,6 +113,7 @@ const props = defineProps<{
   output: string;
   clientData?: ClientRecord | null;
   taxYear?: number | null;
+  typeATemplateContent?: string;
   canGoNext: boolean;
 }>();
 
@@ -318,7 +320,7 @@ const isPremessaReady = computed(
 const isTypeAActionDisabled = computed(() => {
   if (props.isGenerating) return true;
   if (props.activeStep.order === 2) return !isPremessaReady.value;
-  return !props.output;
+  return false;
 });
 const unsupportedFields = computed(() =>
   formFields.value.filter(
@@ -741,6 +743,12 @@ const visuraFile = ref<Record<string, File | null>>({});
 const visuraExtracting = ref<Record<string, boolean>>({});
 const visuraError = ref<Record<string, string | null>>({});
 const visuraResult = ref<Record<string, VisuraExtractResult | null>>({});
+const visuraReviewResult = ref<Record<string, ExtractionResult | null>>({});
+const extractionReviewOpen = ref(false);
+const activeExtractionReviewFieldKey = ref<string | null>(null);
+const extractionReviewFilename = ref<string | null>(null);
+const isSavingClientProfile = ref(false);
+const clientProfileSaved = ref(false);
 
 // Reset visura state when the step changes
 watch(
@@ -750,6 +758,12 @@ watch(
     visuraExtracting.value = {};
     visuraError.value = {};
     visuraResult.value = {};
+    visuraReviewResult.value = {};
+    extractionReviewOpen.value = false;
+    activeExtractionReviewFieldKey.value = null;
+    extractionReviewFilename.value = null;
+    isSavingClientProfile.value = false;
+    clientProfileSaved.value = false;
   },
 );
 
@@ -757,6 +771,24 @@ function onVisuraFileChange(fieldKey: string, file: File | null): void {
   visuraFile.value = { ...visuraFile.value, [fieldKey]: file };
   visuraError.value = { ...visuraError.value, [fieldKey]: null };
   visuraResult.value = { ...visuraResult.value, [fieldKey]: null };
+  visuraReviewResult.value = { ...visuraReviewResult.value, [fieldKey]: null };
+  clientProfileSaved.value = false;
+}
+
+async function clearVisuraFile(fieldKey: string): Promise<void> {
+  onVisuraFileChange(fieldKey, null);
+  extractionReviewOpen.value = false;
+  activeExtractionReviewFieldKey.value = null;
+  extractionReviewFilename.value = null;
+  try {
+    clearFormSaveError();
+    await saveFormField(fieldKey, null, { throwOnError: true });
+  } catch (err: unknown) {
+    const msg =
+      err instanceof Error ? err.message : "Errore durante la cancellazione del file";
+    visuraError.value = { ...visuraError.value, [fieldKey]: msg };
+    console.error("[StepEditor] visura clear error:", err);
+  }
 }
 
 async function extractVisura(field: StepFormField): Promise<void> {
@@ -783,20 +815,14 @@ async function extractVisura(field: StepFormField): Promise<void> {
     });
 
     visuraResult.value = { ...visuraResult.value, [field.key]: result };
-
-    // Persist extracted data to form_data under the field key
-    clearFormSaveError();
-	    await saveFormField(field.key, {
-	      filename: file.name,
-	      soci: result.soci ?? [],
-	      partecipate: result.partecipate ?? [],
-	      board: result.board ?? [],
-	      legale_rappresentante_societa: result.legale_rappresentante_societa ?? null,
-	      shareholders: result.shareholders,
-	      subsidiaries: result.subsidiaries,
-	      missing: result.missing,
-      extracted_at: new Date().toISOString(),
-    }, { throwOnError: true });
+    visuraReviewResult.value = {
+      ...visuraReviewResult.value,
+      [field.key]: normalizeExtractionResult(result),
+    };
+    activeExtractionReviewFieldKey.value = field.key;
+    extractionReviewFilename.value = file.name;
+    clientProfileSaved.value = false;
+    extractionReviewOpen.value = true;
   } catch (err: unknown) {
     const msg =
       err instanceof Error ? err.message : "Errore durante l''estrazione dalla visura";
@@ -804,6 +830,127 @@ async function extractVisura(field: StepFormField): Promise<void> {
     console.error("[StepEditor] visura extraction error:", err);
   } finally {
     visuraExtracting.value = { ...visuraExtracting.value, [field.key]: false };
+  }
+}
+
+function buildReviewedVisuraPayload(
+  result: ExtractionResult,
+  filename: string | null,
+): VisuraExtractResult & { filename: string; extracted_at: string } {
+  return {
+    filename: filename ?? "visura.pdf",
+    soci: result.soci,
+    partecipate: result.partecipate,
+    board: result.board,
+    legale_rappresentante_societa: result.legale_rappresentante_societa,
+    shareholders: result.soci,
+    subsidiaries: result.partecipate,
+    missing: {
+      soci: result.missing?.soci ?? [],
+      partecipate: result.missing?.partecipate ?? [],
+      shareholders: result.missing?.shareholders ?? result.missing?.soci ?? [],
+      subsidiaries: result.missing?.subsidiaries ?? result.missing?.partecipate ?? [],
+    },
+    extracted_at: new Date().toISOString(),
+  };
+}
+
+async function insertReviewedVisura(result: ExtractionResult): Promise<void> {
+  const fieldKey = activeExtractionReviewFieldKey.value;
+  if (!fieldKey) return;
+
+  const payload = buildReviewedVisuraPayload(result, extractionReviewFilename.value);
+
+  try {
+    clearFormSaveError();
+    await saveFormField(fieldKey, payload, { throwOnError: true });
+    visuraResult.value = { ...visuraResult.value, [fieldKey]: payload };
+    visuraReviewResult.value = {
+      ...visuraReviewResult.value,
+      [fieldKey]: normalizeExtractionResult(payload),
+    };
+
+    emit(
+      "confermaStruttura",
+      assembleStruttura(
+        payload,
+        appliedStrutturaRules.value[fieldKey] ?? DEFAULT_STRUTTURA_RULE,
+        props.clientData?.company_name ?? props.clientData?.name ?? null,
+      ),
+    );
+    extractionReviewOpen.value = false;
+  } catch (err: unknown) {
+    const msg =
+      err instanceof Error ? err.message : "Errore durante il salvataggio dei dati estratti";
+    visuraError.value = { ...visuraError.value, [fieldKey]: msg };
+    console.error("[StepEditor] visura insert error:", err);
+  }
+}
+
+const canSaveExtractionToClientProfile = computed(() => Boolean(props.clientData?.id));
+
+const clientProfileHasStructureData = computed(() =>
+  Boolean(
+    props.clientData?.soci?.length ||
+    props.clientData?.partecipate?.length ||
+    props.clientData?.shareholders?.length ||
+    props.clientData?.subsidiaries?.length,
+  ),
+);
+
+function toClientProfileSoci(result: ExtractionResult): ClientProfileSocio[] {
+  return result.soci.map((socio) => ({
+    ragione_sociale: socio.nome ?? null,
+    quota: socio.percentuale ?? null,
+    tipo: socio.entity_type ?? null,
+    sede: socio.indirizzo ?? null,
+    codice_fiscale: socio.cf ?? null,
+    legale_rappresentante: socio.legale_rappresentante ?? null,
+  }));
+}
+
+function toClientProfilePartecipate(result: ExtractionResult): ClientProfilePartecipata[] {
+  return result.partecipate.map((partecipata) => ({
+    ragione_sociale: partecipata.nome ?? null,
+    quota: partecipata.percentuale_detenuta ?? null,
+    tipo: "persona_giuridica",
+    sede: partecipata.indirizzo ?? null,
+    codice_fiscale: partecipata.cf ?? null,
+    legale_rappresentante: partecipata.legale_rappresentante ?? null,
+  }));
+}
+
+async function saveReviewedVisuraToClientProfile(result: ExtractionResult): Promise<void> {
+  const clientId = props.clientData?.id;
+  if (!clientId || isSavingClientProfile.value) return;
+
+  if (clientProfileHasStructureData.value) {
+    const confirmed = window.confirm(
+      "Il profilo cliente contiene già dati su soci o partecipate. Vuoi sovrascriverli con i dati estratti dalla visura?",
+    );
+    if (!confirmed) return;
+  }
+
+  isSavingClientProfile.value = true;
+  try {
+    await $fetch("/api/db/mutate", {
+      method: "POST",
+      body: {
+        table: "clients",
+        operation: "update",
+        data: {
+          soci: toClientProfileSoci(result),
+          partecipate: toClientProfilePartecipate(result),
+        },
+        where: { id: clientId },
+      },
+    });
+    clientProfileSaved.value = true;
+  } catch (err) {
+    console.error("[StepEditor] client profile save error:", err);
+    window.alert("Non siamo riusciti a salvare i dati nel profilo cliente. Riprova.");
+  } finally {
+    isSavingClientProfile.value = false;
   }
 }
 </script>
@@ -895,6 +1042,7 @@ async function extractVisura(field: StepFormField): Promise<void> {
               :saved-value="formValues[field.key]"
 	              :show-required-hint="isVisuraRequired && !isVisuraReady"
 	              @select-file="onVisuraFileChange(field.key, $event)"
+	              @clear-file="clearVisuraFile(field.key)"
 	              @extract="extractVisura(field)"
 	              @edit-extraction-rule="openExtractionRuleModal(field.key)"
 	            />
@@ -907,6 +1055,7 @@ async function extractVisura(field: StepFormField): Promise<void> {
               :error="fileUploadError[field.key]"
               :saved-value="formValues[field.key]"
               @select-file="onFileChange(field.key, $event)"
+              @clear-file="onFileChange(field.key, null)"
             />
 
             <template v-else />
@@ -987,7 +1136,7 @@ async function extractVisura(field: StepFormField): Promise<void> {
         <StepTypeAWorkspace
           v-if="activePaneTab === 'variables' && isTypeAStep"
           :step-id="activeStep.id"
-          :template-content="activeStep.system_prompt_template ?? ''"
+          :template-content="typeATemplateContent ?? ''"
           :is-generating="isGenerating"
           :action-disabled="isTypeAActionDisabled"
           @produce="onTypeAAction"
@@ -1104,5 +1253,15 @@ async function extractVisura(field: StepFormField): Promise<void> {
 	    confirm-label="Applica"
 	    @cancel="extractionRuleModalOpen = false"
 	    @save="applyExtractionRule"
+	  />
+	  <StepExtractionReviewModal
+	    v-model:open="extractionReviewOpen"
+	    :result="activeExtractionReviewFieldKey ? visuraReviewResult[activeExtractionReviewFieldKey] ?? null : null"
+	    :filename="extractionReviewFilename"
+	    :can-save-profile="canSaveExtractionToClientProfile"
+	    :is-saving-profile="isSavingClientProfile"
+	    :profile-saved="clientProfileSaved"
+	    @insert="insertReviewedVisura"
+	    @save-profile="saveReviewedVisuraToClientProfile"
 	  />
 	</template>

@@ -34,6 +34,7 @@ const emit = defineEmits<{
 	  selectFile: [file: File | null];
 	  extract: [];
 	  editExtractionRule: [];
+	  clearFile: [];
 	}>();
 
 const inputRef = ref<HTMLInputElement | null>(null);
@@ -41,6 +42,11 @@ const inputRef = ref<HTMLInputElement | null>(null);
 function onChange(event: Event): void {
   const file = (event.target as HTMLInputElement).files?.[0] ?? null;
   emit("selectFile", file);
+}
+
+function clearFile(): void {
+  if (inputRef.value) inputRef.value.value = "";
+  emit("clearFile");
 }
 
 const savedFilename = computed(() => {
@@ -115,6 +121,17 @@ const partecipateCount = computed(() => (props.result?.partecipate ?? props.resu
       >
 	        Estrai dalla visura
 	      </UButton>
+	      <UButton
+	        v-if="selectedFile || savedValue"
+	        variant="link"
+	        color="error"
+	        size="sm"
+	        icon="i-lucide-trash-2"
+	        class="ml-1 w-fit px-1"
+	        aria-label="Cancella file"
+	        :disabled="disabled || isExtracting"
+	        @click="clearFile"
+	      />
 	      <UButton
 	        v-if="selectedFile"
 	        variant="link"

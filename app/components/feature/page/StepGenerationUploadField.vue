@@ -16,6 +16,7 @@ defineProps<{
 
 const emit = defineEmits<{
   selectFile: [file: File | null];
+  clearFile: [];
 }>();
 
 const inputRef = ref<HTMLInputElement | null>(null);
@@ -25,6 +26,12 @@ function onChange(event: Event): void {
   const file = (event.target as HTMLInputElement).files?.[0] ?? null;
   selectedFilename.value = file?.name ?? "";
   emit("selectFile", file);
+}
+
+function clearFile(): void {
+  selectedFilename.value = "";
+  if (inputRef.value) inputRef.value.value = "";
+  emit("clearFile");
 }
 </script>
 
@@ -70,6 +77,18 @@ function onChange(event: Event): void {
         <UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />
         Caricamento in corso...
       </div>
+
+      <UButton
+        v-if="selectedFilename || savedValue"
+        variant="link"
+        color="error"
+        size="sm"
+        icon="i-lucide-trash-2"
+        class="ml-1 w-fit px-1"
+        aria-label="Cancella file"
+        :disabled="disabled || loading"
+        @click="clearFile"
+      />
 
       <div
         v-else-if="savedValue"

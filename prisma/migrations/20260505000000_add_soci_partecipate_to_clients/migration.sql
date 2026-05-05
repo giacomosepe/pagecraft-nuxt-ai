@@ -1,0 +1,3 @@
+ALTER TABLE "clients"
+  ADD COLUMN IF NOT EXISTS "soci" JSONB,
+  ADD COLUMN IF NOT EXISTS "partecipate" JSONB;

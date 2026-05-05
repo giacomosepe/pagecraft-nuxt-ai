@@ -52,6 +52,30 @@ export interface SubsidiaryPerson {
 
 export type Subsidiary = SubsidiaryCompany | SubsidiaryPerson;
 
+// ─── Client Profile Legal Structure (Soci / Partecipate) ─────────────────────
+// New client-profile fields use the same Italian labels as the operator-facing
+// extraction modal. Legacy `shareholders` / `subsidiaries` remain supported.
+
+export type ClientProfileEntityType = "persona_fisica" | "persona_giuridica";
+
+export interface ClientProfileSocio {
+  ragione_sociale: string | null;
+  quota: number | null;
+  tipo: ClientProfileEntityType | null;
+  sede: string | null;
+  codice_fiscale: string | null;
+  legale_rappresentante: string | null;
+}
+
+export interface ClientProfilePartecipata {
+  ragione_sociale: string | null;
+  quota: number | null;
+  tipo: ClientProfileEntityType | null;
+  sede: string | null;
+  codice_fiscale: string | null;
+  legale_rappresentante: string | null;
+}
+
 // ─── Missing fields audit ─────────────────────────────────────────────────────
 // Produced after extraction or save — tells the UI what to highlight.
 

@@ -59,7 +59,9 @@ export type Database = {
           industry_sector: string | null
           legal_representative: string | null
           name: string
+          partecipate: Json | null
           registered_address: string | null
+          soci: Json | null
           shareholders: Json | null
           status: string
           subsidiaries: Json | null
@@ -78,7 +80,9 @@ export type Database = {
           industry_sector?: string | null
           legal_representative?: string | null
           name: string
+          partecipate?: Json | null
           registered_address?: string | null
+          soci?: Json | null
           shareholders?: Json | null
           status?: string
           subsidiaries?: Json | null
@@ -97,7 +101,9 @@ export type Database = {
           industry_sector?: string | null
           legal_representative?: string | null
           name?: string
+          partecipate?: Json | null
           registered_address?: string | null
+          soci?: Json | null
           shareholders?: Json | null
           status?: string
           subsidiaries?: Json | null
