@@ -62,6 +62,13 @@ Never reference `company_profiles` or `company_profile_id`.
 
 ---
 
+## Step prompt columns
+
+`type_a` and `type_b` steps: `system_prompt_template` and `refine_prompt_template` must be `''`.
+Only `type_c` steps carry prompt content. Non-empty prompt on a non-generating step = wrong.
+
+---
+
 ## What NOT to do — database
 
 - Never use `prisma migrate dev` on an existing DB

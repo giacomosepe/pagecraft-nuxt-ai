@@ -23,7 +23,7 @@ export function usePage(pageId: string) {
       const [pageRes, stepsRes] = await Promise.all([
         supabase
           .from("pages")
-          .select("id, title, status, framework_name, client_id, tax_year")
+          .select("id, title, status, framework_name, folder_id, client_id, tax_year, referente")
           .eq("id", pageId)
           .single(),
         supabase
@@ -54,6 +54,11 @@ export function usePage(pageId: string) {
   const page = computed(() => data.value?.page ?? null);
   const steps = computed(() => data.value?.steps ?? null);
 
+  function patchPage(patch: Partial<Pick<PageRecord, "title" | "tax_year" | "referente">>): void {
+    if (!data.value?.page) return;
+    data.value.page = { ...data.value.page, ...patch };
+  }
+
   // ─── Client data — secondary fetch ────────────────────────────────────────
   // Triggered once when page data arrives (client_id may be null).
   // Provides company context for the AI generation pipeline via useClientFields.
@@ -75,5 +80,5 @@ export function usePage(pageId: string) {
     { immediate: true },
   );
 
-  return { page, steps, clientData, pending, error };
+  return { page, steps, clientData, pending, error, patchPage };
 }

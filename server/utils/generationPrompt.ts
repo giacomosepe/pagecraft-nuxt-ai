@@ -188,6 +188,7 @@ export function buildGenerationPrompt({
 			c.industry_sector ? `Settore: ${c.industry_sector}` : null,
 			c.employee_count ? `Dipendenti: ${c.employee_count}` : null,
 			taxYear ? `Anno fiscale: ${taxYear}` : null,
+			page?.referente ? `Referente progetto: ${page.referente}` : null,
 			c.legal_representative ? `Legale rappresentante: ${c.legal_representative}` : null,
 			c.vat_number ? `P.IVA: ${c.vat_number}` : null,
 			c.codice_fiscale ? `Codice fiscale: ${c.codice_fiscale}` : null,

@@ -64,15 +64,21 @@ export function useClientFields(client: ClientRecord | null | undefined, taxYear
       : displayName;
 
     map["company_name"]         = displayName;
+    map["ragione_sociale"]      = displayName;
     map["company_full_name"]    = fullName;       // "Acme S.r.l."
     map["company_form"]         = client.company_form ?? "";
     map["industry_sector"]      = client.industry_sector ?? "";
     map["employee_count"]       = client.employee_count?.toString() ?? "";
     map["legal_representative"] = client.legal_representative ?? "";
+    map["legale_rappresentante"] = client.legal_representative ?? "";
     map["vat_number"]           = client.vat_number ?? "";
+    map["partita_iva"]          = client.vat_number ?? "";
     map["codice_fiscale"]       = client.codice_fiscale ?? "";
     map["registered_address"]   = client.registered_address ?? "";
+    map["sede_legale"]          = client.registered_address ?? "";
     map["tax_year"]             = taxYear?.toString() ?? "";
+    map["anno_di_imposta"]      = taxYear?.toString() ?? "";
+    map["esercizio_fiscale"]    = taxYear?.toString() ?? "";
 
     // Board members — flat list and indexed
     const board = client.board_members ?? [];

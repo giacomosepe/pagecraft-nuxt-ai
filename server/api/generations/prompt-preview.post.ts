@@ -48,7 +48,7 @@ export default defineEventHandler(async (event) => {
 			`
 			id, order, title, system_prompt_template, refine_prompt_template, form_data, form_schema,
 			page:pages (
-				title, tax_year,
+				title, tax_year, referente,
 				client:clients (
 					name, company_name, company_form, industry_sector, employee_count,
 					legal_representative, vat_number, codice_fiscale, registered_address,

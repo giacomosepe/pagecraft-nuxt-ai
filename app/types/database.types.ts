@@ -401,6 +401,7 @@ export type Database = {
           framework_id: string | null
           framework_name: string
           id: string
+          referente: string | null
           status: string
           tax_year: number | null
           title: string
@@ -414,6 +415,7 @@ export type Database = {
           framework_id?: string | null
           framework_name: string
           id?: string
+          referente?: string | null
           status?: string
           tax_year?: number | null
           title: string
@@ -427,6 +429,7 @@ export type Database = {
           framework_id?: string | null
           framework_name?: string
           id?: string
+          referente?: string | null
           status?: string
           tax_year?: number | null
           title?: string

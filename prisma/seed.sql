@@ -67,29 +67,13 @@ VALUES (
   'Intestazione',
   'Frontespizio del documento con dati identificativi e citazione normativa',
   'type_a',
-  'Write the cover and header section ("Intestazione") of the Patent Box
-documentation package.
-
-This section must contain:
-- The full document title: "Documentazione per l''accesso al regime Patent Box —
-  Relazione Illustrativa"
-- The company name, legal form, and relevant tax year
-- The name and role of the legal representative
-- The date of preparation (use the current date if not provided)
-- A brief formal declaration of purpose confirming the document is prepared
-  in exercise of the Patent Box option pursuant to applicable Italian law
-- A closing clause affirming the truthfulness of the information provided
-
-Target length: 200–350 words. Formal and minimal — this is a cover page, not
-an introduction. No invented information.',
-  'Revise the existing "Intestazione" section according to the instructions
-provided. This is the cover page of a formal Patent Box submission — keep it
-formal, factual, and minimal. Correct any factual inconsistencies, outdated
-information, or phrasing issues identified in the instructions. Return only
-the revised section text.',
+  '',
+  '',
   '[
-    {"key": "program_title", "label": "Titolo del programma", "type": "text", "placeholder": "es. Nuovo Patent Box 2025", "aiSuggestable": false},
-    {"key": "legal_citation", "label": "Citazione normativa", "type": "text", "placeholder": "Articolo 6 del decreto-legge 21 ottobre 2021, n. 146...", "aiSuggestable": false, "defaultValue": "Articolo 6 del decreto-legge 21 ottobre 2021, n. 146, convertito, con modificazioni, dalla legge 17 dicembre 2021, n. 215, così come successivamente modificato dalla legge 30 dicembre 2021, n. 234"}
+    {"key": "program_title", "label": "Titolo del programma", "type": "project_detail", "placeholder": "es. Nuovo Patent Box 2025", "required": true, "hint": "Collegato al titolo del documento."},
+    {"key": "company_name", "label": "Ragione sociale", "type": "client_detail", "placeholder": "es. Acme S.r.l.", "required": true, "hint": "Collegato alla scheda cliente."},
+    {"key": "tax_year", "label": "Anno di imposta", "type": "project_detail", "placeholder": "es. 2026", "required": true, "hint": "Collegato ai dettagli progetto."},
+    {"key": "legal_representative", "label": "Legale rappresentante", "type": "client_detail", "placeholder": "es. Mario Rossi", "required": true, "hint": "Collegato alla scheda cliente."}
   ]',
   NOW(),
   NOW()
@@ -112,15 +96,11 @@ VALUES (
   'Premessa',
   'Testo normativo standardizzato — generato da template, non da AI',
   'type_a',
-  'TEMPLATE_STEP: This step uses the premessa template route, not AI generation.
-The system prompt is intentionally minimal — generation is handled by
-server/api/generations/premessa.post.ts which substitutes company name
-and tax year into the fixed legal boilerplate.',
-  'Revise the existing "Premessa" section if needed. This is standardised legal
-boilerplate — only correct factual errors (company name, tax year). Return
-only the revised section text.',
+  '',
+  '',
   '[
-    {"key": "esercizio_fiscale", "label": "Esercizio fiscale", "type": "text", "placeholder": "es. 2023", "required": true}
+    {"key": "tax_year", "label": "Anno di imposta", "type": "project_detail", "placeholder": "es. 2026", "required": true, "hint": "Collegato ai dettagli progetto."},
+    {"key": "legal_representative", "label": "Legale rappresentante", "type": "client_detail", "placeholder": "es. Mario Rossi", "required": true, "hint": "Collegato alla scheda cliente."}
   ]',
   NOW(),
   NOW()
@@ -143,39 +123,16 @@ VALUES (
   'Struttura Partecipativa',
   'Assetto societario, azionisti, partecipate, governance',
   'type_b',
-  'Write the corporate and ownership structure section ("Struttura Partecipativa")
-of the Patent Box documentation package. This section is a legal declaration —
-factual precision is paramount.
-
-The user message contains a structured list of shareholders and subsidiaries.
-Use this data exactly as provided. Where a field shows [DA COMPLETARE] or [N/D],
-render it in the document as [DATO NON FORNITO] — do not invent replacements.
-
-The section must:
-- Describe the shareholding structure in narrative prose: for each shareholder,
-  state their full name (or company name with legal form), whether they are a
-  natural person (persona fisica) or legal entity (persona giuridica), their
-  percentage ownership, and — for natural persons — their place of birth and
-  fiscal code; for companies, their registered address and fiscal code / VAT
-  number, plus the name of their legal representative if provided
-- Describe any subsidiaries (società partecipate): for each, state the name
-  with legal form, country of registration, the percentage stake held by the
-  company, and the legal representative if provided
-- Identify the members of the board of directors by name and role
-- Identify the legal representative of the company
-- If the company has a sole shareholder (socio unico), state this explicitly
-  using correct Italian legal terminology
-
-Write each entity as a narrative paragraph — do not create a list or table.
-The section should read as a declarative description, as in a notarial act.
-
-Target length: 400–650 words.',
-  'Revise the existing "Struttura Partecipativa" section according to the
-instructions provided. This is a legal declaration — apply corrections
-precisely. Verify names, percentages, and corporate relationships match the
-data in the instructions. Do not invent information. Return only the revised
-section text.',
+  '',
+  '',
   '[
+    {
+      "key": "document_reference",
+      "label": "Documento di riferimento",
+      "type": "document_reference",
+      "hint": "Collegamento a un documento di riferimento. La visualizzazione del link verrà gestita in un passaggio successivo.",
+      "required": false
+    },
     {
       "key": "visura_pdf",
       "label": "Visura Camerale (PDF)",
@@ -338,7 +295,39 @@ ON CONFLICT (id) DO UPDATE SET
 
 -- Backfill current step copies after step-schema contract changes
 UPDATE framework_steps
-SET form_schema = '[
+SET
+  system_prompt_template = '',
+  refine_prompt_template = '',
+  form_schema = '[
+    {"key": "program_title", "label": "Titolo del programma", "type": "project_detail", "placeholder": "es. Nuovo Patent Box 2025", "required": true, "hint": "Collegato al titolo del documento."},
+    {"key": "company_name", "label": "Ragione sociale", "type": "client_detail", "placeholder": "es. Acme S.r.l.", "required": true, "hint": "Collegato alla scheda cliente."},
+    {"key": "tax_year", "label": "Anno di imposta", "type": "project_detail", "placeholder": "es. 2026", "required": true, "hint": "Collegato ai dettagli progetto."},
+    {"key": "legal_representative", "label": "Legale rappresentante", "type": "client_detail", "placeholder": "es. Mario Rossi", "required": true, "hint": "Collegato alla scheda cliente."}
+  ]'
+WHERE id = '11111111-0000-0000-0000-000000000001';
+
+UPDATE framework_steps
+SET
+  system_prompt_template = '',
+  refine_prompt_template = '',
+  form_schema = '[
+    {"key": "tax_year", "label": "Anno di imposta", "type": "project_detail", "placeholder": "es. 2026", "required": true, "hint": "Collegato ai dettagli progetto."},
+    {"key": "legal_representative", "label": "Legale rappresentante", "type": "client_detail", "placeholder": "es. Mario Rossi", "required": true, "hint": "Collegato alla scheda cliente."}
+  ]'
+WHERE id = '11111111-0000-0000-0000-000000000002';
+
+UPDATE framework_steps
+SET
+  system_prompt_template = '',
+  refine_prompt_template = '',
+  form_schema = '[
+  {
+    "key": "document_reference",
+    "label": "Documento di riferimento",
+    "type": "document_reference",
+    "hint": "Collegamento a un documento di riferimento. La visualizzazione del link verrà gestita in un passaggio successivo.",
+    "required": false
+  },
   {
     "key": "visura_pdf",
     "label": "Visura Camerale (PDF)",
@@ -375,14 +364,22 @@ SET form_schema = $schema$[
 WHERE id = '11111111-0000-0000-0000-000000000004';
 
 UPDATE steps s
-SET form_schema = fs.form_schema
+SET
+  form_schema = fs.form_schema,
+  system_prompt_template = fs.system_prompt_template,
+  refine_prompt_template = fs.refine_prompt_template
 FROM framework_steps fs
 WHERE fs.id = s.framework_step_id
   AND fs.id IN (
-    '11111111-0000-0000-0000-000000000003',
-    '11111111-0000-0000-0000-000000000004'
+    '11111111-0000-0000-0000-000000000001',
+    '11111111-0000-0000-0000-000000000002',
+    '11111111-0000-0000-0000-000000000003'
   )
-  AND s.form_schema IS DISTINCT FROM fs.form_schema;
+  AND (
+    s.form_schema IS DISTINCT FROM fs.form_schema
+    OR s.system_prompt_template IS DISTINCT FROM fs.system_prompt_template
+    OR s.refine_prompt_template IS DISTINCT FROM fs.refine_prompt_template
+  );
 
 -- Step 6: Modello Organizzativo (type_c)
 

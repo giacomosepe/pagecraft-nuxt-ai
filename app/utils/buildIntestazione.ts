@@ -7,9 +7,12 @@
 import { formatDateLong } from "~/utils/date";
 import { renderTemplate } from "~/utils/renderTemplate";
 
+export const DEFAULT_LEGAL_CITATION =
+  "Articolo 6 del decreto-legge 21 ottobre 2021, n. 146, convertito, con modificazioni, dalla legge 17 dicembre 2021, n. 215, così come successivamente modificato dalla legge 30 dicembre 2021, n. 234";
+
 export interface IntestazioneParams {
   programTitle: string;
-  legalCitation: string;
+  legalCitation?: string;
   companyName: string;
   companyForm: string;
   legalRepresentative: string;
@@ -29,7 +32,7 @@ export function buildIntestazione({
   const company = companyForm ? `${companyName} ${companyForm}`.trim() : companyName;
   const year = taxYear ?? "[ANNO DI IMPOSTA]";
   const rep = legalRepresentative || "[LEGALE RAPPRESENTANTE]";
-  const citation = legalCitation || "[CITAZIONE NORMATIVA]";
+  const citation = legalCitation || DEFAULT_LEGAL_CITATION;
   const title = programTitle || "[TITOLO DEL PROGRAMMA]";
   const date = formatDateLong();
 

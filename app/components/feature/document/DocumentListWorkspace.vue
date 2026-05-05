@@ -4,6 +4,7 @@ import type { DocumentListItem } from "~/types/app.types";
 const props = defineProps<{
   documents?: DocumentListItem[] | null;
   pending?: boolean;
+  errorMsg?: string;
   refreshDocuments?: () => Promise<unknown>;
 }>();
 
@@ -189,6 +190,16 @@ async function confirmDelete(): Promise<void> {
         </UButton>
       </template>
     </BasePageHeader>
+
+    <UAlert
+      v-if="errorMsg"
+      color="error"
+      variant="soft"
+      icon="i-lucide-circle-alert"
+      title="Caricamento documenti non riuscito"
+      :description="errorMsg"
+      class="mb-6"
+    />
 
     <UAlert
       v-if="feedback"

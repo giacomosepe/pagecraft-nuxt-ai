@@ -29,7 +29,7 @@ const emit = defineEmits<{
 }>();
 
 const showExpandModal = ref(false);
-const showEditorModal = ref(false);
+const isEditingInline = ref(false);
 
 const shouldFormatStruttura = computed(() => props.activeStep?.order === 3);
 const outputIsRichHtml = computed(() => isRichTextHtml(props.output));
@@ -37,19 +37,19 @@ const safeOutputHtml = computed(() => sanitizeRichTextHtml(props.output));
 const canRefineWithAi = computed(() =>
   props.activeStep?.step_type === "type_c" && Boolean(props.output) && !props.isGenerating,
 );
+const documentTextClass = "document-output text-justify text-[12px] leading-7 text-slate-700";
 
-function confirmEditedOutput(value: string): void {
+function updateInlineOutput(value: string): void {
   emit("updateOutput", value);
-  showEditorModal.value = false;
 }
 
 function openEditor(): void {
   showExpandModal.value = false;
-  showEditorModal.value = true;
+  isEditingInline.value = true;
 }
 
-function cancelEditOutput(): void {
-  showEditorModal.value = false;
+function closeInlineEditor(): void {
+  isEditingInline.value = false;
 }
 
 function outputSections(text: string): { title: string; paragraphs: string[] }[] {
@@ -131,9 +131,17 @@ function highlightedParts(paragraph: string): { text: string; isPlaceholder: boo
       v-if="output"
       class="mx-auto w-full max-w-3xl bg-white px-1 py-2 sm:px-4"
     >
+      <InlineRichTextEditor
+        v-if="isEditingInline"
+        :model-value="output"
+        min-height-class="min-h-[520px]"
+        @update:model-value="updateInlineOutput"
+      />
+
       <div
-        v-if="outputIsRichHtml"
-        class="rich-output text-sm leading-7 text-slate-700"
+        v-else-if="outputIsRichHtml"
+        class="rich-output"
+        :class="documentTextClass"
         v-html="safeOutputHtml"
       />
 
@@ -152,7 +160,7 @@ function highlightedParts(paragraph: string): { text: string; isPlaceholder: boo
           <p
             v-for="paragraph in section.paragraphs"
             :key="paragraph"
-            class="text-sm leading-7 text-slate-700"
+            :class="documentTextClass"
           >
             <template
               v-for="(part, index) in highlightedParts(paragraph)"
@@ -172,7 +180,8 @@ function highlightedParts(paragraph: string): { text: string; isPlaceholder: boo
 
       <p
         v-else
-        class="whitespace-pre-wrap text-sm leading-7 text-slate-700"
+        class="whitespace-pre-wrap"
+        :class="documentTextClass"
       >
         {{ output }}
       </p>
@@ -201,7 +210,10 @@ function highlightedParts(paragraph: string): { text: string; isPlaceholder: boo
           >
             {{ section.title }}
           </h4>
-          <p class="whitespace-pre-wrap text-sm leading-7 text-slate-600">
+          <p
+            class="whitespace-pre-wrap"
+            :class="documentTextClass"
+          >
             <template
               v-for="(part, partIndex) in section.parts"
               :key="`${sectionIndex}-${partIndex}`"
@@ -217,25 +229,6 @@ function highlightedParts(paragraph: string): { text: string; isPlaceholder: boo
           </p>
         </section>
 
-        <div
-          v-if="preview.tokens.length"
-          class="mt-6 flex flex-wrap gap-2"
-        >
-          <span
-            v-for="field in preview.tokens"
-            :key="field.key"
-            class="inline-flex items-center rounded-md bg-violet-50 px-2 py-1 text-xs font-semibold text-violet-700 ring-1 ring-violet-100"
-          >
-            {{ field.label }}
-          </span>
-        </div>
-
-        <div
-          v-else
-          class="mt-6 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-500"
-        >
-          Nessuna variabile richiesta per questo step.
-        </div>
       </div>
     </div>
 
@@ -263,11 +256,11 @@ function highlightedParts(paragraph: string): { text: string; isPlaceholder: boo
           color="neutral"
           variant="outline"
           size="sm"
-          icon="i-lucide-pencil"
+          :icon="isEditingInline ? 'i-lucide-check' : 'i-lucide-pencil'"
           class="rounded-xl bg-white"
-          @click="openEditor"
+          @click="isEditingInline ? closeInlineEditor() : openEditor()"
         >
-          Modifica testo
+          {{ isEditingInline ? "Fine modifica" : "Modifica testo" }}
         </UButton>
         <UButton
           v-if="activeStep?.step_type === 'type_c'"
@@ -305,7 +298,11 @@ function highlightedParts(paragraph: string): { text: string; isPlaceholder: boo
   </EditorPanel>
 
   <!-- Expand modal -->
-  <UModal v-model:open="showExpandModal" :ui="{ content: 'max-w-4xl' }">
+  <UModal
+    v-if="showExpandModal"
+    v-model:open="showExpandModal"
+    :ui="{ content: 'max-w-4xl' }"
+  >
     <template #content>
       <div class="flex max-h-[80vh] flex-col bg-white">
         <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
@@ -329,12 +326,14 @@ function highlightedParts(paragraph: string): { text: string; isPlaceholder: boo
         <div class="flex-1 overflow-y-auto px-6 py-6">
           <div
             v-if="outputIsRichHtml"
-            class="rich-output text-sm leading-7 text-slate-700"
+            class="rich-output"
+            :class="documentTextClass"
             v-html="safeOutputHtml"
           />
           <p
             v-else
-            class="whitespace-pre-wrap text-sm leading-7 text-slate-700"
+            class="whitespace-pre-wrap"
+            :class="documentTextClass"
           >
             {{ output }}
           </p>
@@ -394,20 +393,18 @@ function highlightedParts(paragraph: string): { text: string; isPlaceholder: boo
       </div>
     </template>
   </UModal>
-
-  <TextEditorModal
-    v-if="showEditorModal"
-    title="Modifica testo"
-    :content="output"
-    confirm-label="Applica modifiche"
-    :on-confirm="confirmEditedOutput"
-    :on-cancel="cancelEditOutput"
-  />
 </template>
 
 <style scoped>
 .rich-output :deep(p) {
   margin: 0 0 1rem;
+}
+
+.document-output,
+.document-output :deep(*) {
+  font-size: 12px;
+  line-height: 1.75rem;
+  text-align: justify;
 }
 
 .rich-output :deep(ul),

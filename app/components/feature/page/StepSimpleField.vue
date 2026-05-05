@@ -12,9 +12,19 @@ const emit = defineEmits<{
 }>();
 
 const inputType = computed(() => {
-  if (props.field.key === "esercizio_fiscale") return "number";
+  if (
+    props.field.key === "esercizio_fiscale" ||
+    props.field.key === "tax_year" ||
+    props.field.key === "anno_di_imposta"
+  ) return "number";
   return props.field.type === "number" ? "number" : "text";
 });
+
+const isYearField = computed(() =>
+  props.field.key === "esercizio_fiscale" ||
+  props.field.key === "tax_year" ||
+  props.field.key === "anno_di_imposta",
+);
 
 function toggleMultiselectValue(option: string): void {
   const current = Array.isArray(props.modelValue)
@@ -87,9 +97,9 @@ function toggleMultiselectValue(option: string): void {
       :model-value="String(modelValue ?? '')"
       :placeholder="field.placeholder ?? ''"
       :type="inputType"
-      :min="field.key === 'esercizio_fiscale' ? 2020 : undefined"
-      :max="field.key === 'esercizio_fiscale' ? 2035 : undefined"
-      :step="field.key === 'esercizio_fiscale' ? 1 : undefined"
+      :min="isYearField ? 2020 : undefined"
+      :max="isYearField ? 2035 : undefined"
+      :step="isYearField ? 1 : undefined"
       class="w-full"
       :ui="{
         base: 'w-full rounded-2xl border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-violet-300 focus:ring-violet-200',

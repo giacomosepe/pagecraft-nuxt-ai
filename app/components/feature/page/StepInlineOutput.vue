@@ -28,7 +28,7 @@ const emit = defineEmits<{
 			<StepStatusPill :status="status" />
 		</div>
 
-		<p class="whitespace-pre-wrap text-sm leading-7 text-slate-700">
+		<p class="whitespace-pre-wrap text-justify text-[12px] leading-7 text-slate-700">
 			{{ output }}
 		</p>
 

@@ -76,8 +76,8 @@ const partecipateCount = computed(() => (props.result?.partecipate ?? props.resu
     :hint="field.hint"
     :required="field.required"
   >
-    <div class="space-y-4 rounded-[24px] border border-slate-200 bg-white p-4 sm:p-5">
-      <div class="flex flex-col gap-3 rounded-[20px] border border-dashed border-slate-300 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+    <div class="space-y-3">
+      <div class="rounded-lg border border-dashed border-slate-300 bg-white px-3 py-3">
         <input
           ref="inputRef"
           type="file"
@@ -87,63 +87,68 @@ const partecipateCount = computed(() => (props.result?.partecipate ?? props.resu
           @change="onChange"
         />
 
-	      <UButton
-          type="button"
-          variant="outline"
-          color="neutral"
-          size="sm"
-          icon="i-lucide-paperclip"
-          class="rounded-xl border-slate-300 bg-white"
-          :disabled="disabled || isExtracting"
-          @click="inputRef?.click()"
-        >
-          Scegli file
-        </UButton>
+        <div class="flex items-start justify-between gap-3">
+          <button
+            type="button"
+            class="min-w-0 text-left text-xs leading-5"
+            :class="selectedFile || savedValue ? 'text-slate-700' : 'text-slate-500'"
+            :disabled="disabled || isExtracting"
+            @click="inputRef?.click()"
+          >
+            {{ selectedFile?.name ?? (savedValue ? savedFilename : 'Nessun file selezionato') }}
+          </button>
 
-        <span
-          class="text-xs leading-5"
-          :class="selectedFile ? 'text-slate-700' : 'text-slate-500'"
-        >
-          {{ selectedFile?.name ?? 'Nessun file selezionato' }}
-        </span>
+          <UButton
+            v-if="selectedFile || savedValue"
+            variant="ghost"
+            color="error"
+            size="xs"
+            icon="i-lucide-trash-2"
+            class="shrink-0 rounded-md"
+            aria-label="Cancella file"
+            :disabled="disabled || isExtracting"
+            @click="clearFile"
+          />
+        </div>
+
+        <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+          <UButton
+            variant="link"
+            color="primary"
+            size="xs"
+            class="px-0"
+            :disabled="disabled || isExtracting"
+            @click="inputRef?.click()"
+          >
+            Scegli file
+          </UButton>
+
+          <UButton
+            variant="link"
+            color="primary"
+            size="xs"
+            class="px-0"
+            :loading="isExtracting"
+            :disabled="!selectedFile || disabled || isExtracting"
+            @click="emit('extract')"
+          >
+            Estrai dalla visura
+          </UButton>
+
+          <UButton
+            v-if="selectedFile"
+            variant="link"
+            color="neutral"
+            size="xs"
+            icon="i-lucide-eye"
+            class="px-0 text-slate-600 hover:text-slate-900"
+            :disabled="disabled || isExtracting"
+            @click="emit('editExtractionRule')"
+          >
+            Regola di estrazione
+          </UButton>
+        </div>
       </div>
-
-      <UButton
-        size="sm"
-        :variant="selectedFile ? 'solid' : 'outline'"
-        :color="selectedFile ? 'primary' : 'neutral'"
-        icon="i-lucide-scan-text"
-        class="rounded-xl sm:w-fit"
-        :class="selectedFile ? '' : 'border-slate-300 bg-white'"
-        :loading="isExtracting"
-        :disabled="!selectedFile || disabled || isExtracting"
-        @click="emit('extract')"
-      >
-	        Estrai dalla visura
-	      </UButton>
-	      <UButton
-	        v-if="selectedFile || savedValue"
-	        variant="link"
-	        color="error"
-	        size="sm"
-	        icon="i-lucide-trash-2"
-	        class="ml-1 w-fit px-1"
-	        aria-label="Cancella file"
-	        :disabled="disabled || isExtracting"
-	        @click="clearFile"
-	      />
-	      <UButton
-	        v-if="selectedFile"
-	        variant="link"
-	        color="neutral"
-	        size="sm"
-	        icon="i-lucide-eye"
-	        class="w-fit px-0 text-slate-600 hover:text-slate-900"
-	        :disabled="disabled || isExtracting"
-	        @click="emit('editExtractionRule')"
-	      >
-	        Regola di estrazione
-	      </UButton>
 
       <UAlert
         v-if="error"
@@ -156,7 +161,7 @@ const partecipateCount = computed(() => (props.result?.partecipate ?? props.resu
 
       <div
         v-if="result"
-        class="rounded-[20px] border border-emerald-200 bg-emerald-50 p-4"
+        class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3"
       >
         <div class="mb-2 flex items-center gap-1.5">
           <UIcon
@@ -212,7 +217,7 @@ const partecipateCount = computed(() => (props.result?.partecipate ?? props.resu
 
       <div
         v-else-if="savedValue && !isExtracting"
-        class="rounded-[20px] border border-slate-200 bg-slate-50 p-4"
+        class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3"
       >
         <div class="flex items-center gap-1.5">
           <UIcon

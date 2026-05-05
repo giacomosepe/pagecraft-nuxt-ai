@@ -85,6 +85,15 @@ Then apply SQL in Supabase SQL editor in this order:
 
 ---
 
+## Step prompt column rule
+
+`type_a` and `type_b` steps that do not use AI generation must have
+`system_prompt_template` and `refine_prompt_template` set to `''` in the seed.
+Only `type_c` steps carry real prompt content.
+A non-empty prompt on a non-generating step is always wrong.
+
+---
+
 ## What not to do
 
 - Never add a `status` column to `folders`.
