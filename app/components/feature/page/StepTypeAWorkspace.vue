@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import type { GenerativeRuleSection } from "~/types/generative-rule";
-
 const props = defineProps<{
 	stepId: string;
 	templateContent: string;
@@ -13,24 +11,6 @@ const emit = defineEmits<{
 }>();
 
 const modalOpen = ref(false);
-const appliedRules = ref<Record<string, GenerativeRuleSection[]>>({});
-
-const baseRuleSections = computed<GenerativeRuleSection[]>(() => [
-	{
-		key: "template",
-		label: "Regola",
-		content: props.templateContent,
-	},
-]);
-const appliedRuleSections = computed(
-	() => appliedRules.value[props.stepId] ?? null,
-);
-const activeRuleSections = computed(
-	() => appliedRuleSections.value ?? baseRuleSections.value,
-);
-const appliedRuleContent = computed(
-	() => appliedRuleSections.value?.find((section) => section.key === "template")?.content ?? null,
-);
 
 watch(
 	() => props.stepId,
@@ -38,26 +18,15 @@ watch(
 		modalOpen.value = false;
 	},
 );
-
-function applyRule(sections: GenerativeRuleSection[]): void {
-	appliedRules.value = {
-		...appliedRules.value,
-		[props.stepId]: sections,
-	};
-}
-
-function cancelRuleEdit(): void {
-	modalOpen.value = false;
-}
 </script>
 
 <template>
 	<div class="flex flex-col items-end gap-2 border-t border-slate-200 pt-5">
 		<StepTypeAActionButton
-			label="Aggiorna documento"
+			label="Inserisci variabili"
 			:loading="isGenerating"
 			:disabled="actionDisabled"
-			@click="emit('produce', appliedRuleContent)"
+			@click="emit('produce', null)"
 		/>
 		<UButton
 			variant="link"
@@ -70,13 +39,37 @@ function cancelRuleEdit(): void {
 			Template documento
 		</UButton>
 
-		<GenerativeRuleModal
+		<UModal
 			v-model:open="modalOpen"
-			title="Template documento"
-			:sections="activeRuleSections"
-			confirm-label="Applica"
-			@cancel="cancelRuleEdit"
-			@save="applyRule"
-		/>
+			:ui="{ content: 'max-w-[min(860px,calc(100vw-32px))]' }"
+		>
+			<template #content>
+				<div class="flex max-h-[82vh] flex-col bg-white">
+					<div class="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+						<div>
+							<p class="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+								Template
+							</p>
+							<h3 class="mt-1 text-base font-semibold text-slate-900">
+								Template documento
+							</h3>
+						</div>
+						<UButton
+							icon="i-lucide-x"
+							color="neutral"
+							variant="ghost"
+							size="sm"
+							aria-label="Chiudi"
+							@click="modalOpen = false"
+						/>
+					</div>
+					<div class="flex-1 overflow-y-auto px-5 py-5">
+						<p class="whitespace-pre-wrap text-sm leading-7 text-slate-700">
+							{{ templateContent }}
+						</p>
+					</div>
+				</div>
+			</template>
+		</UModal>
 	</div>
 </template>

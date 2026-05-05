@@ -8,7 +8,7 @@
 import type { Ref } from "vue";
 import type { StepRecord } from "~/types/app.types";
 import { buildIntestazione } from "~/utils/buildIntestazione";
-import { buildStepPreview } from "~/utils/buildStepPreview";
+import { buildStepPreview, stepPreviewToText } from "~/utils/buildStepPreview";
 
 definePageMeta({ middleware: "auth" });
 
@@ -87,12 +87,6 @@ watch(activeStepIndex, () => {
 	stepFormValues.value = {};
 });
 
-const typeAOutput = computed<string | null>(() => {
-	if (activeStep.value?.step_type !== "type_a") return null;
-	if (activeStep.value.order !== 1) return null;
-	return buildTypeAOutput();
-});
-
 function buildTypeAOutput(templateOverride: string | null = null): string | null {
 	if (activeStep.value?.step_type !== "type_a") return null;
 	if (activeStep.value.order !== 1) return null;
@@ -115,7 +109,20 @@ const stepPreview = computed(() =>
 		client: clientData.value,
 		taxYear: page.value?.tax_year ?? null,
 		formValues: stepFormValues.value,
+		showTokensOnly: activeStep.value?.step_type === "type_a" && !output.value,
 	}),
+);
+
+const typeATemplateText = computed(() =>
+	stepPreviewToText(
+		buildStepPreview({
+			step: activeStep.value ?? null,
+			client: clientData.value,
+			taxYear: page.value?.tax_year ?? null,
+			formValues: {},
+			showTokensOnly: activeStep.value?.step_type === "type_a",
+		}),
+	),
 );
 
 function produceTypeA(templateOverride: string | null): void {
@@ -123,10 +130,15 @@ function produceTypeA(templateOverride: string | null): void {
 	if (nextOutput !== null) output.value = nextOutput;
 }
 
-// Push assembled text into the shared output ref so StepOutput renders it live
-watch(typeAOutput, (val) => {
-	if (val !== null) output.value = val;
-});
+function discardOutput(): void {
+	if (activeStep.value?.step_type === "type_a") {
+		output.value = "";
+		errorMsg.value = "";
+		return;
+	}
+
+	discard();
+}
 
 function goNext(): void {
 	if (!canGoNext.value) return;
@@ -280,7 +292,7 @@ async function exportWord(): Promise<void> {
 						:active-step="activeStep ?? null"
 						:can-go-next="canGoNext"
 						@commit="commit"
-						@discard="discard"
+						@discard="discardOutput"
 						@next="goNext"
 					/>
 				</template>
@@ -297,13 +309,14 @@ async function exportWord(): Promise<void> {
 						:output="output"
 						:client-data="clientData"
 						:tax-year="page.tax_year"
+						:type-a-template-content="typeATemplateText"
 						@generate="generate"
 						@refine="refine"
 						@form-values-change="onFormValuesChange"
 						@produce-type-a="produceTypeA"
 						@generate-premessa="generatePremessa"
 						@commit="commit"
-						@discard="discard"
+						@discard="discardOutput"
 						@next="goNext"
 						@conferma-struttura="output = $event"
 					/>

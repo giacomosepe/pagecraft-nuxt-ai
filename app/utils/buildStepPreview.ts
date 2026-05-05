@@ -9,6 +9,7 @@ export interface StepPreviewParams {
 	client: ClientRecord | null;
 	taxYear: number | null;
 	formValues: Record<string, unknown>;
+	showTokensOnly?: boolean;
 }
 
 export interface StepPreviewPart {
@@ -69,13 +70,14 @@ function clientCompanyName(client: ClientRecord | null): string {
 }
 
 function buildStepOnePreview(params: StepPreviewParams): StepPreview {
+	const companyName = params.showTokensOnly ? token("company_name") : clientCompanyName(params.client);
 	const rendered = buildIntestazione({
-		programTitle: textValue(params.formValues.program_title) || token("program_title"),
-		legalCitation: textValue(params.formValues.legal_citation) || token("legal_citation"),
-		companyName: clientCompanyName(params.client),
+		programTitle: params.showTokensOnly ? token("program_title") : textValue(params.formValues.program_title) || token("program_title"),
+		legalCitation: params.showTokensOnly ? token("legal_citation") : textValue(params.formValues.legal_citation) || token("legal_citation"),
+		companyName,
 		companyForm: "",
-		legalRepresentative: params.client?.legal_representative ?? token("legal_representative"),
-		taxYear: params.taxYear ?? token("tax_year"),
+		legalRepresentative: params.showTokensOnly ? token("legal_representative") : params.client?.legal_representative ?? token("legal_representative"),
+		taxYear: params.showTokensOnly ? token("tax_year") : params.taxYear ?? token("tax_year"),
 	});
 
 	return {
@@ -93,9 +95,13 @@ function buildStepOnePreview(params: StepPreviewParams): StepPreview {
 }
 
 function buildStepTwoPreview(params: StepPreviewParams): StepPreview {
-	const companyName = clientCompanyName(params.client);
-	const taxYear = textValue(params.formValues.esercizio_fiscale) || String(params.taxYear ?? token("esercizio_fiscale"));
-	const legalRepresentative = textValue(params.formValues.legale_rappresentante) ||
+	const companyName = params.showTokensOnly ? token("company_name") : clientCompanyName(params.client);
+	const taxYear = params.showTokensOnly
+		? token("esercizio_fiscale")
+		: textValue(params.formValues.esercizio_fiscale) || String(params.taxYear ?? token("esercizio_fiscale"));
+	const legalRepresentative = params.showTokensOnly
+		? token("legal_representative")
+		: textValue(params.formValues.legale_rappresentante) ||
 		params.client?.legal_representative ||
 		token("legal_representative");
 	const date = formatDateLong();
@@ -127,7 +133,7 @@ Il sottoscritto ${legalRepresentative}, in qualità di legale rappresentante del
 
 function buildStepThreePreview(params: StepPreviewParams): StepPreview {
 	const extractionField = fieldTokens(params.step).find((field) => field.key === "visura_pdf");
-	const extracted = params.formValues.visura_pdf;
+	const extracted = params.formValues.visura_pdf ?? clientProfileExtraction(params.client);
 	const assembled = assembleStruttura(extracted, undefined, clientCompanyName(params.client));
 	const preview = assembled.trim() || `SOCI
 
@@ -145,6 +151,30 @@ ${token("visura_pdf")} genererà i paragrafi relativi alle società partecipate,
 			extractionField ?? { key: "visura_pdf", label: "Visura camerale" },
 			{ key: "note_integrative", label: "Note integrative" },
 		],
+	};
+}
+
+function clientProfileExtraction(client: ClientRecord | null): unknown {
+	if (!client?.soci?.length && !client?.partecipate?.length) return null;
+
+	return {
+		soci: (client.soci ?? []).map((socio) => ({
+			entity_type: socio.tipo ?? "persona_giuridica",
+			nome: socio.ragione_sociale,
+			percentuale: socio.quota,
+			indirizzo: socio.sede,
+			cf: socio.codice_fiscale,
+			legale_rappresentante: socio.legale_rappresentante,
+		})),
+		partecipate: (client.partecipate ?? []).map((partecipata) => ({
+			nome: partecipata.ragione_sociale,
+			forma_giuridica: null,
+			paese: null,
+			percentuale_detenuta: partecipata.quota,
+			indirizzo: partecipata.sede,
+			cf: partecipata.codice_fiscale,
+			legale_rappresentante: partecipata.legale_rappresentante,
+		})),
 	};
 }
 
@@ -193,4 +223,15 @@ export function buildStepPreview(params: StepPreviewParams): StepPreview {
 		],
 		tokens: fieldTokens(params.step),
 	};
+}
+
+export function stepPreviewToText(preview: StepPreview): string {
+	return preview.sections
+		.map((section) => {
+			const body = section.parts
+				.map((part) => part.isToken ? `{{ ${part.text} }}` : part.text)
+				.join("");
+			return section.title ? `${section.title}\n\n${body}` : body;
+		})
+		.join("\n\n");
 }

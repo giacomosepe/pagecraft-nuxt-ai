@@ -66,7 +66,7 @@ export function usePage(pageId: string) {
       const { data: c } = await supabase
         .from("clients")
         .select(
-          "id, name, company_name, industry_sector, employee_count, legal_representative, vat_number, codice_fiscale, registered_address, company_form, board_members, shareholders, subsidiaries",
+          "id, name, company_name, industry_sector, employee_count, legal_representative, vat_number, codice_fiscale, registered_address, company_form, board_members, soci, partecipate, shareholders, subsidiaries",
         )
         .eq("id", clientId)
         .single();

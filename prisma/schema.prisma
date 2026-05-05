@@ -57,6 +57,8 @@ model Client {
   // Variable nested structures — JSONB is correct here
   shareholders Json? @db.JsonB
   subsidiaries Json? @db.JsonB
+  soci         Json? @db.JsonB
+  partecipate Json? @db.JsonB
 
   // Set manually by operator — never derived
   status String @default("aperto")

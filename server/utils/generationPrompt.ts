@@ -52,6 +52,34 @@ function formatShareholders(shareholders: any[]): string {
 	}).join("\n\n");
 }
 
+function normalizeSoci(soci: any[] | null | undefined): any[] {
+	if (!soci?.length) return [];
+	return soci.map((s) => {
+		if (s.tipo === "persona_fisica") {
+			return {
+				type: "persona_fisica",
+				first_name: s.ragione_sociale ?? "",
+				last_name: "",
+				place_of_birth: "",
+				date_of_birth: "",
+				address: s.sede ?? "",
+				codice_fiscale: s.codice_fiscale ?? "",
+				quota_pct: s.quota ?? null,
+			};
+		}
+
+		return {
+			type: "persona_giuridica",
+			company_name: s.ragione_sociale ?? "",
+			company_form: "",
+			registered_address: s.sede ?? "",
+			codice_fiscale: s.codice_fiscale ?? "",
+			quota_pct: s.quota ?? null,
+			legal_rep: s.legale_rappresentante ?? null,
+		};
+	});
+}
+
 function formatSubsidiaries(subsidiaries: any[]): string {
 	if (!subsidiaries?.length) return "Nessuna società partecipata registrata.";
 	return subsidiaries.map((s: any, i: number) => [
@@ -61,6 +89,20 @@ function formatSubsidiaries(subsidiaries: any[]): string {
 		`  Quota detenuta: ${s.quota_held_pct != null ? `${s.quota_held_pct}%` : "[N/D]"}`,
 		`  Legale rappresentante: ${s.legal_rep ?? "[DA COMPLETARE]"}`,
 	].join("\n")).join("\n\n");
+}
+
+function normalizePartecipate(partecipate: any[] | null | undefined): any[] {
+	if (!partecipate?.length) return [];
+	return partecipate.map((p) => ({
+		type: p.tipo ?? "persona_giuridica",
+		company_name: p.ragione_sociale ?? "",
+		company_form: "",
+		registered_address: p.sede ?? "",
+		country: "Italia",
+		codice_fiscale: p.codice_fiscale ?? null,
+		quota_held_pct: p.quota ?? null,
+		legal_rep: p.legale_rappresentante ?? null,
+	}));
 }
 
 function serializeFormData(
@@ -136,6 +178,8 @@ export function buildGenerationPrompt({
 	const page = step.page;
 	const c = page?.client;
 	const taxYear = page?.tax_year;
+	const shareholders = c?.soci?.length ? normalizeSoci(c.soci) : c?.shareholders;
+	const subsidiaries = c?.partecipate?.length ? normalizePartecipate(c.partecipate) : c?.subsidiaries;
 	const companyContext = c
 		? [
 			`Ragione sociale: ${c.company_name ?? c.name ?? "N/D"} ${c.company_form ?? ""}`.trim(),
@@ -149,8 +193,8 @@ export function buildGenerationPrompt({
 			c.board_members?.length
 				? `Membri CdA: ${(c.board_members as string[]).join(", ")}`
 				: null,
-			`\nAzionisti:\n${formatShareholders(c.shareholders)}`,
-			`\nSocietà partecipate:\n${formatSubsidiaries(c.subsidiaries)}`,
+			`\nAzionisti:\n${formatShareholders(shareholders)}`,
+			`\nSocietà partecipate:\n${formatSubsidiaries(subsidiaries)}`,
 		].filter(Boolean).join("\n")
 		: "";
 

@@ -19,7 +19,7 @@ export function useClient(clientId: string) {
       const { data, error } = await supabase
         .from("clients")
         .select(
-          "id, name, status, updated_at, company_name, industry_sector, employee_count, legal_representative, vat_number, codice_fiscale, registered_address, company_form, folders(id, program_name, updated_at, pages(id, status, updated_at))",
+          "id, name, status, updated_at, company_name, industry_sector, employee_count, legal_representative, vat_number, codice_fiscale, registered_address, company_form, soci, partecipate, shareholders, subsidiaries, folders(id, program_name, updated_at, pages(id, status, updated_at))",
         )
         .eq("id", clientId)
         .single();

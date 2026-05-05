@@ -62,7 +62,7 @@ export default defineEventHandler(async (event) => {
         client:clients (
           name, company_name, company_form, industry_sector, employee_count,
           legal_representative, vat_number, codice_fiscale, registered_address,
-          board_members, shareholders, subsidiaries
+          board_members, soci, partecipate, shareholders, subsidiaries
         )
       )
     `,

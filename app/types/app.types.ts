@@ -7,6 +7,13 @@
 // Add to this file whenever a page or component defines a local type
 // that is or could be shared with another file.
 
+import type {
+  ClientProfilePartecipata,
+  ClientProfileSocio,
+  Shareholder,
+  Subsidiary,
+} from "~/types/company.types";
+
 // ─── Client ───────────────────────────────────────────────────────────────────
 
 export interface ClientListItem {
@@ -42,6 +49,10 @@ export interface ClientDetail {
   codice_fiscale: string | null;
   registered_address: string | null;
   company_form: string | null;
+  soci?: ClientProfileSocio[] | null;
+  partecipate?: ClientProfilePartecipata[] | null;
+  shareholders?: Shareholder[] | null;
+  subsidiaries?: Subsidiary[] | null;
 }
 
 // ─── Folder ───────────────────────────────────────────────────────────────────

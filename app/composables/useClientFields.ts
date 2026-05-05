@@ -13,7 +13,12 @@
 //   - create.post.ts: to build the companyContext string
 //   - Future Word export: to substitute {{variables}} in document templates
 
-import type { Shareholder, Subsidiary } from "~/types/company.types";
+import type {
+  ClientProfilePartecipata,
+  ClientProfileSocio,
+  Shareholder,
+  Subsidiary,
+} from "~/types/company.types";
 import { formatISODate } from "~/utils/date";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -30,6 +35,8 @@ export interface ClientRecord {
   codice_fiscale?: string | null;
   registered_address?: string | null;
   board_members?: string[] | null;
+  soci?: ClientProfileSocio[] | null;
+  partecipate?: ClientProfilePartecipata[] | null;
   shareholders?: Shareholder[] | null;
   subsidiaries?: Subsidiary[] | null;
 }
@@ -73,7 +80,7 @@ export function useClientFields(client: ClientRecord | null | undefined, taxYear
     board.forEach((m, i) => { map[`board_members.${i}`] = m; });
 
     // Shareholders — indexed, with shorthand helpers
-    const shareholders = (client.shareholders ?? []) as Shareholder[];
+    const shareholders = normalizedShareholders(client);
     shareholders.forEach((s, i) => {
       const prefix = `shareholders.${i}`;
       map[`${prefix}.type`] = s.type;
@@ -103,7 +110,7 @@ export function useClientFields(client: ClientRecord | null | undefined, taxYear
     });
 
     // Subsidiaries — same pattern
-    const subsidiaries = (client.subsidiaries ?? []) as Subsidiary[];
+    const subsidiaries = normalizedSubsidiaries(client);
     subsidiaries.forEach((s, i) => {
       const prefix = `subsidiaries.${i}`;
       if (s.type === "persona_fisica") {
@@ -148,7 +155,7 @@ export function useClientFields(client: ClientRecord | null | undefined, taxYear
     if (vm.registered_address) lines.push(`Sede legale: ${vm.registered_address}`);
     if (vm.board_members)     lines.push(`Membri CdA: ${vm.board_members}`);
 
-    const shareholders = (client.shareholders ?? []) as Shareholder[];
+    const shareholders = normalizedShareholders(client);
     if (shareholders.length) {
       lines.push("\nAzionisti:");
       shareholders.forEach((s, i) => {
@@ -161,7 +168,7 @@ export function useClientFields(client: ClientRecord | null | undefined, taxYear
       });
     }
 
-    const subsidiaries = (client.subsidiaries ?? []) as Subsidiary[];
+    const subsidiaries = normalizedSubsidiaries(client);
     if (subsidiaries.length) {
       lines.push("\nSocietà partecipate:");
       subsidiaries.forEach((s, i) => {
@@ -228,3 +235,53 @@ function buildCompanyDescription(
 }
 
 // formatISODate is now imported from ~/utils/date
+
+function normalizedShareholders(client: ClientRecord): Shareholder[] {
+  if (client.soci?.length) {
+    return client.soci.map((socio) => {
+      if (socio.tipo === "persona_fisica") {
+        return {
+          type: "persona_fisica",
+          first_name: socio.ragione_sociale ?? "",
+          last_name: "",
+          place_of_birth: "",
+          date_of_birth: "",
+          address: socio.sede ?? "",
+          codice_fiscale: socio.codice_fiscale ?? "",
+          quota_pct: socio.quota,
+        };
+      }
+
+      return {
+        type: "persona_giuridica",
+        company_name: socio.ragione_sociale ?? "",
+        company_form: "",
+        registered_address: socio.sede ?? "",
+        codice_fiscale: socio.codice_fiscale ?? "",
+        quota_pct: socio.quota,
+        legal_rep: socio.legale_rappresentante ?? null,
+        legal_rep_missing: !socio.legale_rappresentante,
+      };
+    });
+  }
+
+  return (client.shareholders ?? []) as Shareholder[];
+}
+
+function normalizedSubsidiaries(client: ClientRecord): Subsidiary[] {
+  if (client.partecipate?.length) {
+    return client.partecipate.map((partecipata) => ({
+      type: "persona_giuridica",
+      company_name: partecipata.ragione_sociale ?? "",
+      company_form: "",
+      registered_address: partecipata.sede ?? "",
+      country: "",
+      codice_fiscale: partecipata.codice_fiscale ?? null,
+      quota_held_pct: partecipata.quota,
+      legal_rep: partecipata.legale_rappresentante ?? null,
+      legal_rep_missing: !partecipata.legale_rappresentante,
+    }));
+  }
+
+  return (client.subsidiaries ?? []) as Subsidiary[];
+}
