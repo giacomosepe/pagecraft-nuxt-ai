@@ -23,7 +23,7 @@ BEGIN
     AND tablename IN (
       'frameworks', 'framework_steps', 'clients', 'pages',
       'folders', 'steps', 'generations', 'files', 'generation_files',
-      'page_context_documents', 'framework_step_examples', 'users'
+      'page_context_documents', 'folder_documents', 'framework_step_examples', 'users'
     )
   LOOP
     EXECUTE format('DROP POLICY IF EXISTS %I ON %I', r.policyname, r.tablename);
@@ -186,6 +186,31 @@ WITH CHECK (
 CREATE POLICY "Users can delete context documents on their own pages"
 ON page_context_documents FOR DELETE TO authenticated
 USING (page_id IN (SELECT id FROM pages WHERE user_id = auth.uid()));
+
+-- ─── folder_documents (owned through folders) ────────────────────────────────
+
+CREATE POLICY "Users can read documents of their own folders"
+ON folder_documents FOR SELECT TO authenticated
+USING (folder_id IN (SELECT id FROM folders WHERE user_id = auth.uid()));
+
+CREATE POLICY "Users can insert documents on their own folders"
+ON folder_documents FOR INSERT TO authenticated
+WITH CHECK (
+  user_id = auth.uid()
+  AND folder_id IN (SELECT id FROM folders WHERE user_id = auth.uid())
+);
+
+CREATE POLICY "Users can update documents on their own folders"
+ON folder_documents FOR UPDATE TO authenticated
+USING (folder_id IN (SELECT id FROM folders WHERE user_id = auth.uid()))
+WITH CHECK (
+  user_id = auth.uid()
+  AND folder_id IN (SELECT id FROM folders WHERE user_id = auth.uid())
+);
+
+CREATE POLICY "Users can delete documents on their own folders"
+ON folder_documents FOR DELETE TO authenticated
+USING (folder_id IN (SELECT id FROM folders WHERE user_id = auth.uid()));
 
 -- ─── generation_files (owned through generations → steps → pages) ─────────────
 

@@ -1,56 +1,146 @@
 <script setup lang="ts">
+import type { DocumentListItem, FolderDocument, FolderDocumentSlot } from "~/types/app.types";
+import { formatDate } from "~/utils/date";
+import { deriveFolderStatus } from "~/utils/folderStatus";
 import { statusLabel } from "~/utils/status";
 
 definePageMeta({ middleware: "auth" });
 
+interface FolderDetailForm {
+	program_name: string;
+	tax_year: string;
+	referente: string;
+}
+
+const MAX_FILE_SIZE = 20 * 1024 * 1024;
+const ACCEPTED_EXTENSIONS = [".pdf", ".doc", ".docx", ".xls", ".xlsx"];
+const ADMIN_SLOTS: { key: FolderDocumentSlot; label: string }[] = [
+	{ key: "contratto", label: "Contratto" },
+	{ key: "additional", label: "Documenti aggiuntivi" },
+];
+
 const supabase = useSupabaseClient();
 const route = useRoute();
 const router = useRouter();
+const toast = useToast();
 const folderId = route.params.id as string;
 
 const { data, pending, refresh } = await useAsyncData(
 	`folder-${folderId}`,
 	async () => {
-		const [folderRes, pagesRes] = await Promise.all([
+		const [folderRes, pagesRes, docsRes] = await Promise.all([
 			supabase
 				.from("folders")
 				.select(
-					"id, program_name, client_id, created_at, clients(name)",
+					"id, name, program_name, tax_year, referente, client_id, created_at, updated_at, clients(id, name, company_name)",
 				)
 				.eq("id", folderId)
 				.single(),
 			supabase
 				.from("pages")
-				.select("id, title, framework_name, status, updated_at")
+				.select("id, title, framework_name, status, updated_at, folder_id, client_id")
 				.eq("folder_id", folderId)
-				.order("created_at", { ascending: true }),
+				.order("updated_at", { ascending: false }),
+			$fetch<FolderDocument[]>("/api/folder-documents", {
+				query: { folderId },
+			}),
 		]);
 		if (folderRes.error) throw folderRes.error;
 		if (pagesRes.error) throw pagesRes.error;
-		return { folder: folderRes.data, pages: pagesRes.data ?? [] };
+		return {
+			folder: folderRes.data,
+			pages: pagesRes.data ?? [],
+			documents: docsRes ?? [],
+		};
 	},
 	{ server: false },
 );
+
 const deleteDialogOpen = ref(false);
-const deleteIntent = ref<
-	| { kind: "project"; id: string }
-	| { kind: "document"; id: string; title: string }
-	| null
->(null);
 const isDeleting = ref(false);
+const isSaving = ref(false);
+const uploadLoading = ref<FolderDocumentSlot | null>(null);
+const deleteLoading = ref<FolderDocumentSlot | null>(null);
+const confirmDeleteSlot = ref<FolderDocumentSlot | null>(null);
 const feedback = ref<{
 	tone: "success" | "error";
 	title: string;
 	description: string;
 } | null>(null);
+const fileErrors = reactive<Record<FolderDocumentSlot, string | null>>({
+	contratto: null,
+	additional: null,
+});
+const form = reactive<FolderDetailForm>({
+	program_name: "",
+	tax_year: "",
+	referente: "",
+});
+const initialSnapshot = ref("");
 
 const clientName = computed(() => {
-	const c = data.value?.folder?.clients;
-	if (!c) return null;
-	return (c as { name: string } | null)?.name ?? null;
+	const client = data.value?.folder?.clients as
+		| { id: string; name: string | null; company_name?: string | null }
+		| null
+		| undefined;
+	return client?.company_name?.trim() || client?.name || null;
 });
 
-const transitionNotice = computed(() => {
+const folderTitle = computed(() =>
+	data.value?.folder?.program_name?.trim() || "Progetto senza nome",
+);
+
+const folderStatus = computed(() => deriveFolderStatus(data.value?.pages ?? []));
+
+const folderStatusClass = computed(() => {
+	switch (folderStatus.value) {
+		case "completato":
+			return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200";
+		case "in_revisione":
+			return "bg-violet-50 text-violet-700 ring-1 ring-violet-200";
+		case "in_lavorazione":
+			return "bg-blue-50 text-blue-700 ring-1 ring-blue-200";
+		default:
+			return "bg-amber-50 text-amber-700 ring-1 ring-amber-200";
+	}
+});
+
+const projectType = computed(() => {
+	const names = Array.from(
+		new Set(
+			(data.value?.pages ?? [])
+				.map((page) => page.framework_name?.trim())
+				.filter(Boolean),
+		),
+	);
+	if (!names.length) return "—";
+	if (names.length === 1) return names[0] ?? "—";
+	return "Multiplo";
+});
+
+const documentRows = computed<DocumentListItem[]>(() =>
+	(data.value?.pages ?? []).map((page) => ({
+		id: page.id,
+		title: page.title,
+		status: page.status,
+		updated_at: page.updated_at,
+		framework_name: page.framework_name,
+		folder_id: page.folder_id,
+		client_id: page.client_id,
+		folders: data.value?.folder
+			? { id: data.value.folder.id, program_name: data.value.folder.program_name }
+			: null,
+		clients: null,
+	})),
+);
+
+const documentCountLabel = computed(() => {
+	const count = documentRows.value.length;
+	return count === 1 ? "1 documento" : `${count} documenti`;
+});
+
+const activeNotice = computed(() => {
+	if (feedback.value) return feedback.value;
 	if (route.query.created !== "documents") return null;
 
 	const count = Number(route.query.count ?? "1");
@@ -58,118 +148,208 @@ const transitionNotice = computed(() => {
 		? {
 				tone: "success" as const,
 				title: "Documenti creati",
-				description: `${count} documenti sono stati aggiunti al progetto e sono pronti per essere completati.`,
+				description: `${count} documenti sono stati aggiunti al progetto.`,
 			}
 		: {
 				tone: "success" as const,
 				title: "Documento creato",
-				description: "Il nuovo documento e stato aggiunto al progetto ed e pronto per essere completato.",
+				description: "Il nuovo documento e stato aggiunto al progetto.",
 			};
 });
 
-const activeNotice = computed(() => feedback.value ?? transitionNotice.value);
+const dirty = computed(() => JSON.stringify(buildPayload()) !== initialSnapshot.value);
 
-const deleteTitle = computed(() => {
-	if (deleteIntent.value?.kind === "document") {
-		return "Eliminare il documento?";
-	}
-
-	return "Eliminare il progetto?";
-});
-
-const deleteDescription = computed(() => {
-	if (deleteIntent.value?.kind === "document") {
-		return `Il documento "${deleteIntent.value.title}" verra rimosso definitivamente. Questa azione non puo essere annullata.`;
-	}
-
-	return "Il progetto e tutti i documenti collegati verranno eliminati definitivamente. Questa azione non puo essere annullata.";
-});
-
-const deleteConfirmLabel = computed(() =>
-	deleteIntent.value?.kind === "document"
-		? "Elimina documento"
-		: "Elimina progetto",
+watch(
+	data,
+	(value) => {
+		if (!value?.folder) return;
+		form.program_name = value.folder.program_name ?? "";
+		form.tax_year = value.folder.tax_year?.toString() ?? "";
+		form.referente = value.folder.referente ?? "";
+		initialSnapshot.value = JSON.stringify(buildPayload());
+	},
+	{ immediate: true },
 );
 
-function formatDate(iso: string): string {
-	const months = [
-		"Gen",
-		"Feb",
-		"Mar",
-		"Apr",
-		"Mag",
-		"Giu",
-		"Lug",
-		"Ago",
-		"Set",
-		"Ott",
-		"Nov",
-		"Dic",
-	];
-	const d = new Date(iso);
-	return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+function cleanText(value: string): string | null {
+	const trimmed = value.trim();
+	return trimmed ? trimmed : null;
+}
+
+function cleanYear(value: string): number | null {
+	const trimmed = value.trim();
+	if (!trimmed) return null;
+	const parsed = Number.parseInt(trimmed, 10);
+	return Number.isFinite(parsed) ? parsed : null;
+}
+
+function buildPayload() {
+	return {
+		program_name: cleanText(form.program_name),
+		tax_year: cleanYear(form.tax_year),
+		referente: cleanText(form.referente),
+	};
+}
+
+function documentForSlot(slot: FolderDocumentSlot): FolderDocument | null {
+	return data.value?.documents.find((document) => document.slot === slot) ?? null;
+}
+
+function formatFileSize(size: number | null): string {
+	if (!size) return "Dimensione non disponibile";
+	if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
+	return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatUploadedAt(value: string | null): string {
+	return value ? formatDate(value) : "data non disponibile";
+}
+
+function isAllowedClientFile(file: File): boolean {
+	const lower = file.name.toLowerCase();
+	return ACCEPTED_EXTENSIONS.some((extension) => lower.endsWith(extension));
+}
+
+async function saveFolderDetails(): Promise<void> {
+	if (!dirty.value || isSaving.value) return;
+
+	isSaving.value = true;
+	feedback.value = null;
+
+	try {
+		const payload = buildPayload();
+		await $fetch("/api/db/mutate", {
+			method: "POST",
+			body: {
+				table: "folders",
+				operation: "update",
+				data: payload,
+				where: { id: folderId },
+			},
+		});
+		initialSnapshot.value = JSON.stringify(payload);
+		await refresh();
+		toast.add({
+			title: "Progetto salvato",
+			description: "I dettagli del progetto sono stati aggiornati.",
+			color: "success",
+		});
+	}
+	catch {
+		feedback.value = {
+			tone: "error",
+			title: "Salvataggio non riuscito",
+			description: "Non siamo riusciti a salvare i dettagli. Riprova tra qualche istante.",
+		};
+	}
+	finally {
+		isSaving.value = false;
+	}
+}
+
+async function handleFileChange(slot: FolderDocumentSlot, event: Event): Promise<void> {
+	const input = event.target as HTMLInputElement;
+	const file = input.files?.[0];
+	input.value = "";
+	if (!file) return;
+
+	fileErrors[slot] = null;
+
+	if (!isAllowedClientFile(file)) {
+		fileErrors[slot] = "Sono accettati solo file PDF, Word o Excel.";
+		return;
+	}
+
+	if (file.size > MAX_FILE_SIZE) {
+		fileErrors[slot] = "Il file supera il limite massimo di 20 MB.";
+		return;
+	}
+
+	uploadLoading.value = slot;
+	feedback.value = null;
+
+	try {
+		const body = new FormData();
+		body.append("folderId", folderId);
+		body.append("slot", slot);
+		body.append("file", file);
+
+		await $fetch("/api/folder-documents/upload", {
+			method: "POST",
+			body,
+		});
+		await refresh();
+		toast.add({
+			title: "File caricato",
+			description: "Il documento amministrativo e stato salvato.",
+			color: "success",
+		});
+	}
+	catch {
+		fileErrors[slot] = "Upload non riuscito. Riprova tra qualche istante.";
+	}
+	finally {
+		uploadLoading.value = null;
+	}
+}
+
+async function deleteFolderDocument(slot: FolderDocumentSlot): Promise<void> {
+	const document = documentForSlot(slot);
+	if (!document) return;
+
+	deleteLoading.value = slot;
+	feedback.value = null;
+
+	try {
+		await $fetch("/api/folder-documents/delete", {
+			method: "POST",
+			body: { id: document.id },
+		});
+		confirmDeleteSlot.value = null;
+		await refresh();
+		toast.add({
+			title: "File eliminato",
+			description: "Lo slot e tornato disponibile.",
+			color: "success",
+		});
+	}
+	catch {
+		fileErrors[slot] = "Eliminazione non riuscita. Riprova tra qualche istante.";
+	}
+	finally {
+		deleteLoading.value = null;
+	}
 }
 
 function requestDeleteProject(): void {
 	feedback.value = null;
-	deleteIntent.value = { kind: "project", id: folderId };
 	deleteDialogOpen.value = true;
 }
 
-function requestDeleteDocument(pageId: string, title: string): void {
-	feedback.value = null;
-	deleteIntent.value = { kind: "document", id: pageId, title };
-	deleteDialogOpen.value = true;
-}
-
-async function confirmDelete(): Promise<void> {
-	if (!deleteIntent.value) return;
-
+async function confirmDeleteProject(): Promise<void> {
 	isDeleting.value = true;
 
 	try {
-		if (deleteIntent.value.kind === "project") {
-			await $fetch("/api/db/delete", {
-				method: "POST",
-				body: {
-					entity: "project",
-					id: deleteIntent.value.id,
-				},
-			});
-
-			await router.push({ path: "/progetti", query: { deleted: "project" } });
-			return;
-		}
-
 		await $fetch("/api/db/delete", {
 			method: "POST",
 			body: {
-				entity: "document",
-				id: deleteIntent.value.id,
+				entity: "project",
+				id: folderId,
 			},
 		});
 
-		await refresh();
-		feedback.value = {
-			tone: "success",
-			title: "Documento eliminato",
-			description: "Il documento e stato rimosso correttamente dal progetto.",
-		};
-		deleteDialogOpen.value = false;
-		deleteIntent.value = null;
+		await router.push({ path: "/progetti", query: { deleted: "project" } });
 	}
 	catch {
 		feedback.value = {
 			tone: "error",
 			title: "Eliminazione non riuscita",
-			description:
-				deleteIntent.value?.kind === "project"
-					? "Non siamo riusciti a eliminare il progetto. Riprova tra qualche istante."
-					: "Non siamo riusciti a eliminare il documento. Riprova tra qualche istante.",
+			description: "Non siamo riusciti a eliminare il progetto. Riprova tra qualche istante.",
 		};
 	}
 	finally {
 		isDeleting.value = false;
+		deleteDialogOpen.value = false;
 	}
 }
 </script>
@@ -186,78 +366,52 @@ async function confirmDelete(): Promise<void> {
 			<div class="mb-4">
 				<NuxtLink
 					to="/progetti"
-					class="mb-3 flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-slate-700"
+					class="inline-flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-slate-700"
 				>
 					<UIcon name="i-lucide-arrow-left" class="size-4" />
 					Tutti i progetti
 				</NuxtLink>
-
-				<BasePageHeader
-					:title="data.folder.program_name ?? 'Progetto senza nome'"
-					description="Esplora i documenti collegati e il loro stato di avanzamento."
-				>
-					<template #meta>
-						<div class="space-y-2">
-							<p class="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-								Progetto
-							</p>
-							<div class="flex flex-wrap items-start gap-2 text-sm sm:items-center">
-								<NuxtLink
-									v-if="clientName"
-									:to="`/clients/${data.folder.client_id}`"
-									class="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 font-medium text-violet-700"
-								>
-									Cliente: {{ clientName }}
-								</NuxtLink>
-								<span class="text-slate-500">
-									Creato il
-									{{
-										new Date(
-											data.folder.created_at,
-										).toLocaleDateString("it-IT")
-									}}
-								</span>
-							</div>
-						</div>
-					</template>
-
-					<template #actions>
-						<div class="flex w-full flex-col gap-2 sm:items-end">
-							<div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-								<UButton
-									icon="i-lucide-plus"
-									size="lg"
-									class="rounded-xl px-5"
-									:to="`/pages/new?clientId=${data.folder.client_id}`"
-								>
-									Nuovo documento
-								</UButton>
-								<UButton
-									color="error"
-									variant="soft"
-									size="lg"
-									class="rounded-xl px-5"
-									icon="i-lucide-trash-2"
-									@click="requestDeleteProject"
-								>
-									Elimina progetto
-								</UButton>
-								<UBadge color="primary" variant="soft" size="sm">
-									{{ data.pages.length }}
-									{{
-										data.pages.length === 1
-											? "documento"
-											: "documenti"
-									}}
-								</UBadge>
-							</div>
-							<p class="text-xs text-slate-500 sm:max-w-sm sm:text-right">
-								L'eliminazione rimuovera anche tutti i documenti collegati.
-							</p>
-						</div>
-					</template>
-				</BasePageHeader>
 			</div>
+
+			<BasePageHeader
+				:title="folderTitle"
+				:description="clientName ? `Ragione sociale: ${clientName}` : 'Progetto senza cliente collegato'"
+			>
+				<template #meta>
+					<div class="flex flex-wrap items-center gap-2 pt-1">
+						<span
+							class="inline-flex rounded-full px-3 py-1 text-xs font-medium"
+							:class="folderStatusClass"
+						>
+							{{ statusLabel[folderStatus] ?? folderStatus }}
+						</span>
+						<span class="text-sm text-slate-500">
+							Aggiornato {{ formatDate(data.folder.updated_at) }}
+						</span>
+					</div>
+				</template>
+
+				<template #actions>
+					<UButton
+						icon="i-lucide-plus"
+						size="lg"
+						class="rounded-xl px-5"
+						:to="`/pages/new?clientId=${data.folder.client_id}`"
+					>
+						Nuovo documento
+					</UButton>
+					<UButton
+						color="error"
+						variant="soft"
+						size="lg"
+						class="rounded-xl px-5"
+						icon="i-lucide-trash-2"
+						@click="requestDeleteProject"
+					>
+						Elimina progetto
+					</UButton>
+				</template>
+			</BasePageHeader>
 
 			<UAlert
 				v-if="activeNotice"
@@ -273,95 +427,188 @@ async function confirmDelete(): Promise<void> {
 				class="mb-6"
 			/>
 
-			<BaseDetailSection
-				title="Documenti"
-				description="Traccia i documenti collegati e apri subito quello giusto."
-			>
-				<BaseStateMessage
-					v-if="!data.pages.length"
-					compact
-					icon="i-lucide-file-text"
-					title="Nessun documento"
-					description="Questo progetto non contiene ancora documenti."
-				/>
-
-				<div
-					v-else
-					class="overflow-x-auto rounded-2xl border border-slate-200"
-				>
-					<div class="min-w-[720px]">
-						<div
-							class="grid grid-cols-[minmax(0,2fr)_minmax(120px,1fr)_120px_72px] gap-4 bg-slate-50 px-5 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500"
-						>
-							<p>Documento</p>
-							<p>Stato</p>
-							<p>Ultima attività</p>
-							<p class="text-right">Azioni</p>
-						</div>
-
-						<div
-							v-for="page in data.pages"
-							:key="page.id"
-							class="grid grid-cols-[minmax(0,2fr)_minmax(120px,1fr)_120px_72px] items-center gap-4 border-t border-slate-200 px-5 py-4 transition-colors hover:bg-slate-50"
-						>
-							<div
-								class="interactive-row col-span-3 grid grid-cols-[minmax(0,2fr)_minmax(120px,1fr)_120px] items-center gap-4"
-								role="button"
-								tabindex="0"
-								@click="router.push(`/pages/${page.id}`)"
-								@keydown.enter="router.push(`/pages/${page.id}`)"
-								@keydown.space.prevent="router.push(`/pages/${page.id}`)"
+			<div class="space-y-8">
+				<section class="folder-detail-section">
+					<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+						<div class="flex flex-wrap items-center gap-3">
+							<h2 class="folder-detail-title">
+								DETTAGLI PROGETTO
+							</h2>
+							<span
+								class="inline-flex rounded-full px-3 py-1 text-xs font-medium"
+								:class="folderStatusClass"
 							>
+								{{ statusLabel[folderStatus] ?? folderStatus }}
+							</span>
+						</div>
+					</div>
+
+					<div class="folder-detail-grid">
+						<label class="folder-detail-field">
+							<span>Titolo del programma</span>
+							<input v-model="form.program_name" placeholder="Titolo del programma" />
+						</label>
+
+						<label class="folder-detail-field">
+							<span>Anno di imposta</span>
+							<input
+								v-model="form.tax_year"
+								inputmode="numeric"
+								placeholder="Anno di imposta"
+							/>
+						</label>
+
+						<label class="folder-detail-field">
+							<span>Referente</span>
+							<input v-model="form.referente" placeholder="Referente di progetto" />
+						</label>
+
+						<label class="folder-detail-field folder-detail-field--readonly">
+							<span>Tipo progetto</span>
+							<input :value="projectType" readonly />
+						</label>
+					</div>
+
+					<div class="mt-6 flex justify-end">
+						<UButton
+							color="neutral"
+							:variant="dirty ? 'solid' : 'soft'"
+							:disabled="!dirty || isSaving"
+							:loading="isSaving"
+							class="rounded-xl px-5 transition-opacity"
+							:class="dirty ? 'opacity-100' : 'opacity-40'"
+							@click="saveFolderDetails"
+						>
+							Salva modifiche
+						</UButton>
+					</div>
+				</section>
+
+				<section class="folder-detail-section">
+					<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+						<h2 class="folder-detail-title">
+							DOCUMENTI
+						</h2>
+						<p class="text-sm text-slate-500">
+							{{ documentCountLabel }}
+						</p>
+					</div>
+
+					<div v-if="!documentRows.length" class="py-12 text-center text-[13px] text-slate-400">
+						Nessun documento
+					</div>
+
+					<div v-else class="mt-5 overflow-hidden border-t border-slate-200">
+						<DocumentListRow
+							v-for="document in documentRows"
+							:key="document.id"
+							:document="document"
+							compact
+						/>
+					</div>
+				</section>
+
+				<section class="folder-detail-section">
+					<h2 class="folder-detail-title">
+						DOCUMENTI AMMINISTRATIVI
+					</h2>
+
+					<div class="mt-5 grid gap-4 md:grid-cols-2">
+						<div
+							v-for="slot in ADMIN_SLOTS"
+							:key="slot.key"
+							class="folder-document-slot"
+							:class="documentForSlot(slot.key) ? 'folder-document-slot--filled' : ''"
+						>
+							<div class="flex items-start justify-between gap-4">
 								<div class="min-w-0">
-									<p
-										class="truncate text-sm font-semibold text-slate-900"
-									>
-										{{ page.title }}
+									<p class="folder-document-label">
+										{{ slot.label }}
 									</p>
-									<p class="truncate text-xs text-slate-500">
-										{{ page.framework_name ?? "—" }}
+									<template v-if="documentForSlot(slot.key)">
+										<p class="mt-2 truncate text-sm font-medium text-slate-900">
+											{{ documentForSlot(slot.key)?.filename }}
+										</p>
+										<p class="mt-1 text-xs text-slate-500">
+											{{ formatFileSize(documentForSlot(slot.key)?.file_size_bytes ?? null) }}
+											· caricato {{ formatUploadedAt(documentForSlot(slot.key)?.uploaded_at ?? null) }}
+										</p>
+									</template>
+									<p v-else class="mt-2 text-sm text-slate-500">
+										PDF, Word, Excel · max 20 MB
 									</p>
 								</div>
 
-								<div>
-									<span
-										class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
-									>
-										{{ statusLabel[page.status] ?? page.status }}
-									</span>
-								</div>
-
-								<p class="text-sm text-slate-500">
-									{{ formatDate(page.updated_at) }}
-								</p>
+								<UButton
+									v-if="documentForSlot(slot.key) && confirmDeleteSlot !== slot.key"
+									color="error"
+									variant="ghost"
+									icon="i-lucide-trash-2"
+									class="size-7 rounded-lg p-0"
+									@click="confirmDeleteSlot = slot.key"
+								/>
 							</div>
 
-							<div class="flex justify-end">
-								<UButton
-									color="error"
-									variant="soft"
-									icon="i-lucide-trash-2"
-									class="rounded-xl"
-									:loading="
-										isDeleting &&
-										deleteIntent?.kind === 'document' &&
-										deleteIntent.id === page.id
-									"
-									@click="requestDeleteDocument(page.id, page.title)"
+							<div v-if="confirmDeleteSlot === slot.key" class="mt-4 rounded-xl bg-rose-50 p-3">
+								<p class="text-xs font-medium text-rose-700">
+									Conferma eliminazione?
+								</p>
+								<div class="mt-2 flex gap-2">
+									<UButton
+										size="xs"
+										color="error"
+										:loading="deleteLoading === slot.key"
+										@click="deleteFolderDocument(slot.key)"
+									>
+										Sì
+									</UButton>
+									<UButton
+										size="xs"
+										color="neutral"
+										variant="ghost"
+										@click="confirmDeleteSlot = null"
+									>
+										Annulla
+									</UButton>
+								</div>
+							</div>
+
+							<p v-if="fileErrors[slot.key]" class="mt-3 text-xs text-rose-600">
+								{{ fileErrors[slot.key] }}
+							</p>
+
+							<div class="mt-4">
+								<input
+									:id="`folder-doc-${slot.key}`"
+									type="file"
+									class="sr-only"
+									accept=".pdf,.doc,.docx,.xls,.xlsx"
+									@change="handleFileChange(slot.key, $event)"
 								/>
+								<UButton
+									as="label"
+									:for="`folder-doc-${slot.key}`"
+									color="neutral"
+									variant="soft"
+									icon="i-lucide-upload"
+									class="cursor-pointer rounded-xl"
+									:loading="uploadLoading === slot.key"
+								>
+									{{ documentForSlot(slot.key) ? "Sostituisci file" : "Carica file" }}
+								</UButton>
 							</div>
 						</div>
 					</div>
-				</div>
-			</BaseDetailSection>
+				</section>
+			</div>
 
 			<BaseConfirmDialog
 				v-model:open="deleteDialogOpen"
-				:title="deleteTitle"
-				:description="deleteDescription"
-				:confirm-label="deleteConfirmLabel"
+				title="Eliminare il progetto?"
+				description="Il progetto e tutti i documenti collegati verranno eliminati definitivamente. Questa azione non puo essere annullata."
+				confirm-label="Elimina progetto"
 				:loading="isDeleting"
-				@confirm="confirmDelete"
+				@confirm="confirmDeleteProject"
 			/>
 		</template>
 
@@ -380,3 +627,90 @@ async function confirmDelete(): Promise<void> {
 		</BaseStateMessage>
 	</BasePageContainer>
 </template>
+
+<style scoped>
+.folder-detail-section {
+	border-top: 1px solid var(--color-border-muted, rgb(226 232 240));
+	padding-top: 24px;
+}
+
+.folder-detail-title,
+.folder-document-label {
+	color: var(--color-text-muted, rgb(100 116 139));
+	font-size: 11px;
+	font-weight: 500;
+	letter-spacing: 0.06em;
+	line-height: 1.2;
+	text-transform: uppercase;
+}
+
+.folder-detail-grid {
+	display: grid;
+	gap: 22px 32px;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	margin-top: 22px;
+}
+
+.folder-detail-field {
+	display: flex;
+	min-width: 0;
+	flex-direction: column;
+	gap: 7px;
+}
+
+.folder-detail-field span {
+	color: var(--color-text-tertiary, rgb(148 163 184));
+	font-size: 11px;
+	font-weight: 500;
+	letter-spacing: 0.06em;
+	line-height: 1.2;
+	text-transform: uppercase;
+}
+
+.folder-detail-field input {
+	width: 100%;
+	border: 0;
+	border-bottom: 1px solid transparent;
+	background: transparent;
+	border-radius: 0;
+	color: var(--color-text, rgb(15 23 42));
+	font-size: 13px;
+	line-height: 1.6;
+	outline: none;
+	padding: 3px 0 6px;
+	transition: border-color 140ms ease, color 140ms ease;
+}
+
+.folder-detail-field:not(.folder-detail-field--readonly) input:hover {
+	border-bottom-color: var(--color-border-tertiary, rgb(203 213 225));
+}
+
+.folder-detail-field:not(.folder-detail-field--readonly) input:focus {
+	border-bottom-color: var(--ui-primary, rgb(124 58 237));
+}
+
+.folder-detail-field--readonly input {
+	color: rgb(100 116 139);
+}
+
+.folder-detail-field input::placeholder {
+	color: rgb(148 163 184);
+}
+
+.folder-document-slot {
+	border: 1px dashed rgb(203 213 225);
+	border-radius: 8px;
+	padding: 18px;
+}
+
+.folder-document-slot--filled {
+	border-style: solid;
+	border-color: rgb(226 232 240);
+}
+
+@media (max-width: 720px) {
+	.folder-detail-grid {
+		grid-template-columns: 1fr;
+	}
+}
+</style>
