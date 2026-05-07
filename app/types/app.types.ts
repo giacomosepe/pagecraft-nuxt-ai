@@ -48,6 +48,17 @@ export interface ClientDetail {
   vat_number: string | null;
   codice_fiscale: string | null;
   registered_address: string | null;
+  street_address: string | null;
+  city: string | null;
+  provincia: string | null;
+  cap: string | null;
+  revenue: number | string | null;
+  legal_rep_name: string | null;
+  legal_rep_cf: string | null;
+  legal_rep_dob: string | null;
+  contact_name: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
   company_form: string | null;
   soci?: ClientProfileSocio[] | null;
   partecipate?: ClientProfilePartecipata[] | null;
@@ -61,6 +72,8 @@ export interface PageItem {
   id: string;
   status: string;
   updated_at: string;
+  title?: string | null;
+  tax_year?: number | null;
 }
 
 export interface FolderItem {

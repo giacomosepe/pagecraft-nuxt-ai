@@ -152,19 +152,3 @@ Repo-local issue-writing context:
 | Bucket | Access | Purpose |
 |---|---|---|
 | `page-context-documents` | Private | Word/PDF context documents uploaded per document (page) |
-
-## Server utilities (server/utils/)
-
-| File | Purpose |
-|---|---|
-| `getProjectContext.ts` | Assembles context document text for a page+step combination; abstraction boundary for future RAG swap |
-| `extractDocumentText.ts` | Extracts plain text from uploaded Word docs via mammoth |
-| `sanitiseGeneration.ts` | Post-generation blocklist enforcement; checks AI output against `framework_step_examples.blocklist` |
-| `getFrameworkStepExample.ts` | Fetches the active example for a given step (newest active wins) |
-| `getStepFigureCaptions.ts` | Fetches figure captions for a step from `page_step_figures` |
-| `contextDocuments.ts` | Supporting helpers for context document upload/retrieval flow |
-| `generationPrompt.ts` | Prompt assembly helpers |
-| `buildPremessa.ts` | Assembles Step 2 normative preamble text |
-| `initialStepFormData.ts` | Initialises form data for new step instances |
-| `renderTemplate.ts` | Template rendering helpers |
-| `visuraExtraction.ts` | Visura PDF extraction helpers |

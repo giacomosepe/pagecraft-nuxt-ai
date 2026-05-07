@@ -54,11 +54,31 @@ model Client {
   companyForm  String?  @map("company_form")   // S.r.l., S.p.A., etc.
   boardMembers String[] @map("board_members")
 
+  // Structured address (ENGNEER-325) — replaces freetext registered_address for new records
+  streetAddress String? @map("street_address")
+  city          String?
+  provincia     String?
+  cap           String?
+
+  // Financial (ENGNEER-326)
+  revenue Decimal? @db.Decimal
+
+  // Legal representative — split fields (ENGNEER-327)
+  // legal_representative is deprecated (kept for backfill); use legal_rep_name going forward
+  legalRepName String? @map("legal_rep_name")
+  legalRepCf   String? @map("legal_rep_cf")
+  legalRepDob  DateTime? @map("legal_rep_dob") @db.Date
+
+  // Contact person (ENGNEER-328)
+  contactName  String? @map("contact_name")
+  contactEmail String? @map("contact_email")
+  contactPhone String? @map("contact_phone")
+
   // Variable nested structures — JSONB is correct here
   shareholders Json? @db.JsonB
   subsidiaries Json? @db.JsonB
   soci         Json? @db.JsonB
-  partecipate Json? @db.JsonB
+  partecipate  Json? @db.JsonB
 
   // Set manually by operator — never derived
   status String @default("aperto")
