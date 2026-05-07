@@ -228,6 +228,8 @@ export type Database = {
           id: string
           name: string | null
           program_name: string | null
+          referente: string | null
+          tax_year: number | null
           updated_at: string
           user_id: string
         }
@@ -237,6 +239,8 @@ export type Database = {
           id?: string
           name?: string | null
           program_name?: string | null
+          referente?: string | null
+          tax_year?: number | null
           updated_at?: string
           user_id: string
         }
@@ -246,6 +250,8 @@ export type Database = {
           id?: string
           name?: string | null
           program_name?: string | null
+          referente?: string | null
+          tax_year?: number | null
           updated_at?: string
           user_id?: string
         }
@@ -262,6 +268,47 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      folder_documents: {
+        Row: {
+          file_size_bytes: number | null
+          filename: string
+          folder_id: string
+          id: string
+          slot: string
+          storage_path: string
+          uploaded_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          file_size_bytes?: number | null
+          filename: string
+          folder_id: string
+          id?: string
+          slot: string
+          storage_path: string
+          uploaded_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          file_size_bytes?: number | null
+          filename?: string
+          folder_id?: string
+          id?: string
+          slot?: string
+          storage_path?: string
+          uploaded_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folder_documents_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
             referencedColumns: ["id"]
           },
         ]

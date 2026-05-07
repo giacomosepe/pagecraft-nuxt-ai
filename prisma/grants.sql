@@ -44,6 +44,7 @@ ALTER TABLE public.files            ALTER COLUMN id SET DEFAULT gen_random_uuid(
 ALTER TABLE public.generation_files ALTER COLUMN id SET DEFAULT gen_random_uuid();
 ALTER TABLE public.page_context_documents ALTER COLUMN id SET DEFAULT gen_random_uuid();
 ALTER TABLE public.framework_step_examples ALTER COLUMN id SET DEFAULT gen_random_uuid();
+ALTER TABLE public.folder_documents ALTER COLUMN id SET DEFAULT gen_random_uuid();
 
 -- updated_at timestamps
 ALTER TABLE public.clients          ALTER COLUMN updated_at SET DEFAULT now();
@@ -62,9 +63,14 @@ ALTER TABLE public.users            ALTER COLUMN updated_at SET DEFAULT now();
 
 REVOKE ALL ON TABLE public.page_context_documents FROM anon, authenticated, service_role;
 REVOKE ALL ON TABLE public.framework_step_examples FROM anon, authenticated, service_role;
+REVOKE ALL ON TABLE public.folder_documents FROM anon, authenticated, service_role;
 
 GRANT SELECT, INSERT, UPDATE, DELETE
 ON TABLE public.page_context_documents
+TO authenticated, service_role;
+
+GRANT SELECT, INSERT, UPDATE, DELETE
+ON TABLE public.folder_documents
 TO authenticated, service_role;
 
 GRANT SELECT

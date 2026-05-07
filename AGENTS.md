@@ -1,5 +1,5 @@
 # PageCraft — AGENTS.md
-# Last updated: May 7, 2026
+# Last updated: May 7, 2026 (post-sprint update)
 
 Read this file fully before starting any task.
 Read `codebase-map.md` before opening source files for implementation work.
@@ -129,26 +129,39 @@ Repo-local issue-writing context:
 - `folders.name` is a legacy column still pending cleanup
 - prompts and field content were not rewritten during the restyling sweep
 - `mammoth` is approved but not yet added to `package.json` — must be added before ENGNEER-337 feature build
+- `page_context_documents` uses the original slot-based design (NOT the generic `files` table) — the `files` and `generation_files` tables were added by Codex as a separate general-purpose file layer and coexist independently
 
 ---
 
-## Database tables (as of May 7, 2026)
+## Database tables (as of May 7, 2026 — verified against Supabase)
 
 | Table | Purpose | Notes |
 |---|---|---|
 | `frameworks` | Document framework definitions | |
 | `framework_steps` | Step templates per framework | `step_type`: `type_a`, `type_b`, `type_c` |
-| `framework_step_examples` | Per-step example outputs for prompt injection | `blocklist` column = stored metadata only; anon grants revoked |
+| `framework_step_examples` | Per-step example outputs for prompt injection | `blocklist` = stored metadata only; anon grants revoked |
 | `steps` | Per-document step instances (snapshot of framework_steps) | |
 | `pages` | Documents (one page = one document) | `status` is TEXT with check constraint, not enum |
-| `folders` | Folder groupings | No `status` column — derived in frontend |
-| `clients` | Client company records | |
+| `folders` | Folder groupings per project | Has `tax_year INTEGER` and `referente TEXT`; no `status` column — derived in frontend |
+| `folder_documents` | Files uploaded at folder level | `folder_id`, `slot` (contratto / additional), storage bucket `folder-documents` |
+| `clients` | Client company records | See client fields section below |
 | `generations` | AI generation records per step | |
-| `page_context_documents` | Uploaded context docs scoped to a document (page) | `page_id → pages.id`; storage bucket `page-context-documents`; anon grants revoked |
-| `page_step_figures` | Figure captions per step, injected as text markers at generation | V1: text markers only, no file upload |
+| `generation_files` | Join table linking generations to files | `generation_id → generations.id`, `file_id → files.id` |
+| `files` | General-purpose file storage layer | `scope`, `file_type`, `extraction_status` enums; `page_id`, `step_id` foreign keys |
+| `page_context_documents` | Slot-based context docs scoped to a page | `page_id → pages.id`; slots: technical_presentation, financial_notes, additional_docs; bucket `page-context-documents`; anon grants revoked |
+| `page_step_figures` | Figure captions per step | `step_id`, `page_id`, `caption`, `sort_order`; V1: text markers only |
+
+> ⚠️ `files` + `generation_files` are a Codex-added general file layer. They coexist with `page_context_documents` but serve different purposes. Do not merge or conflate them.
+
+## Client fields (as of May 7, 2026 — verified against Supabase)
+
+Existing (pre-sprint): `id`, `user_id`, `name`, `created_at`, `updated_at`, `company_name`, `codice_fiscale`, `vat_number`, `employee_count`, `company_form`, `industry_sector`, `legal_representative` _(deprecated — use `legal_rep_name`)_, `registered_address` _(deprecated — use structured address fields)_, `board_members`, `shareholders`, `subsidiaries`, `soci`, `partecipate`, `status`
+
+Added this sprint (ENGNEER-325–328): `street_address`, `city`, `provincia`, `cap`, `revenue`, `legal_rep_name`, `legal_rep_cf`, `legal_rep_dob`, `contact_name`, `contact_email`, `contact_phone`
 
 ## Storage buckets
 
 | Bucket | Access | Purpose |
 |---|---|---|
-| `page-context-documents` | Private | Word/PDF context documents uploaded per document (page) |
+| `page-context-documents` | Private | Slot-based context docs per page (technical_presentation, financial_notes, additional_docs) |
+| `folder-documents` | Private | Folder-level documents (contratto, additional) |

@@ -6,6 +6,7 @@ import { statusLabel } from "~/utils/status";
 const props = defineProps<{
   document: DocumentListItem;
   deleteLoading?: boolean;
+  compact?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -35,6 +36,17 @@ const statusTone = computed((): string => {
   }
 });
 
+const relativeUpdatedAt = computed((): string => {
+  const updated = new Date(props.document.updated_at);
+  const now = new Date();
+  const diffDays = Math.floor((now.getTime() - updated.getTime()) / 86_400_000);
+
+  if (diffDays <= 0) return "aggiornato oggi";
+  if (diffDays === 1) return "aggiornato ieri";
+  if (diffDays < 7) return `aggiornato ${diffDays} giorni fa`;
+  return `aggiornato il ${formatDate(props.document.updated_at)}`;
+});
+
 function openDocument(): void {
   router.push(`/pages/${props.document.id}`);
 }
@@ -47,6 +59,36 @@ function handleDeleteClick(event: MouseEvent): void {
 
 <template>
   <div
+    v-if="compact"
+    class="grid w-full grid-cols-[minmax(0,1fr)_minmax(120px,auto)_32px] items-center gap-4 border-t border-slate-200 px-6 py-4 transition-colors hover:bg-slate-50"
+  >
+    <div
+      class="interactive-row col-span-3 grid grid-cols-[minmax(0,1fr)_minmax(120px,auto)_32px] items-center gap-4 text-left"
+      role="button"
+      tabindex="0"
+      @click="openDocument"
+      @keydown.enter="openDocument"
+      @keydown.space.prevent="openDocument"
+    >
+      <div class="min-w-0">
+        <p class="truncate text-sm font-semibold text-slate-900">
+          {{ document.title }}
+        </p>
+        <p class="truncate text-xs text-slate-500">
+          {{ document.framework_name ?? "Framework non definito" }}
+        </p>
+      </div>
+
+      <p class="whitespace-nowrap text-sm text-slate-500">
+        {{ relativeUpdatedAt }}
+      </p>
+
+      <UIcon name="i-lucide-arrow-right" class="size-4 text-slate-400" />
+    </div>
+  </div>
+
+  <div
+    v-else
     class="grid w-full grid-cols-[minmax(0,2.1fr)_minmax(180px,1.2fr)_minmax(150px,1fr)_minmax(125px,0.9fr)_minmax(120px,0.9fr)_72px] items-center gap-4 border-t border-slate-200 px-6 py-4 transition-colors hover:bg-slate-50"
   >
     <div

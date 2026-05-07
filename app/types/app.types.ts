@@ -74,11 +74,14 @@ export interface PageItem {
   updated_at: string;
   title?: string | null;
   tax_year?: number | null;
+  framework_name?: string | null;
 }
 
 export interface FolderItem {
   id: string;
   program_name: string | null;
+  tax_year?: number | null;
+  referente?: string | null;
   updated_at: string;
   pages: PageItem[] | null;
 }
@@ -112,6 +115,18 @@ export interface DocumentListItem {
   client_id: string | null;
   folders: { id: string; program_name: string | null } | null;
   clients: { id: string; name: string } | null;
+}
+
+export type FolderDocumentSlot = "contratto" | "additional";
+
+export interface FolderDocument {
+  id: string;
+  folder_id: string;
+  slot: FolderDocumentSlot;
+  filename: string;
+  file_size_bytes: number | null;
+  storage_path: string;
+  uploaded_at: string | null;
 }
 
 // ─── Framework ────────────────────────────────────────────────────────────────

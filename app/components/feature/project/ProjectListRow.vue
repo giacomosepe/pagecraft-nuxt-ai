@@ -34,6 +34,9 @@ const statusTone = computed((): string => {
 	switch (projectStatus.value) {
 		case "completato":
 			return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200";
+		case "in_revisione":
+			return "bg-violet-50 text-violet-700 ring-1 ring-violet-200";
+		case "attesa_info":
 		case "in_attesa":
 			return "bg-amber-50 text-amber-700 ring-1 ring-amber-200";
 		default:

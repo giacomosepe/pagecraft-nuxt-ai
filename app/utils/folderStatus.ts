@@ -4,16 +4,16 @@
 // Pure function — takes an array of page status strings, returns a status key.
 //
 // Rules (in priority order):
-//   1. No pages → "in_attesa"
-//   2. Any page "in_lavorazione" → "in_lavorazione"
-//   3. All pages "in_attesa" → "in_attesa"
-//   4. All pages "completato" or "archiviato" → "completato"
-//   5. Mixed → "in_lavorazione"
+//   1. No pages → "attesa_info"
+//   2. All pages completed/archived → "completato"
+//   3. Any page "in_revisione" → "in_revisione"
+//   4. Any page "in_lavorazione" → "in_lavorazione"
+//   5. Mixed/older waiting statuses → "attesa_info"
 
 export function deriveFolderStatus(pages: { status: string }[]): string {
-  if (!pages || pages.length === 0) return "in_attesa";
-  if (pages.some((p) => p.status === "in_lavorazione")) return "in_lavorazione";
-  if (pages.every((p) => p.status === "in_attesa")) return "in_attesa";
+  if (!pages || pages.length === 0) return "attesa_info";
   if (pages.every((p) => ["completato", "archiviato"].includes(p.status))) return "completato";
-  return "in_lavorazione";
+  if (pages.some((p) => p.status === "in_revisione")) return "in_revisione";
+  if (pages.some((p) => p.status === "in_lavorazione")) return "in_lavorazione";
+  return "attesa_info";
 }

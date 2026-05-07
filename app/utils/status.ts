@@ -13,8 +13,10 @@ type BadgeColor = "error" | "primary" | "secondary" | "success" | "info" | "warn
  */
 export const statusColor: Record<string, BadgeColor> = {
   // Folder / page statuses
+  attesa_info:    "warning",
   in_attesa:      "warning",
   in_lavorazione: "info",
+  in_revisione:   "secondary",
   completato:     "success",
   archiviato:     "neutral",
 
@@ -33,8 +35,10 @@ export const statusColor: Record<string, BadgeColor> = {
  */
 export const statusLabel: Record<string, string> = {
   // Folder / page statuses
+  attesa_info:    "Attesa info",
   in_attesa:      "In attesa",
   in_lavorazione: "In lavorazione",
+  in_revisione:   "In revisione",
   completato:     "Completato",
   archiviato:     "Archiviato",
 
