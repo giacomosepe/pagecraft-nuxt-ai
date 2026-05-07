@@ -4,6 +4,9 @@ import {
 } from "#supabase/server";
 import { z } from "zod";
 import { buildGenerationPrompt } from "../../utils/generationPrompt";
+import { getFrameworkStepExample } from "../../utils/getFrameworkStepExample";
+import { getProjectContext } from "../../utils/getProjectContext";
+import { getStepFigureCaptions } from "../../utils/getStepFigureCaptions";
 
 const PromptPreviewSchema = z.object({
 	stepId: z.string().uuid("Invalid step ID"),
@@ -46,7 +49,7 @@ export default defineEventHandler(async (event) => {
 		.from("steps")
 		.select(
 			`
-			id, order, title, system_prompt_template, refine_prompt_template, form_data, form_schema,
+			id, framework_step_id, order, title, system_prompt_template, refine_prompt_template, form_data, form_schema,
 			page:pages (
 				title, tax_year, referente,
 				client:clients (
@@ -73,10 +76,19 @@ export default defineEventHandler(async (event) => {
 		.not("committed_output", "is", null)
 		.order("order", { ascending: true });
 
+	const [projectContext, stepExample, figureCaptions] = await Promise.all([
+		getProjectContext(pageId, (step as any).order, supabase as any),
+		getFrameworkStepExample((step as any).framework_step_id, supabase as any),
+		getStepFigureCaptions((step as any).id, supabase as any),
+	]);
+
 	return buildGenerationPrompt({
 		step: step as any,
 		priorSteps: priorSteps ?? [],
 		mode,
 		existingOutput,
+		projectContext,
+		stepExample,
+		figureCaptions,
 	}).promptUsed;
 });

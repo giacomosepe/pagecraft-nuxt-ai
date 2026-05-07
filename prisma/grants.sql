@@ -42,6 +42,8 @@ ALTER TABLE public.steps            ALTER COLUMN id SET DEFAULT gen_random_uuid(
 ALTER TABLE public.generations      ALTER COLUMN id SET DEFAULT gen_random_uuid();
 ALTER TABLE public.files            ALTER COLUMN id SET DEFAULT gen_random_uuid();
 ALTER TABLE public.generation_files ALTER COLUMN id SET DEFAULT gen_random_uuid();
+ALTER TABLE public.page_context_documents ALTER COLUMN id SET DEFAULT gen_random_uuid();
+ALTER TABLE public.framework_step_examples ALTER COLUMN id SET DEFAULT gen_random_uuid();
 
 -- updated_at timestamps
 ALTER TABLE public.clients          ALTER COLUMN updated_at SET DEFAULT now();
@@ -52,6 +54,22 @@ ALTER TABLE public.generations      ALTER COLUMN updated_at SET DEFAULT now();
 ALTER TABLE public.frameworks       ALTER COLUMN updated_at SET DEFAULT now();
 ALTER TABLE public.framework_steps  ALTER COLUMN updated_at SET DEFAULT now();
 ALTER TABLE public.users            ALTER COLUMN updated_at SET DEFAULT now();
+
+-- ─── Scoped grants for document context and framework examples ───────────────
+-- The broad reset grants above restore legacy app behavior for existing tables.
+-- These new tables are intentionally narrower: no anon access, and examples are
+-- read-only outside migrations/seed/admin SQL.
+
+REVOKE ALL ON TABLE public.page_context_documents FROM anon, authenticated, service_role;
+REVOKE ALL ON TABLE public.framework_step_examples FROM anon, authenticated, service_role;
+
+GRANT SELECT, INSERT, UPDATE, DELETE
+ON TABLE public.page_context_documents
+TO authenticated, service_role;
+
+GRANT SELECT
+ON TABLE public.framework_step_examples
+TO authenticated, service_role;
 
 -- ─── Verify ───────────────────────────────────────────────────────────────────
 SELECT table_name, column_name, column_default

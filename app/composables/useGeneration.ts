@@ -11,6 +11,26 @@ import type { Ref, ComputedRef } from "vue";
 import type { StepRecord } from "~/types/app.types";
 import { isRichTextHtml, richHtmlToPlainText } from "~/utils/richText";
 
+const CONTAMINATED_GENERATION_MESSAGE =
+  "Errore nella generazione. Riprova — se il problema persiste contatta il supporto.";
+
+interface GenerationErrorBody {
+  message?: string;
+  statusMessage?: string;
+  data?: {
+    error?: string;
+  };
+}
+
+async function readGenerationError(res: Response, fallback: string): Promise<string> {
+  const err = await res.json().catch(() => null) as GenerationErrorBody | null;
+  if (err?.data?.error === "generation_contaminated") {
+    return CONTAMINATED_GENERATION_MESSAGE;
+  }
+
+  return err?.message ?? err?.statusMessage ?? fallback;
+}
+
 export interface UseGenerationParams {
   pageId: string;
   activeStep: ComputedRef<StepRecord | undefined>;
@@ -41,16 +61,15 @@ export function useGeneration({
       const res = await fetch("/api/generations/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-	        body: JSON.stringify({
-	          stepId: activeStep.value.id,
-	          pageId,
-	          mode: "generate",
-	          promptOverride,
-	        }),
+        body: JSON.stringify({
+          stepId: activeStep.value.id,
+          pageId,
+          mode: "generate",
+          promptOverride,
+        }),
       });
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error((err as { message?: string }).message ?? "Generazione non riuscita");
+        throw new Error(await readGenerationError(res, "Generazione non riuscita"));
       }
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
@@ -91,8 +110,7 @@ export function useGeneration({
         }),
       });
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error((err as { message?: string }).message ?? "Raffinamento non riuscito");
+        throw new Error(await readGenerationError(res, "Raffinamento non riuscito"));
       }
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();

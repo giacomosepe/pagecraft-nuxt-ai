@@ -23,7 +23,7 @@ BEGIN
     AND tablename IN (
       'frameworks', 'framework_steps', 'clients', 'pages',
       'folders', 'steps', 'generations', 'files', 'generation_files',
-      'users'
+      'page_context_documents', 'framework_step_examples', 'users'
     )
   LOOP
     EXECUTE format('DROP POLICY IF EXISTS %I ON %I', r.policyname, r.tablename);
@@ -40,6 +40,10 @@ USING (is_public = true AND deprecated_at IS NULL);
 
 CREATE POLICY "Framework steps are readable by all authenticated users"
 ON framework_steps FOR SELECT TO authenticated
+USING (true);
+
+CREATE POLICY "Authenticated users can read examples"
+ON framework_step_examples FOR SELECT TO authenticated
 USING (true);
 
 -- ─── clients ──────────────────────────────────────────────────────────────────
@@ -157,6 +161,31 @@ USING (user_id = auth.uid());
 CREATE POLICY "Users can delete their own files"
 ON files FOR DELETE TO authenticated
 USING (user_id = auth.uid());
+
+-- ─── page_context_documents (owned through pages) ────────────────────────────
+
+CREATE POLICY "Users can read context documents of their own pages"
+ON page_context_documents FOR SELECT TO authenticated
+USING (page_id IN (SELECT id FROM pages WHERE user_id = auth.uid()));
+
+CREATE POLICY "Users can insert context documents on their own pages"
+ON page_context_documents FOR INSERT TO authenticated
+WITH CHECK (
+  user_id = auth.uid()
+  AND page_id IN (SELECT id FROM pages WHERE user_id = auth.uid())
+);
+
+CREATE POLICY "Users can update context documents on their own pages"
+ON page_context_documents FOR UPDATE TO authenticated
+USING (page_id IN (SELECT id FROM pages WHERE user_id = auth.uid()))
+WITH CHECK (
+  user_id = auth.uid()
+  AND page_id IN (SELECT id FROM pages WHERE user_id = auth.uid())
+);
+
+CREATE POLICY "Users can delete context documents on their own pages"
+ON page_context_documents FOR DELETE TO authenticated
+USING (page_id IN (SELECT id FROM pages WHERE user_id = auth.uid()));
 
 -- ─── generation_files (owned through generations → steps → pages) ─────────────
 

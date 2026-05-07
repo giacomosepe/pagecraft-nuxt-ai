@@ -4,10 +4,12 @@ import type { StepRecord } from "~/types/app.types";
 const props = defineProps<{
   steps: StepRecord[];
   activeIndex: number;
+  configurationActive?: boolean;
 }>();
 
 const emit = defineEmits<{
   select: [index: number];
+  selectConfiguration: [];
 }>();
 
 const committedCount = computed(
@@ -28,6 +30,7 @@ function stepTypeLabel(step: StepRecord): string {
 }
 
 function stepState(step: StepRecord, index: number): "saved" | "active" | "todo" {
+  if (props.configurationActive) return step.status === "COMMITTED" ? "saved" : "todo";
   if (index === props.activeIndex) return "active";
   return step.status === "COMMITTED" ? "saved" : "todo";
 }
@@ -66,6 +69,25 @@ function stepState(step: StepRecord, index: number): "saved" | "active" | "todo"
 
     <nav class="flex-1 overflow-y-auto px-3 py-3">
       <div class="space-y-2">
+        <button
+          class="step-row"
+          :class="configurationActive ? 'step-row--active' : 'step-row--config'"
+          @click="emit('selectConfiguration')"
+        >
+          <div class="step-row__index">
+            <UIcon name="i-lucide-settings" class="size-3.5 text-slate-400" />
+          </div>
+
+          <div class="min-w-0 flex-1 space-y-1">
+            <p class="step-row__title">
+              Configurazione
+            </p>
+            <p class="step-row__type">
+              Documenti di contesto
+            </p>
+          </div>
+        </button>
+
         <button
           v-for="(step, index) in steps"
           :key="step.id"
@@ -125,6 +147,10 @@ function stepState(step: StepRecord, index: number): "saved" | "active" | "todo"
   background: var(--color-surface);
 }
 
+.step-row--config {
+  background: var(--color-surface);
+}
+
 .step-row__index {
   display: flex;
   width: 1.5rem;
@@ -181,6 +207,10 @@ function stepState(step: StepRecord, index: number): "saved" | "active" | "todo"
 
 .step-row--todo .step-row__title {
   opacity: 0.42;
+}
+
+.step-row--config .step-row__title {
+  opacity: 1;
 }
 
 .step-row__type {

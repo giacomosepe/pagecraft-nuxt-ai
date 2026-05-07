@@ -1,5 +1,5 @@
 # PageCraft — AGENTS.md
-# Last updated: April 22, 2026
+# Last updated: May 7, 2026
 
 Read this file fully before starting any task.
 Read `codebase-map.md` before opening source files for implementation work.
@@ -50,8 +50,11 @@ When a Linear issue lists concrete values from source files such as options, fie
 | AI provider | `@ai-sdk/anthropic` | 3.0.58 |
 | Validation | Zod | 4.3.6 |
 | Hosting | Railway | Node server deploy from GitHub |
+| Word extraction | mammoth | 1.12.0 |
 
-Pinned dependencies: `zod`, `@nuxtjs/supabase`, `ai`, `@ai-sdk/anthropic`, `prisma`
+Pinned dependencies: `zod`, `@nuxtjs/supabase`, `ai`, `@ai-sdk/anthropic`, `prisma`, `mammoth`
+
+`mammoth@1.12.0` is approved for Word document text extraction. Install pinned to this version without asking.
 
 ---
 
@@ -61,6 +64,10 @@ Pinned dependencies: `zod`, `@nuxtjs/supabase`, `ai`, `@ai-sdk/anthropic`, `pris
 - Never update dependencies with `@latest`; pin explicit versions one at a time
 - Never add a `status` column to `folders`; status is derived from pages in the frontend
 - Never treat `pages.status` as a Postgres enum; it is `TEXT` with a check constraint
+- Never re-grant anon access to `page_context_documents` or `framework_step_examples` — anon grants have been intentionally revoked
+- `type_a` and `type_b` framework steps must always have `system_prompt_template = ''` and `refine_prompt_template = ''` — prompt columns are only populated for `type_c` steps
+- `blocklist` on `framework_step_examples` is stored metadata only — do not implement runtime enforcement in the DB layer; enforcement lives in `server/utils/sanitiseGeneration.ts`
+- Prompt injection goes into `userMessage`, not `systemPrompt`. Injection point: after Dati del passaggio, before refine draft / final instruction
 
 ---
 
@@ -121,3 +128,43 @@ Repo-local issue-writing context:
 - white screen after branch switch: `rm -rf .nuxt && npm run dev`
 - `folders.name` is a legacy column still pending cleanup
 - prompts and field content were not rewritten during the restyling sweep
+- `mammoth` is approved but not yet added to `package.json` — must be added before ENGNEER-337 feature build
+
+---
+
+## Database tables (as of May 7, 2026)
+
+| Table | Purpose | Notes |
+|---|---|---|
+| `frameworks` | Document framework definitions | |
+| `framework_steps` | Step templates per framework | `step_type`: `type_a`, `type_b`, `type_c` |
+| `framework_step_examples` | Per-step example outputs for prompt injection | `blocklist` column = stored metadata only; anon grants revoked |
+| `steps` | Per-document step instances (snapshot of framework_steps) | |
+| `pages` | Documents (one page = one document) | `status` is TEXT with check constraint, not enum |
+| `folders` | Folder groupings | No `status` column — derived in frontend |
+| `clients` | Client company records | |
+| `generations` | AI generation records per step | |
+| `page_context_documents` | Uploaded context docs scoped to a document (page) | `page_id → pages.id`; storage bucket `page-context-documents`; anon grants revoked |
+| `page_step_figures` | Figure captions per step, injected as text markers at generation | V1: text markers only, no file upload |
+
+## Storage buckets
+
+| Bucket | Access | Purpose |
+|---|---|---|
+| `page-context-documents` | Private | Word/PDF context documents uploaded per document (page) |
+
+## Server utilities (server/utils/)
+
+| File | Purpose |
+|---|---|
+| `getProjectContext.ts` | Assembles context document text for a page+step combination; abstraction boundary for future RAG swap |
+| `extractDocumentText.ts` | Extracts plain text from uploaded Word docs via mammoth |
+| `sanitiseGeneration.ts` | Post-generation blocklist enforcement; checks AI output against `framework_step_examples.blocklist` |
+| `getFrameworkStepExample.ts` | Fetches the active example for a given step (newest active wins) |
+| `getStepFigureCaptions.ts` | Fetches figure captions for a step from `page_step_figures` |
+| `contextDocuments.ts` | Supporting helpers for context document upload/retrieval flow |
+| `generationPrompt.ts` | Prompt assembly helpers |
+| `buildPremessa.ts` | Assembles Step 2 normative preamble text |
+| `initialStepFormData.ts` | Initialises form data for new step instances |
+| `renderTemplate.ts` | Template rendering helpers |
+| `visuraExtraction.ts` | Visura PDF extraction helpers |

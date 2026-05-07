@@ -5,6 +5,13 @@ import {
 import { randomUUID } from "uncrypto";
 import { z } from "zod";
 import { buildGenerationPrompt, splitPromptUsed } from "../../utils/generationPrompt";
+import {
+  getActiveFrameworkStepExampleBlocklist,
+  getFrameworkStepExample,
+} from "../../utils/getFrameworkStepExample";
+import { getProjectContext } from "../../utils/getProjectContext";
+import { getStepFigureCaptions } from "../../utils/getStepFigureCaptions";
+import { sanitiseGeneration } from "../../utils/sanitiseGeneration";
 
 // ─── Request schema ───────────────────────────────────────────────────────────
 const GenerateSchema = z.object({
@@ -57,7 +64,7 @@ export default defineEventHandler(async (event) => {
     .from("steps")
     .select(
       `
-      id, order, title, system_prompt_template, refine_prompt_template, form_data, form_schema,
+      id, framework_step_id, order, title, system_prompt_template, refine_prompt_template, form_data, form_schema,
       page:pages (
         title, tax_year, referente,
         client:clients (
@@ -85,6 +92,12 @@ export default defineEventHandler(async (event) => {
     .not("committed_output", "is", null)
     .order("order", { ascending: true });
 
+  const [projectContext, stepExample, figureCaptions] = await Promise.all([
+    getProjectContext(pageId, (step as any).order, supabase as any),
+    getFrameworkStepExample((step as any).framework_step_id, supabase as any),
+    getStepFigureCaptions((step as any).id, supabase as any),
+  ]);
+
   // ─── Step 5: Build or apply the generative rule ───────────────────────────
   const builtPrompt = promptRule?.trim()
     ? splitPromptUsed(promptRule)
@@ -94,6 +107,9 @@ export default defineEventHandler(async (event) => {
         mode,
         existingOutput,
         promptOverride,
+        projectContext,
+        stepExample,
+        figureCaptions,
       });
   const { systemPrompt, userMessage, promptUsed } = builtPrompt;
 
@@ -129,73 +145,80 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 502, message: "AI service error" });
   }
 
-  // ─── Step 9: Stream response, accumulate full output, then save ───────────
+  // ─── Step 9: Accumulate output, sanitise, then save and return ────────────
   const generationId = randomUUID();
+  const reader = anthropicRes.body!.getReader();
+  const decoder = new TextDecoder();
+  let fullOutput = "";
+
+  let buffer = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+
+    for (const line of lines) {
+      if (!line.startsWith("data: ")) continue;
+      const data = line.slice(6);
+      if (data === "[DONE]") continue;
+
+      try {
+        const parsed = JSON.parse(data);
+        if (
+          parsed.type === "content_block_delta" &&
+          parsed.delta?.type === "text_delta"
+        ) {
+          fullOutput += parsed.delta.text;
+        }
+      } catch {
+        // Skip malformed JSON lines
+      }
+    }
+  }
+
+  const blocklist = await getActiveFrameworkStepExampleBlocklist(
+    (step as any).framework_step_id,
+    supabase as any,
+  );
+
+  if (blocklist.length > 0) {
+    const { clean, matches } = sanitiseGeneration(fullOutput, blocklist);
+    if (!clean) {
+      console.error(
+        `[GENERATION_CONTAMINATED] page_id=${pageId} step_id=${stepId} matches=${JSON.stringify(matches)}`,
+      );
+      throw createError({
+        statusCode: 422,
+        statusMessage: "generation_contaminated",
+        message: "Errore nella generazione. Riprova — se il problema persiste contatta il supporto.",
+        data: { error: "generation_contaminated" },
+      });
+    }
+  }
+
+  await Promise.all([
+    supabase.from("generations").insert({
+      id: generationId,
+      step_id: stepId,
+      prompt_used: promptUsed,
+      output: fullOutput,
+      source: mode === "generate" ? "AI_GENERATED" : "AI_REFINED",
+      is_committed: false,
+    }),
+    supabase
+      .from("steps")
+      .update({ status: "IN_PROGRESS", last_prompt_used: promptUsed })
+      .eq("id", stepId),
+  ]);
+
   setResponseHeaders(event, {
     "Content-Type": "text/plain; charset=utf-8",
-    "Transfer-Encoding": "chunked",
     "Cache-Control": "no-cache",
     "X-Generation-Id": generationId,
   });
 
-  const reader = anthropicRes.body!.getReader();
-  const decoder = new TextDecoder();
-  const encoder = new TextEncoder();
-  let fullOutput = "";
-
-  return new ReadableStream({
-    async start(controller) {
-      try {
-        let buffer = "";
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() ?? "";
-
-          for (const line of lines) {
-            if (!line.startsWith("data: ")) continue;
-            const data = line.slice(6);
-            if (data === "[DONE]") continue;
-
-            try {
-              const parsed = JSON.parse(data);
-              if (
-                parsed.type === "content_block_delta" &&
-                parsed.delta?.type === "text_delta"
-              ) {
-                const text = parsed.delta.text;
-                fullOutput += text;
-                controller.enqueue(encoder.encode(text));
-              }
-            } catch {
-              // Skip malformed JSON lines
-            }
-          }
-        }
-
-        await Promise.all([
-          supabase.from("generations").insert({
-            id: generationId,
-            step_id: stepId,
-            prompt_used: promptUsed,
-            output: fullOutput,
-            source: mode === "generate" ? "AI_GENERATED" : "AI_REFINED",
-            is_committed: false,
-          }),
-          supabase
-            .from("steps")
-            .update({ status: "IN_PROGRESS", last_prompt_used: promptUsed })
-            .eq("id", stepId),
-        ]);
-      } catch (e) {
-        controller.error(e);
-      } finally {
-        controller.close();
-      }
-    },
-  });
+  return fullOutput;
 });
