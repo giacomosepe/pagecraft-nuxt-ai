@@ -7,6 +7,9 @@ import { statusLabel } from "~/utils/status";
 const props = defineProps<{
 	project: ProjectListItem;
 	deleteLoading?: boolean;
+	showClient?: boolean;
+	showActions?: boolean;
+	showYear?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -16,6 +19,8 @@ const emit = defineEmits<{
 const router = useRouter();
 
 const documentCount = computed((): number => props.project.pages?.length ?? 0);
+
+const primaryPage = computed(() => props.project.pages?.[0] ?? null);
 
 const completedCount = computed((): number =>
 	(props.project.pages ?? []).filter((page) => page.status === "completato").length,
@@ -48,6 +53,16 @@ const typeLabel = computed((): string => {
 	const programName = props.project.program_name?.toLowerCase() ?? "";
 	if (programName.includes("patent box")) return "Nuovo Patent Box";
 	return "Relazione Tecnica";
+});
+
+const secondaryColumnLabel = computed((): string => {
+	if (props.showYear) return primaryPage.value?.tax_year?.toString() ?? "—";
+	return props.project.clients?.name ?? "—";
+});
+
+const secondaryColumnHint = computed((): string => {
+	if (props.showYear) return primaryPage.value?.title ?? "Anno fiscale";
+	return "";
 });
 
 function openProject(): void {
@@ -86,9 +101,14 @@ function handleDeleteClick(event: MouseEvent): void {
 			</div>
 		</div>
 
-		<p class="truncate text-sm text-slate-600">
-			{{ project.clients?.name ?? "—" }}
-		</p>
+		<div v-if="showClient !== false || showYear" class="min-w-0">
+			<p class="truncate text-sm text-slate-600">
+				{{ secondaryColumnLabel }}
+			</p>
+			<p v-if="secondaryColumnHint" class="truncate text-xs text-slate-400">
+				{{ secondaryColumnHint }}
+			</p>
+		</div>
 
 		<p class="text-sm text-slate-600">
 			{{ completedCount }} / {{ documentCount }} documenti
@@ -108,7 +128,7 @@ function handleDeleteClick(event: MouseEvent): void {
 		</p>
 		</div>
 
-		<div class="flex justify-end">
+		<div v-if="showActions !== false" class="flex justify-end">
 			<UButton
 				color="error"
 				variant="soft"

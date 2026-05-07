@@ -53,17 +53,28 @@ export type Database = {
           codice_fiscale: string | null
           company_form: string | null
           company_name: string | null
+          cap: string | null
+          city: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
           created_at: string
           employee_count: number | null
           id: string
           industry_sector: string | null
+          legal_rep_cf: string | null
+          legal_rep_dob: string | null
+          legal_rep_name: string | null
           legal_representative: string | null
           name: string
           partecipate: Json | null
+          provincia: string | null
           registered_address: string | null
+          revenue: number | null
           soci: Json | null
           shareholders: Json | null
           status: string
+          street_address: string | null
           subsidiaries: Json | null
           updated_at: string
           user_id: string
@@ -74,17 +85,28 @@ export type Database = {
           codice_fiscale?: string | null
           company_form?: string | null
           company_name?: string | null
+          cap?: string | null
+          city?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
           created_at?: string
           employee_count?: number | null
           id?: string
           industry_sector?: string | null
+          legal_rep_cf?: string | null
+          legal_rep_dob?: string | null
+          legal_rep_name?: string | null
           legal_representative?: string | null
           name: string
           partecipate?: Json | null
+          provincia?: string | null
           registered_address?: string | null
+          revenue?: number | null
           soci?: Json | null
           shareholders?: Json | null
           status?: string
+          street_address?: string | null
           subsidiaries?: Json | null
           updated_at?: string
           user_id: string
@@ -95,17 +117,28 @@ export type Database = {
           codice_fiscale?: string | null
           company_form?: string | null
           company_name?: string | null
+          cap?: string | null
+          city?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
           created_at?: string
           employee_count?: number | null
           id?: string
           industry_sector?: string | null
+          legal_rep_cf?: string | null
+          legal_rep_dob?: string | null
+          legal_rep_name?: string | null
           legal_representative?: string | null
           name?: string
           partecipate?: Json | null
+          provincia?: string | null
           registered_address?: string | null
+          revenue?: number | null
           soci?: Json | null
           shareholders?: Json | null
           status?: string
+          street_address?: string | null
           subsidiaries?: Json | null
           updated_at?: string
           user_id?: string

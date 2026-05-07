@@ -13,13 +13,13 @@ import type { ClientDetail, FolderItem } from "~/types/app.types";
 export function useClient(clientId: string) {
   const supabase = useSupabaseClient();
 
-  const { data, pending } = useAsyncData<ClientDetail>(
+  const { data, pending, refresh } = useAsyncData<ClientDetail>(
     `client-${clientId}`,
     async () => {
       const { data, error } = await supabase
         .from("clients")
         .select(
-          "id, name, status, updated_at, company_name, industry_sector, employee_count, legal_representative, vat_number, codice_fiscale, registered_address, company_form, soci, partecipate, shareholders, subsidiaries, folders(id, program_name, updated_at, pages(id, status, updated_at))",
+          "id, name, status, updated_at, company_name, industry_sector, employee_count, legal_representative, vat_number, codice_fiscale, registered_address, street_address, city, provincia, cap, revenue, legal_rep_name, legal_rep_cf, legal_rep_dob, contact_name, contact_email, contact_phone, company_form, soci, partecipate, shareholders, subsidiaries, folders(id, program_name, updated_at, pages(id, title, status, updated_at, tax_year))",
         )
         .eq("id", clientId)
         .single();
@@ -50,5 +50,5 @@ export function useClient(clientId: string) {
     });
   }
 
-  return { data, folders, pending, updateStatus };
+  return { data, folders, pending, refresh, updateStatus };
 }
