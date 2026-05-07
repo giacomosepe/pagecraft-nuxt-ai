@@ -172,3 +172,19 @@ export interface PageWithSteps {
   page: PageRecord;
   steps: StepRecord[];
 }
+
+export type PageContextSlot =
+  | "technical_presentation"
+  | "financial_notes"
+  | "additional_docs";
+
+export interface PageContextDocument {
+  id: string;
+  page_id: string;
+  slot: PageContextSlot;
+  filename: string;
+  file_size_bytes: number | null;
+  storage_path: string;
+  extracted_at: string | null;
+  uploaded_at: string;
+}

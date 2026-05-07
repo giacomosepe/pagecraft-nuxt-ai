@@ -30,6 +30,7 @@ export interface ClientRecord {
   company_form?: string | null;
   industry_sector?: string | null;
   employee_count?: number | null;
+  revenue?: number | string | null;
   legal_representative?: string | null;
   vat_number?: string | null;
   codice_fiscale?: string | null;
@@ -69,6 +70,8 @@ export function useClientFields(client: ClientRecord | null | undefined, taxYear
     map["company_form"]         = client.company_form ?? "";
     map["industry_sector"]      = client.industry_sector ?? "";
     map["employee_count"]       = client.employee_count?.toString() ?? "";
+    map["total_employees"]      = client.employee_count?.toString() ?? "";
+    map["revenue"]              = client.revenue?.toString() ?? "";
     map["legal_representative"] = client.legal_representative ?? "";
     map["legale_rappresentante"] = client.legal_representative ?? "";
     map["vat_number"]           = client.vat_number ?? "";

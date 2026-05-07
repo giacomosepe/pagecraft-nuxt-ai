@@ -19,6 +19,7 @@ const { page, steps, clientData, pending, error, patchPage } = usePage(pageId);
 
 // ─── Active step state ────────────────────────────────────────────────────────
 const activeStepIndex = ref(0);
+const configurationActive = ref(false);
 
 const activeStep = computed<StepRecord | undefined>(
 	() => steps.value?.[activeStepIndex.value],
@@ -95,6 +96,7 @@ function firstFormText(...values: unknown[]): string {
 
 // Reset on step navigation
 watch(activeStepIndex, () => {
+	configurationActive.value = false;
 	output.value = activeStep.value?.committed_output ?? "";
 	errorMsg.value = "";
 	stepFormValues.value = {};
@@ -176,6 +178,16 @@ function discardOutput(): void {
 function goNext(): void {
 	if (!canGoNext.value) return;
 	activeStepIndex.value++;
+}
+
+function selectStep(index: number): void {
+	configurationActive.value = false;
+	activeStepIndex.value = index;
+}
+
+function selectConfiguration(): void {
+	configurationActive.value = true;
+	errorMsg.value = "";
 }
 
 // ─── Word export ──────────────────────────────────────────────────────────────
@@ -297,7 +309,9 @@ async function exportWord(): Promise<void> {
 						<StepNav
 							:steps="steps ?? []"
 							:active-index="activeStepIndex"
-							@select="activeStepIndex = $event"
+							:configuration-active="configurationActive"
+							@select="selectStep"
+							@select-configuration="selectConfiguration"
 						/>
 
 						<div class="border-t border-slate-200 px-4 py-4">
@@ -310,6 +324,7 @@ async function exportWord(): Promise<void> {
 
 				<template #document>
 					<StepOutput
+						v-if="!configurationActive"
 						:output="output"
 						:preview="stepPreview"
 						:is-generating="isGenerating"
@@ -323,11 +338,32 @@ async function exportWord(): Promise<void> {
 						@update-output="output = $event"
 						@next="goNext"
 					/>
+
+					<div
+						v-else
+						class="flex h-full min-h-[420px] items-center justify-center bg-slate-50 px-6"
+					>
+						<div class="max-w-sm text-center">
+							<div class="mx-auto grid size-12 place-items-center rounded-lg border border-slate-200 bg-white">
+								<UIcon name="i-lucide-settings" class="size-6 text-slate-500" />
+							</div>
+							<h2 class="mt-4 text-base font-semibold text-slate-950">
+								Configurazione documento
+							</h2>
+							<p class="mt-2 text-sm leading-6 text-slate-500">
+								I documenti caricati qui saranno disponibili come contesto per gli step supportati.
+							</p>
+						</div>
+					</div>
 				</template>
 
 				<template #work>
+					<ContextDocumentsPanel
+						v-if="configurationActive"
+						:page-id="pageId"
+					/>
 					<StepEditor
-						v-if="activeStep"
+						v-else-if="activeStep"
 						:page-id="pageId"
 						:active-step="activeStep"
 						:is-generating="isGenerating"

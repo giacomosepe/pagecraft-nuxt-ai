@@ -1,5 +1,7 @@
 interface PromptStep {
 	title: string;
+	order?: number;
+	framework_step_id?: string | null;
 	system_prompt_template: string;
 	refine_prompt_template: string;
 	form_data?: Record<string, unknown> | null;
@@ -19,6 +21,13 @@ export interface BuildGenerationPromptParams {
 	mode: "generate" | "refine";
 	existingOutput?: string;
 	promptOverride?: string | null;
+	projectContext?: string;
+	stepExample?: {
+		sector: string | null;
+		content: string;
+		blocklist?: string[];
+	} | null;
+	figureCaptions?: string[];
 }
 
 export interface BuiltGenerationPrompt {
@@ -170,12 +179,54 @@ function buildPriorContext(prior: PriorStep[]): string {
 		.join("\n\n");
 }
 
+function formatStepExample(
+	example: BuildGenerationPromptParams["stepExample"],
+): string {
+	if (!example?.content?.trim()) return "";
+	const blocklist = example.blocklist?.length
+		? `\n\nRiferimenti specifici dell'esempio da non copiare: ${example.blocklist.join(", ")}.`
+		: "";
+
+	return [
+		`Esempio di sezione approvata da un consulente (settore: ${example.sector ?? "non specificato"}):`,
+		"---",
+		example.content.trim(),
+		"---",
+		`Usa questo esempio come riferimento esclusivamente per tono, struttura e lunghezza. Non copiare nomi, cifre o dettagli specifici dell'esempio — adatta interamente al cliente corrente usando solo le informazioni fornite nei campi sopra e nei documenti di contesto.${blocklist}`,
+	].join("\n");
+}
+
+function formatFigureBlock(
+	stepOrder: number | undefined,
+	captions: string[] | undefined,
+): string {
+	const cleanCaptions = (captions ?? [])
+		.map((caption) => caption.trim())
+		.filter(Boolean);
+	if (!cleanCaptions.length) return "";
+	if (!stepOrder || stepOrder < 4 || stepOrder > 7) return "";
+
+	const genericInstruction =
+		"Se sono presenti riferimenti a figure, inserisci ciascun segnaposto [INSERIRE FIGURA: ...] subito dopo il paragrafo del testo a cui la figura è più pertinente. Non raggruppare i segnaposti alla fine — distribuiscili nel testo nel punto più appropriato.";
+	const stepSixInstruction =
+		" Per gli organigrammi, il segnaposto va inserito subito dopo la descrizione della struttura organizzativa.";
+
+	return [
+		`${genericInstruction}${stepOrder === 6 ? stepSixInstruction : ""}`,
+		"",
+		cleanCaptions.map((caption) => `[INSERIRE FIGURA: ${caption}]`).join("\n"),
+	].join("\n");
+}
+
 export function buildGenerationPrompt({
 	step,
 	priorSteps,
 	mode,
 	existingOutput = "",
 	promptOverride = null,
+	projectContext = "",
+	stepExample = null,
+	figureCaptions = [],
 }: BuildGenerationPromptParams): BuiltGenerationPrompt {
 	const page = step.page;
 	const c = page?.client;
@@ -209,10 +260,15 @@ export function buildGenerationPrompt({
 			? serializeFormData(step.form_data, step.form_schema)
 			: "";
 	const priorContext = buildPriorContext(priorSteps);
+	const exampleBlock = formatStepExample(stepExample);
+	const figureBlock = formatFigureBlock((step as any).order, figureCaptions);
 	const userMessage = [
 		companyContext ? `Informazioni aziendali:\n${companyContext}` : "",
 		priorContext ? `Sezioni precedenti già redatte:\n${priorContext}` : "",
 		formDataBlock ? `Dati del passaggio:\n${formDataBlock}` : "",
+		figureBlock,
+		projectContext,
+		exampleBlock,
 		mode === "refine" && existingOutput
 			? `Bozza esistente da raffinare:\n${existingOutput}`
 			: "",

@@ -170,63 +170,92 @@ VALUES (
   'Attività Rilevanti',
   'Attività di R&S qualificanti e beni immateriali agevolabili',
   'type_c',
-  $sysprompt$Write the "Attività Rilevanti" section (A04) of the Patent Box documentation.
-Produce three sub-sections in sequence, each introduced by its heading.
+  $sysprompt$Sei un esperto di fiscalità italiana specializzato nel regime Patent Box (art. 6 D.L. 146/2021 e Provvedimento AdE 15/02/2022).
+Stai redigendo la sezione "Attività rilevanti, natura di investitore ed eventuale attività svolta con imprese associate" della Relazione illustrativa per {{company_name}}, anno di imposta {{tax_year}}.
 
-SUB-SECTION 1 — ATTIVITÀ RILEVANTI
+Il consulente ha fornito le seguenti informazioni:
+- Nome del progetto: {{project_name}}
+- Tipo di attività: {{activity_type}}
+- Contesto e tematica: {{context_description}}
+- La sfida: {{challenge}}
+- Obiettivi e risultati attesi: {{objectives}}
+- Fasi di sviluppo: {{development_phases}}
+- Risultati conseguiti: {{results_achieved}}
+- Operazioni con imprese associate: {{associated_companies}}
 
-For each activity block provided, write one paragraph introduced by a subtitle
-in the form "Attività [N] — [brief descriptive title derived from the context]".
-Each paragraph must cover: the nature of the qualifying R&D activity and its
-connection to the intangible asset; the project context and objectives; the
-development phases (if provided); the results achieved (if provided).
+Hai accesso ai documenti di contesto caricati dal consulente (business plan, report R&D, documentazione tecnica). Usa questi documenti come fonte primaria per fatti, dati finanziari, nomi e dettagli tecnici non presenti nei campi sopra.
 
-If ip_linked is "No" for an activity, omit that activity entirely.
-If ip_linked is "Parzialmente", include the paragraph but note the partial
-connection to the qualifying asset in one sentence.
+Redigi la sezione in italiano formale e burocratico, strutturata nei seguenti paragrafi:
 
-Use the reference document extract (if provided) to enrich descriptions with
-specific technical detail. Never invent facts not present in the inputs.
+1. INTRODUZIONE — Sintesi del progetto e inquadramento normativo (tipo di attività, riferimento all'art. 5 del D.M. 26/05/2020 se innovazione tecnologica)
+2. LA SFIDA — Contesto operativo prima del progetto, problemi da risolvere, obiettivi del management
+3. IL PROGETTO — Descrizione tecnica delle fasi di sviluppo. Se disponibili, includi una tabella con cronoprogramma (DATA | FASE | DESCRIZIONE | TIPOLOGIA)
+4. I RISULTATI — Benefici conseguiti, dati quantitativi, impatto operativo e finanziario
+5. NATURA DI INVESTITORE — Chi detiene i diritti di sfruttamento economico del bene immateriale, chi sostiene i costi e assume i rischi, autonomia finanziaria e gestionale dell'impresa
+6. OPERAZIONI CON IMPRESE ASSOCIATE — Solo se il campo corrispondente non è vuoto. Se vuoto, ometti completamente questa sezione.
 
-Target: 300–450 words per activity.
+Regole:
+- Non inventare dati, nomi, cifre o date non presenti nei campi o nei documenti di contesto
+- Se un'informazione è assente e non recuperabile dai documenti, scrivi [DA COMPLETARE]
+- Tono: formale, tecnico, in terza persona
+- Lunghezza target: 600–900 parole$sysprompt$,
+  $refineprompt$La sezione "Attività rilevanti" è stata generata. Il consulente ha richiesto le seguenti modifiche:
 
-SUB-SECTION 2 — NATURA DI INVESTITORE DELL'IMPRESA
+{{refine_instructions}}
 
-If investor_nature text is provided: write a formal paragraph describing the
-company's financial position, risk propensity, and medium-to-long-term
-investment objectives, based strictly on the text provided.
+Testo attuale:
+{{current_output}}
 
-If investor_nature is empty: output exactly the string [SEZIONE DA COMPLETARE]
-and nothing else for this sub-section.
-
-SUB-SECTION 3 — EVENTUALI OPERAZIONI CON IMPRESE ASSOCIATE
-
-If has_associated_ops is "No": write one formal sentence stating that no
-transactions occurred between the company and associated or related entities
-during the relevant tax year.
-
-If has_associated_ops is "Sì": write a formal paragraph describing the
-operations using associated_ops_description only. Do not elaborate beyond
-what is provided.$sysprompt$,
-  $refineprompt$Revise the "Attività Rilevanti" section as instructed. Maintain the three
-sub-section structure. For activity paragraphs: sharpen the technical
-description and strengthen the nexus to the qualifying intangible asset.
-For sub-section 3: keep strictly to what was provided. Do not invent.
-Return only the revised section text.$refineprompt$,
+Riscrivi la sezione incorporando le modifiche richieste, mantenendo il tono formale e la struttura esistente. Non aggiungere informazioni non presenti nel testo originale o nei campi forniti.$refineprompt$,
   $schema$[
-    {"key": "context_note", "label": "Contesto generale delle attività R&S", "type": "textarea", "placeholder": "Breve descrizione del contesto complessivo delle attività...", "required": false},
-    {"key": "reference_document", "label": "Documento di riferimento del cliente", "type": "file_upload_generation", "accept": [".pdf", ".docx", ".pptx"], "hint": "Utilizzato dall'AI come contesto — non viene incluso direttamente nel documento", "required": false},
-    {"key": "activities", "label": "Attività rilevanti", "type": "repeatable_group", "minItems": 1, "addLabel": "Aggiungi attività", "fields": [
-      {"key": "ip_linked", "label": "Riconducibile alla privativa oggetto di agevolazione?", "type": "select", "options": ["Sì", "Parzialmente", "No"], "required": false},
-      {"key": "context", "label": "Contesto generale del progetto", "type": "textarea", "required": true},
-      {"key": "objectives", "label": "Obiettivo del progetto e risultati attesi", "type": "textarea", "required": true},
-      {"key": "phases", "label": "Fasi di sviluppo (sintesi)", "type": "textarea", "required": false},
-      {"key": "results", "label": "Risultati conseguiti", "type": "textarea", "required": false}
-    ]},
-    {"key": "investor_nature", "label": "Natura di investitore dell'impresa", "type": "textarea", "placeholder": "Sezione in sviluppo — inserire manualmente se disponibile", "required": false, "hint": "Verrà strutturata con prompt dedicato in FPB-4b. Se vuoto, il documento mostrerà [SEZIONE DA COMPLETARE]."},
-    {"key": "has_associated_ops", "label": "L'impresa ha operazioni con imprese associate o collegate?", "type": "select", "options": ["No", "Sì"], "defaultValue": "No", "required": true},
-    {"key": "associated_ops_description", "label": "Descrizione delle operazioni con imprese associate", "type": "textarea", "required": false, "conditional": {"key": "has_associated_ops", "value": "Sì"}, "placeholder": "Descrivere le operazioni intercorse con le imprese associate e/o collegate..."}
-  ]$schema$,
+  {
+    "key": "project_name",
+    "label": "Nome del progetto",
+    "type": "text",
+    "placeholder": "es. Autoquote — automazione quotazioni"
+  },
+  {
+    "key": "activity_type",
+    "label": "Tipo di attività",
+    "type": "select",
+    "options": ["Ricerca industriale", "Sviluppo sperimentale", "Innovazione tecnologica", "Design e ideazione estetica"]
+  },
+  {
+    "key": "context_description",
+    "label": "Contesto e tematica del progetto",
+    "type": "textarea",
+    "placeholder": "Descrivi liberamente il contesto, anche in modo grezzo. L'AI strutturerà il testo."
+  },
+  {
+    "key": "challenge",
+    "label": "La sfida e il problema da risolvere",
+    "type": "textarea",
+    "placeholder": "Qual era la situazione prima del progetto? Quali inefficienze o limiti si volevano superare?"
+  },
+  {
+    "key": "objectives",
+    "label": "Obiettivi e risultati attesi",
+    "type": "textarea"
+  },
+  {
+    "key": "development_phases",
+    "label": "Fasi di sviluppo",
+    "type": "textarea",
+    "placeholder": "Elenca le fasi principali, anche in forma di lista o tabella grezza"
+  },
+  {
+    "key": "results_achieved",
+    "label": "Risultati conseguiti",
+    "type": "textarea",
+    "placeholder": "Includi dati quantitativi dove disponibili (es. tempi, volumi, risparmi)"
+  },
+  {
+    "key": "associated_companies",
+    "label": "Operazioni con imprese associate",
+    "type": "textarea",
+    "placeholder": "Lascia vuoto se non applicabile. L'AI ometterà questa sezione."
+  }
+]$schema$,
   NOW(),
   NOW()
 )
@@ -247,41 +276,298 @@ VALUES (
   'Attività Commissionate a Terzi',
   'R&S commissionata a università, enti di ricerca o fornitori terzi',
   'type_c',
-  'Write the section on R&D activities commissioned to third parties ("Attività
-Commissionate a Terzi") of the Patent Box documentation package.
+  $sysprompt$Sei un esperto di fiscalità italiana specializzato nel regime Patent Box (art. 6 D.L. 146/2021).
+Stai redigendo la sezione "Attività rilevanti commissionate a terzi indipendenti" della Relazione illustrativa per {{company_name}}, anno di imposta {{tax_year}}.
 
-Under Patent Box 2.0, qualifying R&D may be contracted to universities,
-authorised research bodies, or other companies (including related parties),
-provided the company retains economic ownership of the resulting IP and the
-arrangement is properly documented.
+Presenza di attività commissionate: {{has_outsourced}}
 
-The section must follow one of two paths based on the user message:
+Se {{has_outsourced}} è "No":
+Redigi un unico paragrafo formale che dichiari che la società non ha commissionato attività rilevanti a soggetti terzi indipendenti nel periodo di riferimento. Tono: formale, in terza persona. Lunghezza: 3–4 righe.
 
-PATH A — Third-party R&D exists: describe the nature of the work contracted,
-the identity or category of the provider (università, ente di ricerca, società
-del gruppo, fornitore terzo), the contractual basis, and the company''s retention
-of IP ownership and economic risk.
+Se {{has_outsourced}} è "Sì":
+Il consulente ha fornito le seguenti informazioni:
+- Commissionario: {{contractor_name}} ({{contractor_type}})
+- Ambito tecnico: {{technical_domain}}
+- Oggetto del contratto: {{contract_object}}
+- Titolarità IP: {{ip_ownership}}
+- Ripartizione del rischio: {{risk_sharing}}
+- Fasi di sviluppo: {{development_phases}}
 
-PATH B — No third-party R&D: state clearly and formally that all qualifying
-R&D activities were conducted exclusively by the company''s internal resources
-for the relevant tax year.
+Hai accesso ai documenti di contesto caricati dal consulente. Usali come fonte primaria per dettagli tecnici, clausole contrattuali e profilo del fornitore non presenti nei campi sopra.
 
-In either case, confirm the company''s IP ownership and its direct link to the
-activities described. If the user message provides no information about
-third-party activities, default to Path B.
+Redigi la sezione in italiano formale, strutturata nei seguenti paragrafi:
+1. AMBITO TECNOLOGICO — descrizione del dominio tecnico in cui opera il commissionario
+2. IL COMMISSIONARIO — profilo e competenze del soggetto terzo
+3. OGGETTO DEL CONTRATTO E FASI — attività previste, deliverable, metodologia di sviluppo
+4. TITOLARITÀ DEI DIRITTI — clausole contrattuali su proprietà intellettuale e sfruttamento economico
+5. RIPARTIZIONE DEL RISCHIO E NATURA DI INVESTITORE — distribuzione del rischio di insuccesso, evidenza che il committente mantiene la natura di investitore
 
-Target length: 300–500 words.',
-  'Revise the existing "Attività Commissionate a Terzi" section according to the
-instructions provided. Ensure factual consistency with the preceding "Attività
-Rilevanti" section. If switching between "third-party exists" and "all internal"
-scenarios, rewrite accordingly. Do not invent contractual arrangements.
-Return only the revised section text.',
-  '[
-    {"key": "has_third_party", "label": "Attività commissionate a terzi?", "type": "select", "options": ["No — tutto interno", "Sì"], "aiSuggestable": false},
-    {"key": "third_party_type", "label": "Tipo di soggetto terzo", "type": "select", "options": ["Università o ente di ricerca", "Fornitore terzo indipendente", "Società del gruppo", "Misto"], "aiSuggestable": false},
-    {"key": "work_description", "label": "Descrizione del lavoro commissionato", "type": "textarea", "placeholder": "Tipo di attività, risultati attesi...", "aiSuggestable": false},
-    {"key": "contract_type", "label": "Tipo di contratto", "type": "select", "options": ["Contratto di ricerca", "Contratto di collaborazione", "Contratto di appalto", "Accordo di service infragruppo"], "aiSuggestable": false}
-  ]',
+Regole:
+- Non inventare clausole contrattuali, nomi o dati non presenti nei campi o nei documenti di contesto
+- Se un'informazione è assente, scrivi [DA COMPLETARE]
+- Tono: formale, tecnico, in terza persona
+- Lunghezza target: 400–600 parole$sysprompt$,
+  $refineprompt$La sezione "Attività commissionate a terzi" è stata generata. Il consulente ha richiesto le seguenti modifiche:
+
+{{refine_instructions}}
+
+Testo attuale:
+{{current_output}}
+
+Riscrivi la sezione incorporando le modifiche richieste, mantenendo il tono formale e la struttura esistente.$refineprompt$,
+  $schema$[
+  {
+    "key": "has_outsourced",
+    "label": "Attività commissionate a terzi presenti",
+    "type": "select",
+    "options": ["Sì", "No"],
+    "default": "Sì"
+  },
+  {
+    "key": "contractor_name",
+    "label": "Nome del soggetto commissionario",
+    "type": "text",
+    "placeholder": "es. Beta 80 Group S.p.A."
+  },
+  {
+    "key": "contractor_type",
+    "label": "Tipo di soggetto",
+    "type": "select",
+    "options": ["Università o ente di ricerca", "Società di sviluppo software", "Società di consulenza specializzata", "Altro soggetto indipendente"]
+  },
+  {
+    "key": "technical_domain",
+    "label": "Ambito tecnico e tecnologico",
+    "type": "textarea",
+    "placeholder": "Es. intelligenza artificiale applicata ai processi aziendali, RPA, machine learning..."
+  },
+  {
+    "key": "contract_object",
+    "label": "Oggetto del contratto",
+    "type": "textarea",
+    "placeholder": "Descrivi le attività previste dal contratto e i deliverable principali"
+  },
+  {
+    "key": "ip_ownership",
+    "label": "Titolarità dei diritti sul software / bene immateriale",
+    "type": "textarea",
+    "placeholder": "Chi detiene i diritti di sfruttamento economico? Indica le clausole contrattuali rilevanti."
+  },
+  {
+    "key": "risk_sharing",
+    "label": "Ripartizione del rischio di insuccesso",
+    "type": "textarea",
+    "placeholder": "Come è distribuito il rischio tra committente e commissionario?"
+  },
+  {
+    "key": "development_phases",
+    "label": "Fasi di sviluppo e metodologia",
+    "type": "textarea",
+    "placeholder": "Descrivi le fasi previste dal contratto e il metodo di lavoro del fornitore"
+  }
+]$schema$,
+  NOW(),
+  NOW()
+)
+ON CONFLICT (id) DO UPDATE SET
+  description            = EXCLUDED.description,
+  system_prompt_template = EXCLUDED.system_prompt_template,
+  refine_prompt_template = EXCLUDED.refine_prompt_template,
+  form_schema            = EXCLUDED.form_schema,
+  step_type              = EXCLUDED.step_type,
+  updated_at             = NOW();
+
+-- Step 6: Modello Organizzativo (type_c)
+
+INSERT INTO framework_steps (id, framework_id, "order", title, description, step_type, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
+VALUES (
+  '11111111-0000-0000-0000-000000000006',
+  'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  6,
+  'Modello Organizzativo',
+  'Struttura organizzativa per la gestione della R&S e della proprietà intellettuale',
+  'type_c',
+  $sysprompt$Sei un esperto di fiscalità italiana specializzato nel regime Patent Box (art. 6 D.L. 146/2021).
+Stai redigendo la sezione "Modello organizzativo dell'impresa" della Relazione illustrativa per {{company_name}}, anno di imposta {{tax_year}}.
+L'azienda conta {{total_employees}} dipendenti totali.
+
+Il consulente ha fornito le seguenti informazioni:
+- Struttura organizzativa: {{org_structure}}
+- Dipartimenti coinvolti nel progetto: {{departments_involved}}
+- Strutture trasversali: {{cross_functional_units}}
+- Leadership e governance: {{leadership}}
+- Dotazioni aziendali: {{company_assets}}
+
+Hai accesso ai documenti di contesto caricati dal consulente (organigrammi, business plan, report interni). Usali come fonte primaria per nomi di persone, ruoli, headcount e dettagli sulle dotazioni non presenti nei campi sopra.
+
+Redigi la sezione in italiano formale, strutturata nei seguenti paragrafi:
+
+1. STRUTTURA ORGANIZZATIVA PER FUNZIONI — descrizione delle aree aziendali, responsabili, numero di risorse per divisione
+2. UNITÀ TRASVERSALI — strutture che operano su più ambiti (solo se il campo non è vuoto)
+3. LEADERSHIP E GOVERNANCE — chi guida l'azienda, modello decisionale, autonomia operativa
+4. VANTAGGI DEL MODELLO ORGANIZZATIVO — come il modello supporta le attività di R&D e l'efficienza operativa
+5. DOTAZIONI AZIENDALI — infrastrutture, attrezzature e risorse materiali impiegate nel progetto
+
+Regole critiche:
+- Non inventare MAI nomi di persone, ruoli specifici o cifre di headcount non presenti nei campi o nei documenti di contesto
+- Se nomi o headcount non sono disponibili, scrivi [DA COMPLETARE] per quei valori specifici mantenendo la struttura del paragrafo
+- Tono: formale, descrittivo, in terza persona
+- Lunghezza target: 400–600 parole$sysprompt$,
+  $refineprompt$La sezione "Modello organizzativo" è stata generata. Il consulente ha richiesto le seguenti modifiche:
+
+{{refine_instructions}}
+
+Testo attuale:
+{{current_output}}
+
+Riscrivi la sezione incorporando le modifiche richieste, mantenendo il tono formale e la struttura esistente. Non aggiungere nomi o dati non presenti nel testo originale o nei campi forniti.$refineprompt$,
+  $schema$[
+  {
+    "key": "org_structure",
+    "label": "Struttura organizzativa",
+    "type": "textarea",
+    "placeholder": "Descrivi le divisioni/dipartimenti principali, anche in modo grezzo. Includi nomi dei responsabili se disponibili."
+  },
+  {
+    "key": "departments_involved",
+    "label": "Dipartimenti coinvolti nel progetto R&D",
+    "type": "textarea",
+    "placeholder": "Quali reparti hanno partecipato al progetto? Quante persone per reparto?"
+  },
+  {
+    "key": "cross_functional_units",
+    "label": "Strutture trasversali",
+    "type": "textarea",
+    "placeholder": "Unità o uffici che operano in modo trasversale su più ambiti aziendali. Lascia vuoto se non applicabile."
+  },
+  {
+    "key": "leadership",
+    "label": "Leadership e governance",
+    "type": "textarea",
+    "placeholder": "Chi guida l'azienda? Come è strutturata la governance? Autonomia decisionale?"
+  },
+  {
+    "key": "total_employees",
+    "label": "Totale dipendenti",
+    "type": "client_detail",
+    "source": "client.employee_count"
+  },
+  {
+    "key": "company_assets",
+    "label": "Dotazioni aziendali",
+    "type": "textarea",
+    "placeholder": "Attrezzature, infrastruttura IT, laboratori, software, hardware utilizzati nel progetto"
+  }
+]$schema$,
+  NOW(),
+  NOW()
+)
+ON CONFLICT (id) DO UPDATE SET
+  description            = EXCLUDED.description,
+  system_prompt_template = EXCLUDED.system_prompt_template,
+  refine_prompt_template = EXCLUDED.refine_prompt_template,
+  form_schema            = EXCLUDED.form_schema,
+  step_type              = EXCLUDED.step_type,
+  updated_at             = NOW();
+
+-- Step 7 (was step 8): Funzioni, Rischi e Beni (type_c)
+-- Note: step 7 "Relazione Tecnica" has been removed (moved to ARKADIA-91 framework)
+
+INSERT INTO framework_steps (id, framework_id, "order", title, description, step_type, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
+VALUES (
+  '11111111-0000-0000-0000-000000000008',
+  'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  7,
+  'Funzioni, Rischi e Beni',
+  'Analisi funzionale ed economica — fondamento del calcolo nexus',
+  'type_c',
+  $sysprompt$Sei un esperto di fiscalità italiana specializzato nel regime Patent Box (art. 6 D.L. 146/2021).
+Stai redigendo la sezione "Funzioni, rischi e beni dell'impresa" della Relazione illustrativa per {{company_name}}, anno di imposta {{tax_year}}.
+Fatturato indicativo: {{revenue}}.
+
+Il consulente ha fornito le seguenti informazioni:
+- Processi e funzioni: {{processes_functions}}
+- Beni immateriali: {{intangible_assets}}
+- Utilizzo indiretto: {{indirect_use}}
+- Cespiti utilizzati: {{tangible_assets}}
+- Dati economico-finanziari: {{financial_data}}
+- Rischi di mercato: {{market_risks}}
+- Rischi finanziari: {{financial_risks}}
+
+Hai accesso ai documenti di contesto caricati dal consulente (bilancio, business plan, analisi di mercato). Usali come fonte primaria per tutti i dati finanziari, indicatori di bilancio e analisi di settore non presenti nei campi sopra.
+
+Redigi la sezione in italiano formale, strutturata nei seguenti paragrafi:
+
+1. PROCESSI, ATTIVITÀ E FUNZIONI — descrizione dei processi aziendali rilevanti e dei beni immateriali direttamente impiegati. Se utilizzo indiretto: aggiungi nota sul contratto di concessione allegato.
+2. ANALISI ECONOMICA — performance economico-finanziaria dell'azienda. Includi indicatori disponibili (fatturato, MOL, risultato netto, ROE, ROI, ROS) con confronto rispetto all'anno precedente dove i dati sono disponibili.
+3. CESPITI UTILIZZATI — beni materiali e infrastrutture tecnologiche impiegati nel progetto
+4. ANALISI DEI RISCHI DI MERCATO — rischi del settore in cui opera l'azienda, contesto macroeconomico rilevante
+5. ANALISI DEL RISCHIO FINANZIARIO — esposizione a rischio di credito, cambio, liquidità, tasso. Solidità patrimoniale.
+6. CONCLUSIONE — capacità dell'azienda di gestire i rischi ordinari e straordinari del proprio settore
+
+REGOLA CRITICA SUI DATI FINANZIARI:
+Non inventare MAI cifre, percentuali o indicatori finanziari non esplicitamente forniti nei campi sopra o nei documenti di contesto. Se un dato finanziario non è disponibile scrivi [DA COMPLETARE — inserire dato da bilancio]. Non approssimare, non stimare, non dedurre da altri dati.
+
+Tono: formale, analitico, in terza persona.
+Lunghezza target: 500–750 parole.$sysprompt$,
+  $refineprompt$La sezione "Funzioni, rischi e beni" è stata generata. Il consulente ha richiesto le seguenti modifiche:
+
+{{refine_instructions}}
+
+Testo attuale:
+{{current_output}}
+
+Riscrivi la sezione incorporando le modifiche richieste, mantenendo il tono formale e la struttura esistente. Non aggiungere dati finanziari non presenti nel testo originale o nei campi forniti.$refineprompt$,
+  $schema$[
+  {
+    "key": "processes_functions",
+    "label": "Processi e funzioni svolte",
+    "type": "textarea",
+    "placeholder": "Descrivi i principali processi aziendali e le funzioni relative al bene immateriale agevolato"
+  },
+  {
+    "key": "intangible_assets",
+    "label": "Beni immateriali utilizzati",
+    "type": "textarea",
+    "placeholder": "Software, brevetti, know-how, marchi direttamente impiegati nei processi. Indica se l'utilizzo è diretto o indiretto."
+  },
+  {
+    "key": "indirect_use",
+    "label": "Il bene immateriale è utilizzato indirettamente (licenza)?",
+    "type": "select",
+    "options": ["No — utilizzo diretto", "Sì — allega contratto di concessione"]
+  },
+  {
+    "key": "tangible_assets",
+    "label": "Cespiti utilizzati",
+    "type": "textarea",
+    "placeholder": "Macchinari, hardware, laboratori, infrastrutture tecnologiche impiegate nel progetto"
+  },
+  {
+    "key": "financial_data",
+    "label": "Dati economico-finanziari principali",
+    "type": "textarea",
+    "placeholder": "Fatturato, MOL, risultato netto, ROE, ROI, ROS per l'anno di riferimento e precedenti. Anche in forma grezza."
+  },
+  {
+    "key": "market_risks",
+    "label": "Rischi di mercato",
+    "type": "textarea",
+    "placeholder": "Rischi specifici del settore in cui opera l'azienda (es. geopolitici, competitivi, valutari, di settore)"
+  },
+  {
+    "key": "financial_risks",
+    "label": "Rischi finanziari",
+    "type": "textarea",
+    "placeholder": "Rischio di credito, di cambio, di liquidità, di tasso. Indica se la società è esposta o meno a ciascuno."
+  },
+  {
+    "key": "revenue",
+    "label": "Fatturato (€)",
+    "type": "client_detail",
+    "source": "client.revenue"
+  }
+]$schema$,
   NOW(),
   NOW()
 )
@@ -346,23 +632,6 @@ SET
 ]'
 WHERE id = '11111111-0000-0000-0000-000000000003';
 
-UPDATE framework_steps
-SET form_schema = $schema$[
-  {"key": "context_note", "label": "Contesto generale delle attività R&S", "type": "textarea", "placeholder": "Breve descrizione del contesto complessivo delle attività...", "required": false},
-  {"key": "reference_document", "label": "Documento di riferimento del cliente", "type": "file_upload_generation", "accept": [".pdf", ".docx", ".pptx"], "hint": "Utilizzato dall'AI come contesto — non viene incluso direttamente nel documento", "required": false},
-  {"key": "activities", "label": "Attività rilevanti", "type": "repeatable_group", "minItems": 1, "addLabel": "Aggiungi attività", "fields": [
-    {"key": "ip_linked", "label": "Riconducibile alla privativa oggetto di agevolazione?", "type": "select", "options": ["Sì", "Parzialmente", "No"], "required": false},
-    {"key": "context", "label": "Contesto generale del progetto", "type": "textarea", "required": true},
-    {"key": "objectives", "label": "Obiettivo del progetto e risultati attesi", "type": "textarea", "required": true},
-    {"key": "phases", "label": "Fasi di sviluppo (sintesi)", "type": "textarea", "required": false},
-    {"key": "results", "label": "Risultati conseguiti", "type": "textarea", "required": false}
-  ]},
-  {"key": "investor_nature", "label": "Natura di investitore dell'impresa", "type": "textarea", "placeholder": "Sezione in sviluppo — inserire manualmente se disponibile", "required": false, "hint": "Verrà strutturata con prompt dedicato in FPB-4b. Se vuoto, il documento mostrerà [SEZIONE DA COMPLETARE]."},
-  {"key": "has_associated_ops", "label": "L'impresa ha operazioni con imprese associate o collegate?", "type": "select", "options": ["No", "Sì"], "defaultValue": "No", "required": true},
-  {"key": "associated_ops_description", "label": "Descrizione delle operazioni con imprese associate", "type": "textarea", "required": false, "conditional": {"key": "has_associated_ops", "value": "Sì"}, "placeholder": "Descrivere le operazioni intercorse con le imprese associate e/o collegate..."}
-]$schema$
-WHERE id = '11111111-0000-0000-0000-000000000004';
-
 UPDATE steps s
 SET
   form_schema = fs.form_schema,
@@ -373,7 +642,11 @@ WHERE fs.id = s.framework_step_id
   AND fs.id IN (
     '11111111-0000-0000-0000-000000000001',
     '11111111-0000-0000-0000-000000000002',
-    '11111111-0000-0000-0000-000000000003'
+    '11111111-0000-0000-0000-000000000003',
+    '11111111-0000-0000-0000-000000000004',
+    '11111111-0000-0000-0000-000000000005',
+    '11111111-0000-0000-0000-000000000006',
+    '11111111-0000-0000-0000-000000000008'
   )
   AND (
     s.form_schema IS DISTINCT FROM fs.form_schema
@@ -381,121 +654,124 @@ WHERE fs.id = s.framework_step_id
     OR s.refine_prompt_template IS DISTINCT FROM fs.refine_prompt_template
   );
 
--- Step 6: Modello Organizzativo (type_c)
+-- ─── Few-shot examples: Saco Combimar 2024 ───────────────────────────────────
+-- blocklist is stored metadata seeded with the examples; runtime enforcement is handled by generation sanitisation.
 
-INSERT INTO framework_steps (id, framework_id, "order", title, description, step_type, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
-VALUES (
-  '11111111-0000-0000-0000-000000000006',
-  'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-  6,
-  'Modello Organizzativo',
-  'Struttura organizzativa per la gestione della R&S e della proprietà intellettuale',
-  'type_c',
-  'Write the organisational model section ("Modello Organizzativo") of the
-Patent Box documentation package. The purpose of this section is to demonstrate
-to the Agenzia delle Entrate that the company has a structured, intentional
-approach to R&D governance.
+WITH example_data(step_order, label, sector, blocklist, content) AS (
+  VALUES
+  (
+    4,
+    'Saco Combimar 2024 — logistica/shipping',
+    'logistica',
+    ARRAY['Saco Combimar','Saco','Combimar','Autoquote','AutoQuote','Beta 80','Beta80','BeOne','Beon','FBH','MEDH','Roberto Laquale','Laquale','Deborah Fridecky','Fridecky','Roberto Roccato','Roccato','Pierlorenzo Messina','Messina','Mona Bakal','Bakal','Angelo Martina','Martina','Melzo','NVOCC','IBM Watson','Watson Assistant','Automation Anywhere','Django'],
+    $example$L'attività di Ricerca di Saco Combimar ha portato alla realizzazione di un software proprietario che facilita i processi di relazione con i clienti e pertanto le vendite e la customer experience.
 
-The section must:
-- Describe the internal structure dedicated to R&D: the teams, functions, or
-  individuals responsible — using appropriate Italian terminology (funzione R&S,
-  responsabile dell''innovazione, ufficio tecnico, etc.)
-- Describe how R&D projects are initiated, monitored, and evaluated internally,
-  including cost tracking and attribution to qualifying activities (tracking dei
-  costi, contabilità analitica, etc.)
-- Explain how the company protects and maintains its intangible assets:
-  registration procedures where applicable, confidentiality obligations, and
-  internal IP policies
-- Describe how decisions about IP exploitation are made and by whom
+L'innovazione consiste specificamente in una soluzione per il miglioramento del processo di produzione di offerte di quotazioni.
 
-Calibrate the sophistication of the organisational model to the company''s size
-(use employee count from the user message). Do not invent specific department
-names, system names, or process tools not mentioned in the user message.
+Oltre a creare quotazioni, il sistema sviluppato rende possibile visualizzare lo storico delle quotazioni inviate dai diversi canali, utilizzare le funzionalità del servizio cognitivo, amministrare utenze e impostare alcuni parametri necessari al bot "Autoquote".
 
-Target length: 450–650 words.',
-  'Revise the existing "Modello Organizzativo" section according to the
-instructions provided. Strengthen the demonstration of structured IP governance.
-Ensure the organisational description is proportionate to the company''s size.
-Improve any weak passages around cost tracking or IP protection processes.
-Do not invent facts. Return only the revised section text.',
-  '[
-    {"key": "rd_team", "label": "Chi svolge le attività di R&S", "type": "textarea", "placeholder": "Team dedicato, funzione specifica, individui — nomi o ruoli...", "aiSuggestable": false},
-    {"key": "cost_tracking", "label": "Metodo di tracciamento costi", "type": "select", "options": ["Contabilità analitica per centri di costo", "Timesheet e rendicontazione ore", "Budget dedicato con consuntivazione", "Sistema misto"], "aiSuggestable": false},
-    {"key": "ip_protection", "label": "Metodo di protezione IP", "type": "textarea", "placeholder": "NDA, registrazione, policy interne...", "aiSuggestable": false}
-  ]',
-  NOW(),
-  NOW()
+L'attività di ricerca ha riguardato l'automazione dei processi e l'aumento dell'efficienza dell'erogazione del servizio.
+
+L'attività di innovazione tecnologica svolta dall'impresa, è finalizzata al raggiungimento di obiettivi di innovazione digitale 4.0 contenuti nell'art. 5 comma 1 del Decreto del 26 maggio 2020 del Ministero dello sviluppo Economico: c) l'integrazione, attraverso l'applicazione di tecnologie digitali, tra il sistema informatico (IT) e le fasi del processo di produzione di beni o servizi (Operations).
+
+La sfida di Saco Combimar quando ha avviato il progetto di innovazione "Autoquote" era di ridurre la mole di lavoro degli addetti alla vendita e alla gestione offerte. Saco riceve circa 800 richieste di quotazione (RFP, Requests for Proposal) al giorno. Questo enorme flusso di comunicazione, gestito manualmente dagli addetti dell'azienda, ha un effetto molto impegnativo per l'azienda, con costi e tempi dilatati.
+
+Tipicamente una richiesta, se gestita manualmente, richiede che un addetto legga l'email e proceda a trovare le quotazioni migliori sul sistema collegato con le società di shipping. Questo processo manuale e laborioso, richiede una media tra 10 e 15 minuti di lavoro per evadere ciascuna richiesta.
+
+Il cronoprogramma prevede 3 fasi per il 2023: Fase 1 (aprile) — setup ambiente e attivazione; Fase 2 (luglio); Fase 3 (agosto) — compreso test e attivazione; Collaudo (settembre).
+
+I risultati incideranno su alcuni aspetti fondamentali nell'efficienza operativa aziendale. Grazie allo sviluppo di questo progetto innovativo saranno gestite circa 700 quotazioni al giorno con servizio 24x7, con una tempistica da 25 secondi ad alcuni minuti per la creazione di quotazioni.
+
+I principali benefici sono: aumento fatturato grazie alla maggior rapidità dell'emissione delle offerte; migliore servizio clienti grazie a maggiori risorse libere; aumento produttività con incremento dei volumi a parità o con minori risorse dedicate.
+
+Saco Combimar, pur facendo parte del gruppo internazionale SACO e operando sotto la direzione coordinata di FBH S.p.A., mantiene un livello totale di indipendenza finanziaria e operativa. Dal punto di vista finanziario, è una società per azioni con capitale sociale interamente versato pari a tre milioni di euro che genera cash flow sufficiente a finanziare i propri investimenti. In termini operativi, agisce come un'entità con struttura gestionale propria, team indipendente (circa 125 dipendenti), centro decisionale in Italia (Melzo) e autonomia nella definizione delle strategie commerciali.$example$
+  ),
+  (
+    5,
+    'Saco Combimar 2024 — logistica/shipping',
+    'logistica',
+    ARRAY['Saco Combimar','Saco','Combimar','Autoquote','AutoQuote','Beta 80','Beta80','BeOne','Beon','FBH','MEDH','Roberto Laquale','Laquale','Deborah Fridecky','Fridecky','Roberto Roccato','Roccato','Pierlorenzo Messina','Messina','Mona Bakal','Bakal','Angelo Martina','Martina','Melzo','NVOCC','IBM Watson','Watson Assistant','Automation Anywhere','Django'],
+    $example$L'ambito di riferimento è l'intelligenza artificiale, ossia un campo della scienza informatica che si occupa dello sviluppo di sistemi e macchine in grado di compiere attività che richiedono solitamente l'intelligenza umana, come il ragionamento, il problem solving, l'apprendimento e il riconoscimento di pattern.
+
+Nell'ambito di questo progetto l'intelligenza artificiale è applicata ai processi aziendali; quindi, si fa riferimento all'utilizzo di algoritmi e modelli predittivi per automatizzare e ottimizzare le attività all'interno di un'azienda.
+
+Sulla base degli accordi con i fornitori e in funzione anche della sua attività di ideazione e coordinamento del progetto, Saco Combimar è titolare esclusiva dei diritti di utilizzazione economica del Software senza limiti di tempo e per il suo sfruttamento in qualunque territorio.
+
+In forza del Contratto tra il fornitore (Beta80) e la società (Saco Combimar S.p.A.), la società potrà effettuare: la traduzione, l'adattamento, la trasformazione e ogni altra modificazione del Software; effettuare o autorizzare la riproduzione, permanente o temporanea, totale o parziale, del software con qualsiasi mezzo o in qualsiasi forma; le operazioni di caricamento, visualizzazione, esecuzione, trasmissione e memorizzazione del Software.
+
+Il fornitore Beta 80, società specializzata nella programmazione informatica incluso l'utilizzo di motori di Intelligenza artificiale, ha messo a disposizione di Saco Combimar un'unità di sviluppo agile che coprirà le seguenti aree di attività: Ricerca, Sviluppo, Realizzazione prototipo, Test & collaudo per messa in produzione, Formazione.
+
+La realizzazione del progetto è stata attuata attraverso diverse fasi: Prima fase — automazione completa delle attività dei BOT (preparazione ambiente, impostazione BOT, attivazione del sistema); Fasi successive — attuazione del servizio cognitivo e tuning, con analisi e definizione KPI di efficienza, test di implementazione e valutazione dei risultati raggiunti. I task sono stati tutti completati nel 2023.$example$
+  ),
+  (
+    6,
+    'Saco Combimar 2024 — logistica/shipping',
+    'logistica',
+    ARRAY['Saco Combimar','Saco','Combimar','Autoquote','AutoQuote','Beta 80','Beta80','BeOne','Beon','FBH','MEDH','Roberto Laquale','Laquale','Deborah Fridecky','Fridecky','Roberto Roccato','Roccato','Pierlorenzo Messina','Messina','Mona Bakal','Bakal','Angelo Martina','Martina','Melzo','NVOCC','IBM Watson','Watson Assistant','Automation Anywhere','Django'],
+    $example$Saco Combimar S.p.A. ha delineato un approccio chiaro e strutturato, con i riferimenti diretti dall'organigramma ufficiale.
+
+Saco Combimar adotta una struttura organizzativa funzionale, organizzata intorno a diverse aree specialistiche, ognuna con competenze precise e personale dedicato:
+
+Sales: guidata da Roberto Laquale (Amministratore Delegato e supervisor di Sales General Manager), coadiuvato da Deborah Fridecky (Deputy Sales General Manager) e dal team overseas. Questa divisione gestisce le relazioni con i clienti, definisce strategie commerciali, stabilisce tariffe e cura lo sviluppo dei mercati esteri.
+
+Operations – Import & Export: coordinamento delle operazioni logistiche, planning delle rotte, prenotazioni, consolidamento container, gestione magazzini e logistica doganale. Coordinata da Roberto Roccato.
+
+Customs (Dogana): assicura la compliance normativa, l'ottenimento delle certificazioni (es. AEOF) e supporto per lo sdoganamento. Coordinata da Pierlorenzo Messina.
+
+Finance – Accounting – Human Resources: gestione contabilità, controllo di gestione, tesoreria e amministrazione del personale. Coordinata da Mona Bakal.
+
+ICT (Information & Communication Technology): coordinata da Angelo Martina.
+
+La "Centrale Operativa" di Melzo è il nodo decisionale dell'azienda, dove convergono sales, operations, ICT e dogana. Ogni spedizione è monitorata e coordinata end-to-end da team dedicati, garantendo flessibilità operativa e alta reattività sul mercato.
+
+La società è guidata da Roberto Laquale – CEO e Sales General Manager, il quale coordina i vari team e risponde al consiglio di amministrazione, che opera secondo le linee strategiche di FBH S.p.A. pur mantenendo ampia autonomia decisionale in Italia.
+
+Il modello organizzativo si basa su quattro pilastri: chiarezza dei ruoli, agilità operativa, forte coordinamento tra funzioni, e adattabilità geografica con soluzioni personalizzate sui principali mercati.$example$
+  ),
+  (
+    7,
+    'Saco Combimar 2024 — logistica/shipping',
+    'logistica',
+    ARRAY['Saco Combimar','Saco','Combimar','Autoquote','AutoQuote','Beta 80','Beta80','BeOne','Beon','FBH','MEDH','Roberto Laquale','Laquale','Deborah Fridecky','Fridecky','Roberto Roccato','Roccato','Pierlorenzo Messina','Messina','Mona Bakal','Bakal','Angelo Martina','Martina','Melzo','NVOCC','IBM Watson','Watson Assistant','Automation Anywhere','Django'],
+    $example$La società ha registrato nel 2024 un fatturato di € 41.3 mln per un margine operativo lordo (MOL) di € 886k e un Risultato Netto di €163k. Questo risultato è in calo rispetto all'anno precedente in cui il fatturato era di € 43.2 mln, MOL di € 3.3 mln e Risultato Netto di € 1.7 mln. I risultati producono una redditività in termini di MOL su fatturato per il 2024 pari al 2.1%, in calo rispetto all'anno precedente (7.6%).
+
+Il "ROE netto" è determinato come rapporto tra Risultato Netto e Patrimonio Netto non inclusivo del risultato dell'esercizio. Il "ROI" è determinato come rapporto tra Risultato Operativo e Totale Attivo. Il "ROS" è determinato come rapporto tra Risultato Operativo e Ricavi netti.
+
+Il valore della produzione ha subito una diminuzione di circa 1,9 Milioni di euro, pari al 4,39% circa rispetto al 2023, principalmente per la riduzione dei volumi. L'aumento del Costo del lavoro di € 255k, ovvero il 4% in più rispetto al 2023, è dovuto all'aumento dell'organico ed al costo del lavoro dopo il rinnovo contrattuale.
+
+Dal punto di vista patrimoniale l'analisi delle principali voci del bilancio mostra una gestione efficiente del capitale circolante netto e nessuna variazione rilevante del capitale immobilizzato, escluso il normale processo di ammortamento. L'analisi dei principali indicatori finanziari conferma la solidità dell'azienda.
+
+La società non è esposta ad altri rischi finanziari: nessun rischio di credito significativo in considerazione della natura primaria dei clienti; non appare un significativo rischio di cambio operando principalmente in valuta euro.
+
+L'oscillazione del valore di mercato dei noli fa parte dell'attività caratteristica del settore e comporta un rischio di mercato gestito e monitorato con attenzione. Una nota riguarda il rischio connesso agli effetti delle politiche dei dazi dell'amministrazione americana, che rappresenta un mutamento a medio-lungo termine delle relazioni commerciali con potenziale impatto sul volume degli scambi.
+
+Saco Combimar, nel tempo, ha dimostrato di saper gestire rischi ordinari e straordinari del settore in cui opera con una flessibilità gestionale molto efficace nel mitigare i momenti negativi e cavalcare quelli positivi.$example$
+  )
 )
-ON CONFLICT (id) DO UPDATE SET
-  description            = EXCLUDED.description,
-  system_prompt_template = EXCLUDED.system_prompt_template,
-  refine_prompt_template = EXCLUDED.refine_prompt_template,
-  form_schema            = EXCLUDED.form_schema,
-  step_type              = EXCLUDED.step_type,
-  updated_at             = NOW();
-
--- Step 7 (was step 8): Funzioni, Rischi e Beni (type_c)
--- Note: step 7 "Relazione Tecnica" has been removed (moved to ARKADIA-91 framework)
-
-INSERT INTO framework_steps (id, framework_id, "order", title, description, step_type, system_prompt_template, refine_prompt_template, form_schema, created_at, updated_at)
-VALUES (
-  '11111111-0000-0000-0000-000000000008',
-  'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-  7,
-  'Funzioni, Rischi e Beni',
-  'Analisi funzionale ed economica — fondamento del calcolo nexus',
-  'type_c',
-  'Write the functions, risks, and assets analysis section ("Funzioni, Rischi e
-Beni") — the final section of the Patent Box documentation package. This
-section provides the factual foundation for the nexus ratio and demonstrates
-the company''s active involvement in developing and exploiting its IP.
-
-The section must address three distinct areas:
-
-FUNZIONI: Describe the specific economic functions performed by the company in
-relation to the IP — design, engineering, software development, testing, quality
-control, commercial exploitation, etc. Language must convey active contribution,
-not passive ownership.
-
-RISCHI: Describe the risks assumed by the company in the development and
-exploitation of the intangible assets: financial risk (capital at risk of
-non-recovery), technical risk (possibility of development failure), market risk
-(uncertainty of commercial return), and where relevant, legal or regulatory risk.
-
-BENI: Identify the qualifying intangible assets subject to the Patent Box
-election: their nature, legal status (registered or unregistered, as applicable),
-and the company''s legal title.
-
-Close with a brief statement linking the three elements: the company''s functions
-and risks, combined with its ownership of the intangible assets described,
-confirm its eligibility for the Patent Box regime for the stated tax year.
-
-Do not invent specific financial figures, risk amounts, or IP registration numbers
-not provided in the user message.
-
-Target length: 500–700 words.',
-  'Revise the existing "Funzioni, Rischi e Beni" section according to the
-instructions provided. Strengthen the economic argument: ensure functions are
-described actively, risks are substantive and contextually appropriate, and
-assets are clearly identified. Ensure consistency with the preceding sections.
-Do not invent facts or figures. Return only the revised section text.',
-  '[
-    {"key": "key_functions", "label": "Funzioni economiche svolte", "type": "textarea", "placeholder": "Sviluppo, manutenzione, commercializzazione, gestione IP...", "aiSuggestable": false},
-    {"key": "financial_risk", "label": "Rischio finanziario", "type": "textarea", "placeholder": "Capitale investito a rischio, entità dell''investimento...", "aiSuggestable": false},
-    {"key": "technical_risk", "label": "Rischio tecnico", "type": "textarea", "placeholder": "Possibilità di fallimento dello sviluppo...", "aiSuggestable": false},
-    {"key": "market_risk", "label": "Rischio di mercato", "type": "textarea", "placeholder": "Incertezza sul ritorno commerciale...", "aiSuggestable": false},
-    {"key": "asset_legal_status", "label": "Status legale dei beni immateriali", "type": "text", "placeholder": "es. Software non registrato, titolarità in capo alla società...", "aiSuggestable": false}
-  ]',
-  NOW(),
-  NOW()
+INSERT INTO framework_step_examples (
+  framework_step_id,
+  label,
+  sector,
+  blocklist,
+  content,
+  is_active
 )
-ON CONFLICT (id) DO UPDATE SET
-  description            = EXCLUDED.description,
-  system_prompt_template = EXCLUDED.system_prompt_template,
-  refine_prompt_template = EXCLUDED.refine_prompt_template,
-  form_schema            = EXCLUDED.form_schema,
-  step_type              = EXCLUDED.step_type,
-  updated_at             = NOW();
+SELECT
+  fs.id,
+  e.label,
+  e.sector,
+  e.blocklist,
+  e.content,
+  TRUE
+FROM example_data e
+JOIN frameworks f ON f.slug = 'italian-patent-box'
+JOIN framework_steps fs ON fs.framework_id = f.id AND fs."order" = e.step_order
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM framework_step_examples existing
+  WHERE existing.framework_step_id = fs.id
+    AND existing.label = e.label
+);
 
 -- ─── Framework: Relazione Tecnica — Patent Box (ARKADIA-91) ──────────────────
 -- Standalone technical report framework. Separate from the main Patent Box.
@@ -828,3 +1104,43 @@ SELECT "order", title, step_type
 FROM framework_steps
 WHERE framework_id = 'b2c3d4e5-f6a7-8901-bcde-f12345678901'
 ORDER BY "order";
+
+-- ─── framework_step_examples (Saco Combimar seed) ──────────────────────────────────────
+-- Added: ENGNEER-338 (2026-05-07)
+-- Provides example outputs for steps 4–7 to inject at generation time.
+-- Each row: framework_step_id, example_output (text), blocklist (text[] of banned phrases), is_active.
+-- Newest active row per framework_step_id wins at runtime (ordered by created_at DESC).
+-- Anon grants are intentionally REVOKED on this table. Do not re-grant.
+-- blocklist is stored metadata only — enforcement is in server/utils/sanitiseGeneration.ts.
+--
+-- NOTE: The Saco Combimar example content for steps 4–7 was applied directly to Supabase
+-- via migration (ENGNEER-338) and is present in the live DB.
+-- To reproduce on a fresh DB, INSERT the Saco rows here.
+-- Retrieve the current rows from Supabase with:
+--   SELECT id, framework_step_id, is_active, blocklist, created_at FROM framework_step_examples ORDER BY created_at;
+-- Then paste the INSERT block below in this format:
+--
+-- INSERT INTO framework_step_examples (id, framework_step_id, example_output, blocklist, is_active, created_at, updated_at)
+-- VALUES
+--   ('<uuid>', '11111111-0000-0000-0000-000000000004', $ex$<step 4 example text>$ex$, ARRAY['<phrase1>', '<phrase2>'], true, NOW(), NOW()),
+--   ('<uuid>', '11111111-0000-0000-0000-000000000005', $ex$<step 5 example text>$ex$, ARRAY[]::text[], true, NOW(), NOW()),
+--   ('<uuid>', '11111111-0000-0000-0000-000000000006', $ex$<step 6 example text>$ex$, ARRAY[]::text[], true, NOW(), NOW()),
+--   ('<uuid>', '11111111-0000-0000-0000-000000000008', $ex$<step 7 example text>$ex$, ARRAY[]::text[], true, NOW(), NOW())
+-- ON CONFLICT (id) DO UPDATE SET
+--   example_output = EXCLUDED.example_output,
+--   blocklist      = EXCLUDED.blocklist,
+--   is_active      = EXCLUDED.is_active,
+--   updated_at     = NOW();
+
+-- Verify examples present:
+-- SELECT fse.id, fs.title, fse.is_active, array_length(fse.blocklist, 1) as blocklist_count
+-- FROM framework_step_examples fse
+-- JOIN framework_steps fs ON fs.id = fse.framework_step_id
+-- ORDER BY fs."order";
+
+-- ─── page_step_figures ──────────────────────────────────────────────────────────────────
+-- Added: ENGNEER-340 (pending build as of 2026-05-07)
+-- Stores figure captions per page+step. V1: text markers only ([INSERIRE FIGURA: {caption}]).
+-- No seed data required. Table is created by migration.
+-- Verify table exists:
+-- SELECT table_name FROM information_schema.tables WHERE table_name = 'page_step_figures';
