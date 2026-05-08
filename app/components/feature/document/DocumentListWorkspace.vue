@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { DocumentListItem } from "~/types/app.types";
+import { documentListCols } from "~/utils/listLayout";
 
 const props = defineProps<{
   documents?: DocumentListItem[] | null;
@@ -242,13 +243,13 @@ async function confirmDelete(): Promise<void> {
         </div>
       </template>
 
-      <BaseWorkspaceState
+      <BaseStateMessage
         v-if="showLoadingState"
         loading
         title="Caricamento documenti in corso..."
       />
 
-      <BaseWorkspaceState
+      <BaseStateMessage
         v-else-if="!filteredDocuments.length"
         icon="i-lucide-file-stack"
         title="Nessun documento trovato"
@@ -257,7 +258,7 @@ async function confirmDelete(): Promise<void> {
 
       <div v-else class="overflow-x-auto">
         <div class="min-w-[980px]">
-          <div class="grid grid-cols-[minmax(0,2.1fr)_minmax(180px,1.2fr)_minmax(150px,1fr)_minmax(125px,0.9fr)_minmax(120px,0.9fr)_72px] gap-4 bg-slate-50 px-6 py-4 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+          <div class="grid gap-4 bg-slate-50 px-6 py-4 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500" :class="documentListCols">
             <p>Documento</p>
             <p>Progetto</p>
             <p>Cliente</p>

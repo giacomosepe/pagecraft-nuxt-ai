@@ -6,7 +6,7 @@ defineProps<{
 </script>
 
 <template>
-  <section class="rounded-[28px] border border-slate-200 bg-white shadow-sm">
+  <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
     <div
       v-if="title || description || $slots.header"
       class="border-b border-slate-200 px-6 py-5"

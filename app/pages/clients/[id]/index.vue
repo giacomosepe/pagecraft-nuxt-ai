@@ -293,6 +293,17 @@ async function confirmDeleteClient(): Promise<void> {
 						Nuovo progetto
 					</UButton>
 					<UButton
+						color="neutral"
+						:variant="dirty ? 'solid' : 'soft'"
+						:disabled="!dirty || isSaving"
+						:loading="isSaving"
+						class="rounded-xl px-5 transition-opacity"
+						:class="dirty ? 'opacity-100' : 'opacity-40'"
+						@click="saveClient"
+					>
+						Salva modifiche
+					</UButton>
+					<UButton
 						color="error"
 						variant="soft"
 						size="lg"
@@ -335,43 +346,58 @@ async function confirmDeleteClient(): Promise<void> {
 				class="mb-6"
 			/>
 
-			<div class="space-y-8">
-				<section class="client-detail-section">
-					<h2 class="client-detail-title">
-						ANAGRAFICA
-					</h2>
-					<div class="client-detail-grid">
+			<div class="flex flex-col" style="gap: var(--space-section)">
+				<BaseDetailSection title="Anagrafica">
+					<BaseFieldGrid>
 						<label class="client-detail-field">
-							<span>Ragione sociale</span>
+							<span>Ragione sociale <span class="required-marker">*</span></span>
 							<input v-model="form.company_name" placeholder="Ragione sociale" />
 						</label>
 						<label class="client-detail-field">
-							<span>Codice fiscale</span>
-							<input v-model="form.codice_fiscale" placeholder="Codice fiscale" />
-						</label>
-						<label class="client-detail-field">
-							<span>Partita IVA</span>
+							<span>Partita IVA <span class="required-marker">*</span></span>
 							<input v-model="form.vat_number" placeholder="Partita IVA" />
 						</label>
-						<div class="client-detail-field client-detail-field--full">
-							<span>Indirizzo</span>
-							<div class="client-address-grid">
+					</BaseFieldGrid>
+					<div class="client-detail-field mt-5">
+						<div class="client-address-grid">
+							<label class="client-detail-field">
+								<span>Indirizzo</span>
 								<input v-model="form.street_address" placeholder="Via, piazza o corso" />
-								<input v-model="form.city" placeholder="Città" />
-								<div class="grid grid-cols-[minmax(0,1fr)_96px] gap-3">
-									<input v-model="form.provincia" placeholder="Provincia" />
-									<input v-model="form.cap" placeholder="CAP" />
-								</div>
-							</div>
+							</label>
+							<label class="client-detail-field">
+								<span>Comune</span>
+								<input v-model="form.city" placeholder="Comune" />
+							</label>
+							<label class="client-detail-field">
+								<span>Provincia</span>
+								<input v-model="form.provincia" placeholder="Provincia" />
+							</label>
+							<label class="client-detail-field">
+								<span>CAP <span class="required-marker">*</span></span>
+								<input v-model="form.cap" placeholder="CAP" />
+							</label>
 						</div>
 					</div>
-				</section>
+					<div class="mt-5 border-t border-slate-200 pt-5">
+						<div class="client-contact-grid">
+							<label class="client-detail-field">
+								<span>Nome referente <span class="required-marker">*</span></span>
+								<input v-model="form.contact_name" placeholder="Nome referente" />
+							</label>
+							<label class="client-detail-field">
+								<span>Email referente <span class="required-marker">*</span></span>
+								<input v-model="form.contact_email" type="email" placeholder="Email" />
+							</label>
+							<label class="client-detail-field">
+								<span>Telefono referente</span>
+								<input v-model="form.contact_phone" placeholder="Telefono" />
+							</label>
+						</div>
+					</div>
+				</BaseDetailSection>
 
-				<section class="client-detail-section">
-					<h2 class="client-detail-title">
-						DATI AZIENDALI
-					</h2>
-					<div class="client-detail-grid">
+				<BaseDetailSection title="Dati Aziendali">
+					<BaseFieldGrid>
 						<label class="client-detail-field">
 							<span>Totale dipendenti</span>
 							<input
@@ -388,72 +414,28 @@ async function confirmDeleteClient(): Promise<void> {
 								placeholder="Fatturato €"
 							/>
 						</label>
-					</div>
-				</section>
+					</BaseFieldGrid>
+				</BaseDetailSection>
 
-				<section class="client-detail-section">
-					<h2 class="client-detail-title">
-						LEGALE RAPPRESENTANTE
-					</h2>
-					<div class="client-detail-grid">
+				<BaseDetailSection title="Legale Rappresentante">
+					<BaseFieldGrid>
 						<label class="client-detail-field">
-							<span>Nome e cognome</span>
+							<span>Nome e cognome <span class="required-marker">*</span></span>
 							<input v-model="form.legal_rep_name" placeholder="Nome e cognome" />
 						</label>
 						<label class="client-detail-field">
-							<span>Codice fiscale</span>
+							<span>Codice fiscale <span class="required-marker">*</span></span>
 							<input v-model="form.legal_rep_cf" placeholder="Codice fiscale" />
 						</label>
 						<label class="client-detail-field">
 							<span>Data di nascita</span>
 							<input v-model="form.legal_rep_dob" type="date" placeholder="Opzionale" />
 						</label>
-					</div>
-				</section>
+					</BaseFieldGrid>
+				</BaseDetailSection>
 
-				<section class="client-detail-section">
-					<div class="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-						<h2 class="client-detail-title">
-							REFERENTE
-						</h2>
-						<UButton
-							color="neutral"
-							:variant="dirty ? 'solid' : 'soft'"
-							:disabled="!dirty || isSaving"
-							:loading="isSaving"
-							class="rounded-xl px-5 transition-opacity"
-							:class="dirty ? 'opacity-100' : 'opacity-40'"
-							@click="saveClient"
-						>
-							Salva modifiche
-						</UButton>
-					</div>
-					<div class="client-detail-grid">
-						<label class="client-detail-field">
-							<span>Nome</span>
-							<input v-model="form.contact_name" placeholder="Nome referente" />
-						</label>
-						<label class="client-detail-field">
-							<span>Email</span>
-							<input v-model="form.contact_email" type="email" placeholder="Email" />
-						</label>
-						<label class="client-detail-field">
-							<span>Telefono</span>
-							<input v-model="form.contact_phone" placeholder="Telefono" />
-						</label>
-					</div>
-				</section>
-
-				<section class="client-detail-section">
-					<div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-						<div>
-							<h2 class="client-detail-title">
-								PROGETTI
-							</h2>
-							<p class="mt-2 text-sm text-slate-500">
-								{{ visibleProjectsLabel }}
-							</p>
-						</div>
+				<BaseDetailSection title="Progetti" :description="visibleProjectsLabel">
+					<template #actions>
 						<div class="flex gap-2">
 							<UButton
 								color="neutral"
@@ -472,13 +454,13 @@ async function confirmDeleteClient(): Promise<void> {
 								Completati
 							</UButton>
 						</div>
-					</div>
+					</template>
 
 					<div v-if="!visibleProjects.length" class="py-12 text-center text-[13px] text-slate-400">
 						Nessun progetto
 					</div>
 
-					<div v-else class="mt-5 overflow-x-auto border-t border-slate-200">
+					<div v-else class="overflow-x-auto">
 						<div class="min-w-[860px]">
 							<div class="grid grid-cols-[minmax(0,2.2fr)_minmax(140px,1.1fr)_minmax(180px,1.1fr)_minmax(125px,0.9fr)_minmax(120px,0.85fr)_72px] gap-4 bg-slate-50 px-6 py-4 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
 								<p>Progetto</p>
@@ -497,7 +479,7 @@ async function confirmDeleteClient(): Promise<void> {
 							/>
 						</div>
 					</div>
-				</section>
+				</BaseDetailSection>
 			</div>
 
 			<BaseConfirmDialog
@@ -513,36 +495,11 @@ async function confirmDeleteClient(): Promise<void> {
 </template>
 
 <style scoped>
-.client-detail-section {
-	border-top: 1px solid var(--color-border-muted, rgb(226 232 240));
-	padding-top: 24px;
-}
-
-.client-detail-title {
-	color: var(--color-text-muted, rgb(100 116 139));
-	font-size: 11px;
-	font-weight: 500;
-	letter-spacing: 0.06em;
-	line-height: 1.2;
-	text-transform: uppercase;
-}
-
-.client-detail-grid {
-	display: grid;
-	gap: 22px 32px;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-	margin-top: 22px;
-}
-
 .client-detail-field {
 	display: flex;
 	min-width: 0;
 	flex-direction: column;
 	gap: 7px;
-}
-
-.client-detail-field--full {
-	grid-column: 1 / -1;
 }
 
 .client-detail-field span {
@@ -552,6 +509,17 @@ async function confirmDeleteClient(): Promise<void> {
 	letter-spacing: 0.06em;
 	line-height: 1.2;
 	text-transform: uppercase;
+}
+
+.client-detail-field .required-marker {
+	color: var(--color-required);
+}
+
+.client-contact-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	column-gap: var(--space-field-col-gap);
+	row-gap: var(--space-field-gap);
 }
 
 .client-detail-field input,
@@ -586,11 +554,14 @@ async function confirmDeleteClient(): Promise<void> {
 
 .client-address-grid {
 	display: grid;
-	gap: 16px;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	column-gap: var(--space-field-col-gap);
+	row-gap: var(--space-field-gap);
 }
 
 @media (max-width: 720px) {
-	.client-detail-grid {
+	.client-address-grid,
+	.client-contact-grid {
 		grid-template-columns: 1fr;
 	}
 }

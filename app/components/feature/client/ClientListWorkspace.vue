@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ClientListItem } from "~/types/app.types";
+import { clientListCols } from "~/utils/listLayout";
 
 const props = defineProps<{
 	clients?: ClientListItem[] | null;
@@ -237,13 +238,13 @@ async function confirmDelete(): Promise<void> {
 				</div>
 			</template>
 
-			<BaseWorkspaceState
+			<BaseStateMessage
 				v-if="showLoadingState"
 				loading
 				title="Caricamento clienti in corso..."
 			/>
 
-			<BaseWorkspaceState
+			<BaseStateMessage
 				v-else-if="!filteredClients.length"
 				icon="i-lucide-building-2"
 				title="Nessun cliente trovato"
@@ -252,7 +253,7 @@ async function confirmDelete(): Promise<void> {
 
 			<div v-else class="overflow-x-auto">
 				<div class="min-w-[840px]">
-					<div class="grid grid-cols-[minmax(0,2.4fr)_minmax(120px,1.2fr)_minmax(110px,0.9fr)_minmax(110px,0.9fr)_minmax(120px,0.9fr)_72px] gap-4 bg-slate-50 px-6 py-4 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+					<div class="grid gap-4 bg-slate-50 px-6 py-4 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500" :class="clientListCols">
 						<p>Cliente</p>
 						<p>Settore</p>
 						<p>Stato</p>

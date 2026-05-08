@@ -2,7 +2,7 @@
 import type { DocumentListItem, FolderDocument, FolderDocumentSlot } from "~/types/app.types";
 import { formatDate } from "~/utils/date";
 import { deriveFolderStatus } from "~/utils/folderStatus";
-import { statusLabel } from "~/utils/status";
+import { statusLabel, statusToneClass } from "~/utils/status";
 
 definePageMeta({ middleware: "auth" });
 
@@ -91,19 +91,6 @@ const folderTitle = computed(() =>
 );
 
 const folderStatus = computed(() => deriveFolderStatus(data.value?.pages ?? []));
-
-const folderStatusClass = computed(() => {
-	switch (folderStatus.value) {
-		case "completato":
-			return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200";
-		case "in_revisione":
-			return "bg-violet-50 text-violet-700 ring-1 ring-violet-200";
-		case "in_lavorazione":
-			return "bg-blue-50 text-blue-700 ring-1 ring-blue-200";
-		default:
-			return "bg-amber-50 text-amber-700 ring-1 ring-amber-200";
-	}
-});
 
 const projectType = computed(() => {
 	const names = Array.from(
@@ -381,7 +368,7 @@ async function confirmDeleteProject(): Promise<void> {
 					<div class="flex flex-wrap items-center gap-2 pt-1">
 						<span
 							class="inline-flex rounded-full px-3 py-1 text-xs font-medium"
-							:class="folderStatusClass"
+							:class="statusToneClass(folderStatus)"
 						>
 							{{ statusLabel[folderStatus] ?? folderStatus }}
 						</span>
@@ -399,6 +386,17 @@ async function confirmDeleteProject(): Promise<void> {
 						:to="`/pages/new?clientId=${data.folder.client_id}`"
 					>
 						Nuovo documento
+					</UButton>
+					<UButton
+						color="neutral"
+						:variant="dirty ? 'solid' : 'soft'"
+						:disabled="!dirty || isSaving"
+						:loading="isSaving"
+						class="rounded-xl px-5 transition-opacity"
+						:class="dirty ? 'opacity-100' : 'opacity-40'"
+						@click="saveFolderDetails"
+					>
+						Salva modifiche
 					</UButton>
 					<UButton
 						color="error"
@@ -427,30 +425,25 @@ async function confirmDeleteProject(): Promise<void> {
 				class="mb-6"
 			/>
 
-			<div class="space-y-8">
-				<section class="folder-detail-section">
-					<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-						<div class="flex flex-wrap items-center gap-3">
-							<h2 class="folder-detail-title">
-								DETTAGLI PROGETTO
-							</h2>
-							<span
-								class="inline-flex rounded-full px-3 py-1 text-xs font-medium"
-								:class="folderStatusClass"
-							>
-								{{ statusLabel[folderStatus] ?? folderStatus }}
-							</span>
-						</div>
-					</div>
+			<div class="flex flex-col" style="gap: var(--space-section)">
+				<BaseDetailSection title="Dettagli progetto">
+					<template #actions>
+						<span
+							class="inline-flex rounded-full px-3 py-1 text-xs font-medium"
+							:class="statusToneClass(folderStatus)"
+						>
+							{{ statusLabel[folderStatus] ?? folderStatus }}
+						</span>
+					</template>
 
-					<div class="folder-detail-grid">
+					<BaseFieldGrid>
 						<label class="folder-detail-field">
-							<span>Titolo del programma</span>
+							<span>Titolo del programma <span class="required-marker">*</span></span>
 							<input v-model="form.program_name" placeholder="Titolo del programma" />
 						</label>
 
 						<label class="folder-detail-field">
-							<span>Anno di imposta</span>
+							<span>Anno di imposta <span class="required-marker">*</span></span>
 							<input
 								v-model="form.tax_year"
 								inputmode="numeric"
@@ -467,38 +460,15 @@ async function confirmDeleteProject(): Promise<void> {
 							<span>Tipo progetto</span>
 							<input :value="projectType" readonly />
 						</label>
-					</div>
+					</BaseFieldGrid>
+				</BaseDetailSection>
 
-					<div class="mt-6 flex justify-end">
-						<UButton
-							color="neutral"
-							:variant="dirty ? 'solid' : 'soft'"
-							:disabled="!dirty || isSaving"
-							:loading="isSaving"
-							class="rounded-xl px-5 transition-opacity"
-							:class="dirty ? 'opacity-100' : 'opacity-40'"
-							@click="saveFolderDetails"
-						>
-							Salva modifiche
-						</UButton>
-					</div>
-				</section>
-
-				<section class="folder-detail-section">
-					<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-						<h2 class="folder-detail-title">
-							DOCUMENTI
-						</h2>
-						<p class="text-sm text-slate-500">
-							{{ documentCountLabel }}
-						</p>
-					</div>
-
+				<BaseDetailSection title="Documenti" :description="documentCountLabel">
 					<div v-if="!documentRows.length" class="py-12 text-center text-[13px] text-slate-400">
 						Nessun documento
 					</div>
 
-					<div v-else class="mt-5 overflow-hidden border-t border-slate-200">
+					<div v-else class="overflow-hidden">
 						<DocumentListRow
 							v-for="document in documentRows"
 							:key="document.id"
@@ -506,14 +476,10 @@ async function confirmDeleteProject(): Promise<void> {
 							compact
 						/>
 					</div>
-				</section>
+				</BaseDetailSection>
 
-				<section class="folder-detail-section">
-					<h2 class="folder-detail-title">
-						DOCUMENTI AMMINISTRATIVI
-					</h2>
-
-					<div class="mt-5 grid gap-4 md:grid-cols-2">
+				<BaseDetailSection title="Documenti amministrativi">
+					<div class="grid gap-4 md:grid-cols-2">
 						<div
 							v-for="slot in ADMIN_SLOTS"
 							:key="slot.key"
@@ -599,7 +565,7 @@ async function confirmDeleteProject(): Promise<void> {
 							</div>
 						</div>
 					</div>
-				</section>
+				</BaseDetailSection>
 			</div>
 
 			<BaseConfirmDialog
@@ -629,12 +595,6 @@ async function confirmDeleteProject(): Promise<void> {
 </template>
 
 <style scoped>
-.folder-detail-section {
-	border-top: 1px solid var(--color-border-muted, rgb(226 232 240));
-	padding-top: 24px;
-}
-
-.folder-detail-title,
 .folder-document-label {
 	color: var(--color-text-muted, rgb(100 116 139));
 	font-size: 11px;
@@ -642,13 +602,6 @@ async function confirmDeleteProject(): Promise<void> {
 	letter-spacing: 0.06em;
 	line-height: 1.2;
 	text-transform: uppercase;
-}
-
-.folder-detail-grid {
-	display: grid;
-	gap: 22px 32px;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-	margin-top: 22px;
 }
 
 .folder-detail-field {
@@ -665,6 +618,10 @@ async function confirmDeleteProject(): Promise<void> {
 	letter-spacing: 0.06em;
 	line-height: 1.2;
 	text-transform: uppercase;
+}
+
+.folder-detail-field .required-marker {
+	color: var(--color-required);
 }
 
 .folder-detail-field input {
@@ -708,9 +665,4 @@ async function confirmDeleteProject(): Promise<void> {
 	border-color: rgb(226 232 240);
 }
 
-@media (max-width: 720px) {
-	.folder-detail-grid {
-		grid-template-columns: 1fr;
-	}
-}
 </style>

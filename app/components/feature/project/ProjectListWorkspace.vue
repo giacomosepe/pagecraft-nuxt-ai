@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ProjectListItem } from "~/types/app.types";
 import { deriveFolderStatus } from "~/utils/folderStatus";
+import { projectListCols } from "~/utils/listLayout";
 
 const props = defineProps<{
 	projects?: ProjectListItem[] | null;
@@ -214,13 +215,13 @@ async function confirmDelete(): Promise<void> {
 				</div>
 			</template>
 
-			<BaseWorkspaceState
+			<BaseStateMessage
 				v-if="showLoadingState"
 				loading
 				title="Caricamento progetti in corso..."
 			/>
 
-			<BaseWorkspaceState
+			<BaseStateMessage
 				v-else-if="!filteredProjects.length"
 				icon="i-lucide-folder-open"
 				title="Nessun progetto trovato"
@@ -229,7 +230,7 @@ async function confirmDelete(): Promise<void> {
 
 			<div v-else class="overflow-x-auto">
 				<div class="min-w-[940px]">
-					<div class="grid grid-cols-[minmax(0,2.2fr)_minmax(140px,1.1fr)_minmax(180px,1.1fr)_minmax(125px,0.9fr)_minmax(120px,0.85fr)_72px] gap-4 bg-slate-50 px-6 py-4 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+					<div class="grid gap-4 bg-slate-50 px-6 py-4 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500" :class="projectListCols">
 						<p>Progetto</p>
 						<p>Cliente</p>
 						<p>Documenti</p>

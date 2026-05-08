@@ -1,5 +1,5 @@
 # PageCraft — Codebase Map
-> Last updated: 2026-05-07
+> Last updated: 2026-05-07 (post-sprint update)
 > Purpose: structural map of the current codebase, key modules, and current architecture shape.
 
 ---
@@ -31,6 +31,9 @@ server/api/
 ├── generations/create.post.ts
 ├── export/word.post.ts
 ├── steps/
+├── folder-documents/upload.post.ts
+├── folder-documents/index.get.ts
+├── folder-documents/delete.post.ts
 ├── page-context-documents/upload.post.ts
 ├── page-context-documents/index.get.ts
 ├── page-context-documents/delete.post.ts
@@ -43,7 +46,8 @@ server/utils/
 ├── sanitiseGeneration.ts       post-generation blocklist enforcement
 ├── getFrameworkStepExample.ts  fetches active example for a step (newest active wins)
 ├── getStepFigureCaptions.ts    fetches figure captions from page_step_figures
-├── contextDocuments.ts         helpers for context document upload/retrieval
+├── contextDocuments.ts         constants, types, helpers for page-context-documents (slots, buckets, MIME types)
+├── folderDocuments.ts          constants, types, helpers for folder-documents (slots, buckets, MIME types)
 ├── generationPrompt.ts         prompt assembly helpers
 ├── buildPremessa.ts            Step 2 normative preamble assembly
 ├── initialStepFormData.ts      initialises form data for new step instances
@@ -131,9 +135,23 @@ Fetches the active example output for a given framework step from `framework_ste
 Fetches figure captions for a given page+step from `page_step_figures`.
 Returns structured list for injection as `[INSERIRE FIGURA: {caption}]` markers in `userMessage`.
 
+### `server/utils/contextDocuments.ts`
+Constants, types, and helpers for the `page-context-documents` upload flow.
+Exports: `PAGE_CONTEXT_BUCKET`, `PAGE_CONTEXT_SLOTS`, `PageContextSlot`, slot labels, char budgets, allowed MIME types, `isPageContextSlot`, `buildPageContextStoragePath`, `inferDocumentMimeType`, `isAllowedContextDocument`, `truncateAtSentence`, `normalizeExtractedText`.
+
+### `server/utils/folderDocuments.ts` _(new — 2026-05-07)_
+Constants, types, and helpers for the `folder-documents` upload flow.
+Exports: `FOLDER_DOCUMENT_BUCKET`, `FOLDER_DOCUMENT_SLOTS` (`contratto`, `additional`), slot labels, allowed MIME types (PDF, DOC, DOCX, XLS, XLSX), `isFolderDocumentSlot`, `buildFolderDocumentStoragePath`, `inferFolderDocumentMimeType`, `isAllowedFolderDocument`.
+
 ### `server/api/page-context-documents/` _(new — 2026-05-07)_
 Three routes: `upload.post.ts`, `index.get.ts`, `delete.post.ts`.
-Manages context documents uploaded per document (page). Storage bucket: `page-context-documents` (private).
+Slot-based context docs per page. Storage bucket: `page-context-documents` (private).
+Slots: `technical_presentation`, `financial_notes`, `additional_docs`. One file per slot per page (upload replaces existing). Uses `contextDocuments.ts` for all constants and helpers.
+
+### `server/api/folder-documents/` _(new — 2026-05-07)_
+Three routes: `upload.post.ts`, `index.get.ts`, `delete.post.ts`.
+Folder-level document uploads. Storage bucket: `folder-documents` (private).
+Slots: `contratto`, `additional`. One file per slot per folder (upload replaces existing). Uses `folderDocuments.ts` for all constants and helpers.
 
 ### `server/api/export/word.post.ts`
 Builds and streams the `.docx` export from committed steps.
@@ -180,3 +198,7 @@ Database notes:
 - anon grants have been revoked from `page_context_documents` and `framework_step_examples` — never re-grant
 - `page_step_figures` stores figure captions only (V1); actual figure file upload is a V2 concern
 - The Configurazione panel in the document editor is hardcoded UI — it is not a `framework_step` row and not a new step type
+- `files` and `generation_files` tables exist in Supabase (added by Codex this sprint) as a general-purpose file layer with `scope`, `file_type`, `extraction_status` enum columns. Not connected to `page_context_documents` flow. Not yet used by any server route. Do not merge with `page_context_documents`.
+- `folder_documents` table and `folder-documents` storage bucket are active — `server/api/folder-documents/` owns this flow
+- `folders` table has `tax_year INTEGER` and `referente TEXT` (added this sprint)
+- `page_context_documents` uses the original slot-based design from the spec — it was NOT replaced by the generic `files` table
