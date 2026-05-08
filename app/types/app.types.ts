@@ -86,16 +86,6 @@ export interface FolderItem {
   pages: PageItem[] | null;
 }
 
-// ─── Table row (used by the folder table in clients/[id]/index.vue) ───────────
-
-export interface FolderTableRow {
-  id: string;
-  programName: string;
-  documenti: string;
-  lastModified: string;
-  status: string;
-}
-
 export interface ProjectListItem {
   id: string;
   program_name: string | null;

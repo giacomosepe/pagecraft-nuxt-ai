@@ -25,11 +25,11 @@ withDefaults(
 		class="flex flex-col items-center justify-center gap-3 px-6 text-center"
 		:class="[
 			compact ? 'py-10' : 'py-20',
-			surface ? 'rounded-[28px] border border-slate-200 bg-white shadow-sm' : '',
+			surface ? 'rounded-xl border border-slate-200 bg-white shadow-sm' : '',
 		]"
 	>
 		<div
-			class="flex size-14 items-center justify-center rounded-2xl"
+			class="flex size-14 items-center justify-center rounded-xl"
 			:class="
 				tone === 'error'
 					? 'bg-rose-50 text-rose-500'

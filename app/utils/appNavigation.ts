@@ -76,12 +76,6 @@ export const appSidebarSections: AppNavSection[] = [
 				match: { path: "/clienti", status: "aperto" },
 			},
 			{
-				label: "In corso",
-				to: "/clienti",
-				icon: "i-lucide-history",
-				match: { path: "/clienti" },
-			},
-			{
 				label: "Completati",
 				to: "/clienti?status=completato",
 				icon: "i-lucide-circle-check",

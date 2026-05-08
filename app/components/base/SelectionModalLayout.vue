@@ -6,7 +6,7 @@ defineProps<{
 </script>
 
 <template>
-  <div class="flex max-h-[80vh] flex-col overflow-hidden rounded-[28px] bg-white">
+  <div class="flex max-h-[80vh] flex-col overflow-hidden rounded-xl bg-white">
     <div class="border-b border-slate-200 px-6 py-5">
       <div class="space-y-1">
         <h2 class="text-base font-semibold text-slate-900">

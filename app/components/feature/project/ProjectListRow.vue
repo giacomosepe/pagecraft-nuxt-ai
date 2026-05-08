@@ -2,7 +2,8 @@
 import type { ProjectListItem } from "~/types/app.types";
 import { formatDate } from "~/utils/date";
 import { deriveFolderStatus } from "~/utils/folderStatus";
-import { statusLabel } from "~/utils/status";
+import { projectListCols } from "~/utils/listLayout";
+import { statusLabel, statusToneClass } from "~/utils/status";
 
 const props = defineProps<{
 	project: ProjectListItem;
@@ -29,20 +30,6 @@ const completedCount = computed((): number =>
 const projectStatus = computed((): string =>
 	deriveFolderStatus(props.project.pages ?? []),
 );
-
-const statusTone = computed((): string => {
-	switch (projectStatus.value) {
-		case "completato":
-			return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200";
-		case "in_revisione":
-			return "bg-violet-50 text-violet-700 ring-1 ring-violet-200";
-		case "attesa_info":
-		case "in_attesa":
-			return "bg-amber-50 text-amber-700 ring-1 ring-amber-200";
-		default:
-			return "bg-blue-50 text-blue-700 ring-1 ring-blue-200";
-	}
-});
 
 const lastActivity = computed((): string => {
 	const pageDates = props.project.pages?.map((page) => page.updated_at) ?? [];
@@ -80,7 +67,8 @@ function handleDeleteClick(event: MouseEvent): void {
 
 <template>
 	<div
-		class="grid w-full grid-cols-[minmax(0,2.2fr)_minmax(140px,1.1fr)_minmax(180px,1.1fr)_minmax(125px,0.9fr)_minmax(120px,0.85fr)_72px] items-center gap-4 border-t border-slate-200 px-6 py-4 transition-colors hover:bg-slate-50"
+		class="grid w-full items-center gap-4 border-t border-slate-200 px-6 py-4 transition-colors hover:bg-slate-50"
+		:class="projectListCols"
 	>
 		<div
 			class="interactive-row col-span-5 grid grid-cols-[minmax(0,2.2fr)_minmax(140px,1.1fr)_minmax(180px,1.1fr)_minmax(125px,0.9fr)_minmax(120px,0.85fr)] items-center gap-4 text-left"
@@ -120,7 +108,7 @@ function handleDeleteClick(event: MouseEvent): void {
 		<div>
 			<span
 				class="inline-flex rounded-full px-3 py-1 text-xs font-medium"
-				:class="statusTone"
+				:class="statusToneClass(projectStatus)"
 			>
 				{{ statusLabel[projectStatus] ?? projectStatus }}
 			</span>

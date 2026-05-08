@@ -98,7 +98,7 @@ const summaryCards = computed<SummaryCard[]>(() => {
     />
 
     <BaseWorkspaceSurface>
-      <BaseWorkspaceState
+      <BaseStateMessage
         v-if="isLoading"
         loading
         title="Caricamento dashboard in corso..."
@@ -113,7 +113,7 @@ const summaryCards = computed<SummaryCard[]>(() => {
           v-for="card in summaryCards"
           :key="card.key"
           :to="card.to"
-          class="group rounded-[24px] border border-slate-200 bg-white p-6 transition-all duration-150 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+          class="group rounded-xl border border-slate-200 bg-white p-6 transition-all duration-150 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
         >
           <div class="flex items-start justify-between gap-4">
             <div>
@@ -129,14 +129,14 @@ const summaryCards = computed<SummaryCard[]>(() => {
             </div>
 
             <div
-              class="flex size-11 items-center justify-center rounded-2xl bg-violet-50 text-violet-600"
+              class="flex size-11 items-center justify-center rounded-xl bg-violet-50 text-violet-600"
             >
               <UIcon :name="card.icon" class="size-5" />
             </div>
           </div>
 
           <div class="mt-6 grid grid-cols-3 gap-3">
-            <div class="rounded-2xl bg-slate-50 px-4 py-3">
+            <div class="rounded-xl bg-slate-50 px-4 py-3">
               <p class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
                 Aperti
               </p>
@@ -145,7 +145,7 @@ const summaryCards = computed<SummaryCard[]>(() => {
               </p>
             </div>
 
-            <div class="rounded-2xl bg-slate-50 px-4 py-3">
+            <div class="rounded-xl bg-slate-50 px-4 py-3">
               <p class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
                 In lavorazione
               </p>
@@ -154,7 +154,7 @@ const summaryCards = computed<SummaryCard[]>(() => {
               </p>
             </div>
 
-            <div class="rounded-2xl bg-slate-50 px-4 py-3">
+            <div class="rounded-xl bg-slate-50 px-4 py-3">
               <p class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
                 Chiusi
               </p>

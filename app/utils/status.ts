@@ -51,3 +51,24 @@ export const statusLabel: Record<string, string> = {
   IN_PROGRESS:    "In lavorazione",
   COMMITTED:      "Salvato",
 };
+
+export function statusToneClass(status: string): string {
+  switch (status) {
+    case "completato":
+      return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200";
+    case "in_revisione":
+      return "bg-violet-50 text-violet-700 ring-1 ring-violet-200";
+    case "in_lavorazione":
+      return "bg-blue-50 text-blue-700 ring-1 ring-blue-200";
+    case "attesa_info":
+    case "in_attesa":
+      return "bg-amber-50 text-amber-700 ring-1 ring-amber-200";
+    case "aperto":
+      return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200";
+    case "chiuso":
+    case "archiviato":
+      return "bg-slate-100 text-slate-600 ring-1 ring-slate-200";
+    default:
+      return "bg-blue-50 text-blue-700 ring-1 ring-blue-200";
+  }
+}

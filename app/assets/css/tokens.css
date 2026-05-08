@@ -42,8 +42,7 @@
        From Figma: buttons/inputs = 6px, cards = 12px, badges = pill           */
     --radius-sm:   0.25rem;   /* 4px  — tight chips, small tags              */
     --radius-md:   0.375rem;  /* 6px  — buttons, inputs, nav items           */
-    --radius-lg:   0.75rem;   /* 12px — cards, panels                        */
-    --radius-xl:   0.75rem;   /* 12px — large cards (same as lg for now)     */
+    --radius-lg:   0.75rem;   /* 12px — cards, panels, detail sections       */
     --radius-full: 9999px;    /* pill — status badges                        */
 }
 
@@ -55,7 +54,7 @@
 :root {
 
     /* Surfaces ---------------------------------------------------------------- */
-    --color-page-bg:        #f8fafc;  /* slate-50  — app background             */
+    --color-page-bg:        #fefefe;  /* near-white — app background, not slate-50  */
     --color-surface:        #ffffff;  /* white     — cards, sidebar, panels      */
     --color-surface-subtle: #f8fafc;  /* slate-50  — table headers, hover bg     */
 
@@ -68,6 +67,9 @@
     --color-text-secondary: #475569;  /* slate-600 — labels, body, nav items     */
     --color-text-muted:     #64748b;  /* slate-500 — meta, timestamps, subtitles */
     --color-text-placeholder:#94a3b8; /* slate-400 — placeholder, counts, hints  */
+
+    /* Required field marker --------------------------------------------------- */
+    --color-required:       #ef4444;  /* red-500   — required field asterisk (*)  */
 
     /* Brand (interactive) ----------------------------------------------------- */
     --color-brand:          #7c3aed;  /* brand-600 — CTAs, active state          */
@@ -104,4 +106,12 @@
 
     /* Layout ------------------------------------------------------------------ */
     --sidebar-width: 256px;
+
+    /* ─── Spacing scale (detail pages) ─────────────────────────────────────────
+       These tokens exist to prevent drift on entity detail pages.
+       See DESIGN.md — Spacing section for full rationale.
+       Do not hardcode gap values in components; reference these instead.       */
+    --space-section:       1.25rem;  /* 20px — gap between detail page sections  */
+    --space-field-gap:     0.75rem;  /* 12px — row gap inside field grids        */
+    --space-field-col-gap: 1.5rem;   /* 24px — column gap inside field grids     */
 }

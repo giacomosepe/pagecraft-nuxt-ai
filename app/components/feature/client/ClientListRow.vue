@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { ClientListItem } from "~/types/app.types";
 import { formatDate } from "~/utils/date";
-import { statusLabel } from "~/utils/status";
+import { clientListCols } from "~/utils/listLayout";
+import { statusLabel, statusToneClass } from "~/utils/status";
 
 const props = defineProps<{
 	client: ClientListItem;
@@ -52,18 +53,6 @@ const lastActivity = computed((): string => {
 	return formatDate(latest);
 });
 
-const statusTone = computed((): string => {
-	switch (props.client.status) {
-		case "aperto":
-			return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200";
-		case "chiuso":
-		case "completato":
-			return "bg-slate-100 text-slate-600 ring-1 ring-slate-200";
-		default:
-			return "bg-blue-50 text-blue-700 ring-1 ring-blue-200";
-	}
-});
-
 const statusText = computed((): string => {
 	if (props.client.status === "aperto") return "Attivo";
 	if (props.client.status === "chiuso") return "Chiuso";
@@ -86,7 +75,8 @@ function handleDeleteClick(event: MouseEvent): void {
 
 <template>
 	<div
-		class="grid w-full grid-cols-[minmax(0,2.4fr)_minmax(120px,1.2fr)_minmax(110px,0.9fr)_minmax(110px,0.9fr)_minmax(120px,0.9fr)_72px] items-center gap-4 border-t border-slate-200 px-6 py-4 transition-colors hover:bg-slate-50"
+		class="grid w-full items-center gap-4 border-t border-slate-200 px-6 py-4 transition-colors hover:bg-slate-50"
+		:class="clientListCols"
 	>
 		<div
 			class="interactive-row col-span-5 grid grid-cols-[minmax(0,2.4fr)_minmax(120px,1.2fr)_minmax(110px,0.9fr)_minmax(110px,0.9fr)_minmax(120px,0.9fr)] items-center gap-4 text-left"
@@ -125,7 +115,7 @@ function handleDeleteClick(event: MouseEvent): void {
 		<div>
 			<span
 				class="inline-flex rounded-full px-3 py-1 text-xs font-medium"
-				:class="statusTone"
+				:class="statusToneClass(props.client.status)"
 			>
 				{{ statusText }}
 			</span>

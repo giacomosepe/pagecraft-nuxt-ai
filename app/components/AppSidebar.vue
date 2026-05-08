@@ -1,5 +1,71 @@
 <script setup lang="ts">
+import { defineComponent, h, resolveComponent } from "vue";
+import type { PropType } from "vue";
+import type { AppNavItem } from "~/utils/appNavigation";
 import { appSidebarSections } from "~/utils/appNavigation";
+
+type SidebarNavButtonItem = Pick<AppNavItem, "label" | "icon"> & {
+	to?: string;
+};
+
+const SidebarNavButton = defineComponent({
+	props: {
+		item: {
+			type: Object as PropType<SidebarNavButtonItem>,
+			required: true,
+		},
+		isCollapsed: {
+			type: Boolean,
+			required: true,
+		},
+		isActive: {
+			type: Boolean,
+			default: false,
+		},
+		activeClass: {
+			type: String,
+			default: "bg-violet-50 text-violet-700",
+		},
+	},
+	emits: ["click"],
+	setup(props, { emit }) {
+		const renderButton = () =>
+			h(
+				resolveComponent("UButton"),
+				{
+					to: props.item.to,
+					variant: "ghost",
+					color: "neutral",
+					size: "sm",
+					block: true,
+					icon: props.item.icon,
+					"aria-label": props.item.label,
+					class: [
+						props.isCollapsed ? "justify-center" : "justify-start",
+						"rounded-xl px-2.5 py-2.5 text-[13px] font-medium text-slate-600",
+						props.isActive
+							? props.activeClass
+							: "hover:bg-slate-50 hover:text-slate-900",
+					],
+					onClick: (event: MouseEvent) => emit("click", event),
+				},
+				props.isCollapsed
+					? undefined
+					: {
+							default: () => h("span", props.item.label),
+						},
+			);
+
+		return () =>
+			props.isCollapsed
+				? h(
+						resolveComponent("UTooltip"),
+						{ text: props.item.label },
+						{ default: renderButton },
+					)
+				: renderButton();
+	},
+});
 
 const supabase = useSupabaseClient();
 const route = useRoute();
@@ -125,111 +191,32 @@ const accountInitials = computed(() => {
 					{{ section.label }}
 				</p>
 				<div class="space-y-1">
-					<template v-if="isCollapsed">
-						<UTooltip
-							v-for="item in section.items"
-							:key="item.to"
-							:text="item.label"
-						>
-							<UButton
-								:to="item.to"
-								variant="ghost"
-								color="neutral"
-								size="sm"
-								block
-								:icon="item.icon"
-								:aria-label="item.label"
-								class="justify-center rounded-xl px-2.5 py-2.5 text-[13px] font-medium text-slate-600"
-								:class="
-									isItemActive(item.match?.path ?? item.to, item.match?.status)
-										? 'bg-violet-50 text-violet-700'
-										: 'hover:bg-slate-50 hover:text-slate-900'
-								"
-							/>
-						</UTooltip>
-					</template>
-
-					<template v-else>
-						<UButton
-							v-for="item in section.items"
-							:key="item.to"
-							:to="item.to"
-							variant="ghost"
-							color="neutral"
-							size="sm"
-							block
-							:icon="item.icon"
-							:aria-label="item.label"
-							class="justify-start rounded-xl px-2.5 py-2.5 text-[13px] font-medium text-slate-600"
-							:class="
-								isItemActive(item.match?.path ?? item.to, item.match?.status)
-									? 'bg-violet-50 text-violet-700'
-									: 'hover:bg-slate-50 hover:text-slate-900'
-							"
-						>
-							<span>{{ item.label }}</span>
-						</UButton>
-					</template>
+					<SidebarNavButton
+						v-for="item in section.items"
+						:key="item.to"
+						:item="item"
+						:is-collapsed="isCollapsed"
+						:is-active="isItemActive(item.match?.path ?? item.to, item.match?.status)"
+					/>
 				</div>
 			</div>
 		</nav>
 
 		<nav class="border-t border-slate-100 px-3 py-3">
-			<UTooltip v-if="isCollapsed" text="Info">
-				<UButton
-					to="/about"
-					variant="ghost"
-					color="neutral"
-					icon="i-lucide-info"
-					block
-					aria-label="Info"
-					class="rounded-xl px-2.5 py-2.5 text-[13px] font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-					:class="[
-						'justify-center',
-						route.path.startsWith('/about')
-							? 'bg-slate-100 text-slate-900'
-							: '',
-					]"
+			<div class="space-y-1">
+				<SidebarNavButton
+					:item="{ label: 'Info', to: '/about', icon: 'i-lucide-info' }"
+					:is-collapsed="isCollapsed"
+					:is-active="route.path.startsWith('/about')"
+					active-class="bg-slate-100 text-slate-900"
 				/>
-			</UTooltip>
-			<UButton
-				v-else
-				to="/about"
-				variant="ghost"
-				color="neutral"
-				icon="i-lucide-info"
-				block
-				aria-label="Info"
-				class="justify-start rounded-xl px-2.5 py-2.5 text-[13px] font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-				:class="route.path.startsWith('/about') ? 'bg-slate-100 text-slate-900' : ''"
-			>
-				<span>Info</span>
-			</UButton>
 
-			<UTooltip v-if="isCollapsed" text="Esci">
-				<UButton
-					variant="ghost"
-					color="neutral"
-					icon="i-lucide-log-out"
-					block
-					aria-label="Esci"
-					class="rounded-xl px-2.5 py-2.5 text-[13px] font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-					:class="'justify-center'"
+				<SidebarNavButton
+					:item="{ label: 'Esci', icon: 'i-lucide-log-out' }"
+					:is-collapsed="isCollapsed"
 					@click="signOut"
 				/>
-			</UTooltip>
-			<UButton
-				v-else
-				variant="ghost"
-				color="neutral"
-				icon="i-lucide-log-out"
-				block
-				aria-label="Esci"
-				class="justify-start rounded-xl px-2.5 py-2.5 text-[13px] font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-				@click="signOut"
-			>
-				<span>Esci</span>
-			</UButton>
+			</div>
 		</nav>
 	</aside>
 </template>

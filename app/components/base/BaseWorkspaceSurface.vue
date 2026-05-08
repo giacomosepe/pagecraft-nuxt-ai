@@ -1,5 +1,5 @@
 <template>
-	<section class="rounded-[28px] border border-slate-200 bg-white shadow-sm">
+	<section class="rounded-xl border border-slate-200 bg-white shadow-sm">
 		<div
 			v-if="$slots.toolbar"
 			class="border-b border-slate-200 px-5 py-4"
