@@ -10,10 +10,20 @@
 //   4. Any page "in_lavorazione" → "in_lavorazione"
 //   5. Mixed/older waiting statuses → "attesa_info"
 
-export function deriveFolderStatus(pages: { status: string }[]): string {
-  if (!pages || pages.length === 0) return "attesa_info";
-  if (pages.every((p) => ["completato", "archiviato"].includes(p.status))) return "completato";
-  if (pages.some((p) => p.status === "in_revisione")) return "in_revisione";
-  if (pages.some((p) => p.status === "in_lavorazione")) return "in_lavorazione";
-  return "attesa_info";
+import {
+  CLOSED_DOCUMENT_STATUSES,
+  DOCUMENT_STATUS,
+  FOLDER_STATUS,
+  type DocumentStatus,
+  type FolderStatus,
+} from "~/utils/statuses";
+
+export function deriveFolderStatus(pages: { status: string }[]): FolderStatus {
+  if (!pages || pages.length === 0) return FOLDER_STATUS.WAITING_INFO;
+  if (pages.every((p) => CLOSED_DOCUMENT_STATUSES.includes(p.status as DocumentStatus))) {
+    return FOLDER_STATUS.COMPLETED;
+  }
+  if (pages.some((p) => p.status === DOCUMENT_STATUS.IN_REVIEW)) return FOLDER_STATUS.IN_REVIEW;
+  if (pages.some((p) => p.status === DOCUMENT_STATUS.IN_PROGRESS)) return FOLDER_STATUS.IN_PROGRESS;
+  return FOLDER_STATUS.WAITING_INFO;
 }

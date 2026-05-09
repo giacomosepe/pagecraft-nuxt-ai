@@ -5,6 +5,12 @@
 // Currently used by: clients/[id]/index.vue (folder status badges).
 // Future use: pages, steps, any entity with a status field.
 
+import {
+  CLIENT_STATUS,
+  DOCUMENT_STATUS,
+  STEP_STATUS,
+} from "~/utils/statuses";
+
 type BadgeColor = "error" | "primary" | "secondary" | "success" | "info" | "warning" | "neutral";
 
 /**
@@ -13,21 +19,21 @@ type BadgeColor = "error" | "primary" | "secondary" | "success" | "info" | "warn
  */
 export const statusColor: Record<string, BadgeColor> = {
   // Folder / page statuses
-  attesa_info:    "warning",
-  in_attesa:      "warning",
-  in_lavorazione: "info",
-  in_revisione:   "secondary",
-  completato:     "success",
-  archiviato:     "neutral",
+  [DOCUMENT_STATUS.WAITING_INFO]: "warning",
+  [DOCUMENT_STATUS.WAITING]:      "warning",
+  [DOCUMENT_STATUS.IN_PROGRESS]:  "info",
+  [DOCUMENT_STATUS.IN_REVIEW]:    "secondary",
+  [DOCUMENT_STATUS.COMPLETED]:    "success",
+  [DOCUMENT_STATUS.ARCHIVED]:     "neutral",
 
   // Client statuses
-  aperto:         "info",
-  chiuso:         "neutral",
+  [CLIENT_STATUS.OPEN]:           "info",
+  [CLIENT_STATUS.CLOSED]:         "neutral",
 
   // Step statuses (uppercase — matches DB enum)
-  PENDING:        "warning",
-  IN_PROGRESS:    "info",
-  COMMITTED:      "success",
+  [STEP_STATUS.PENDING]:          "warning",
+  [STEP_STATUS.IN_PROGRESS]:      "info",
+  [STEP_STATUS.COMMITTED]:        "success",
 };
 
 /**
@@ -35,38 +41,38 @@ export const statusColor: Record<string, BadgeColor> = {
  */
 export const statusLabel: Record<string, string> = {
   // Folder / page statuses
-  attesa_info:    "Attesa info",
-  in_attesa:      "In attesa",
-  in_lavorazione: "In lavorazione",
-  in_revisione:   "In revisione",
-  completato:     "Completato",
-  archiviato:     "Archiviato",
+  [DOCUMENT_STATUS.WAITING_INFO]: "Attesa info",
+  [DOCUMENT_STATUS.WAITING]:      "In attesa",
+  [DOCUMENT_STATUS.IN_PROGRESS]:  "In lavorazione",
+  [DOCUMENT_STATUS.IN_REVIEW]:    "In revisione",
+  [DOCUMENT_STATUS.COMPLETED]:    "Completato",
+  [DOCUMENT_STATUS.ARCHIVED]:     "Archiviato",
 
   // Client statuses
-  aperto:         "Aperto",
-  chiuso:         "Chiuso",
+  [CLIENT_STATUS.OPEN]:           "Aperto",
+  [CLIENT_STATUS.CLOSED]:         "Chiuso",
 
   // Step statuses
-  PENDING:        "In attesa",
-  IN_PROGRESS:    "In lavorazione",
-  COMMITTED:      "Salvato",
+  [STEP_STATUS.PENDING]:          "In attesa",
+  [STEP_STATUS.IN_PROGRESS]:      "In lavorazione",
+  [STEP_STATUS.COMMITTED]:        "Salvato",
 };
 
 export function statusToneClass(status: string): string {
   switch (status) {
-    case "completato":
+    case DOCUMENT_STATUS.COMPLETED:
       return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200";
-    case "in_revisione":
+    case DOCUMENT_STATUS.IN_REVIEW:
       return "bg-violet-50 text-violet-700 ring-1 ring-violet-200";
-    case "in_lavorazione":
+    case DOCUMENT_STATUS.IN_PROGRESS:
       return "bg-blue-50 text-blue-700 ring-1 ring-blue-200";
-    case "attesa_info":
-    case "in_attesa":
+    case DOCUMENT_STATUS.WAITING_INFO:
+    case DOCUMENT_STATUS.WAITING:
       return "bg-amber-50 text-amber-700 ring-1 ring-amber-200";
-    case "aperto":
+    case CLIENT_STATUS.OPEN:
       return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200";
-    case "chiuso":
-    case "archiviato":
+    case CLIENT_STATUS.CLOSED:
+    case DOCUMENT_STATUS.ARCHIVED:
       return "bg-slate-100 text-slate-600 ring-1 ring-slate-200";
     default:
       return "bg-blue-50 text-blue-700 ring-1 ring-blue-200";

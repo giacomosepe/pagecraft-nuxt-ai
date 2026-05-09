@@ -1,3 +1,5 @@
+import { CLIENT_STATUS, FOLDER_STATUS } from "~/utils/statuses";
+
 export type AppNavItem = {
 	label: string;
 	to: string;
@@ -48,21 +50,21 @@ export const appSidebarSections: AppNavSection[] = [
 		items: [
 			{
 				label: "In attesa",
-				to: "/progetti?status=in_attesa",
+				to: `/progetti?status=${FOLDER_STATUS.WAITING}`,
 				icon: "i-lucide-clock-3",
-				match: { path: "/progetti", status: "in_attesa" },
+				match: { path: "/progetti", status: FOLDER_STATUS.WAITING },
 			},
 			{
 				label: "In lavorazione",
-				to: "/progetti?status=in_lavorazione",
+				to: `/progetti?status=${FOLDER_STATUS.IN_PROGRESS}`,
 				icon: "i-lucide-loader-circle",
-				match: { path: "/progetti", status: "in_lavorazione" },
+				match: { path: "/progetti", status: FOLDER_STATUS.IN_PROGRESS },
 			},
 			{
 				label: "Completati",
-				to: "/progetti?status=completato",
+				to: `/progetti?status=${FOLDER_STATUS.COMPLETED}`,
 				icon: "i-lucide-circle-check-big",
-				match: { path: "/progetti", status: "completato" },
+				match: { path: "/progetti", status: FOLDER_STATUS.COMPLETED },
 			},
 		],
 	},
@@ -71,15 +73,15 @@ export const appSidebarSections: AppNavSection[] = [
 		items: [
 			{
 				label: "Aperti",
-				to: "/clienti?status=aperto",
+				to: `/clienti?status=${CLIENT_STATUS.OPEN}`,
 				icon: "i-lucide-star",
-				match: { path: "/clienti", status: "aperto" },
+				match: { path: "/clienti", status: CLIENT_STATUS.OPEN },
 			},
 			{
 				label: "Completati",
-				to: "/clienti?status=completato",
+				to: `/clienti?status=${CLIENT_STATUS.COMPLETED}`,
 				icon: "i-lucide-circle-check",
-				match: { path: "/clienti", status: "completato" },
+				match: { path: "/clienti", status: CLIENT_STATUS.COMPLETED },
 			},
 		],
 	},

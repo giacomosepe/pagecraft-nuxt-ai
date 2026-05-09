@@ -2,6 +2,7 @@
 import { formatDate } from "~/utils/date";
 import { deriveFolderStatus } from "~/utils/folderStatus";
 import { statusLabel } from "~/utils/status";
+import { DOCUMENT_STATUS } from "~/utils/statuses";
 import type { FolderItem } from "~/types/app.types";
 
 const props = defineProps<{
@@ -19,7 +20,7 @@ function lastModified(folder: FolderItem): string {
 
 function documenti(folder: FolderItem): string {
   const pages = folder.pages ?? [];
-  const completed = pages.filter((p) => p.status === "completato").length;
+  const completed = pages.filter((p) => p.status === DOCUMENT_STATUS.COMPLETED).length;
   return `${completed} / ${pages.length}`;
 }
 

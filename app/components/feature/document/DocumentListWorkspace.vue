@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DocumentListItem } from "~/types/app.types";
 import { documentListCols } from "~/utils/listLayout";
+import { DOCUMENT_STATUS } from "~/utils/statuses";
 
 const props = defineProps<{
   documents?: DocumentListItem[] | null;
@@ -23,12 +24,12 @@ const feedback = ref<{
 
 const filters = [
   { key: "recenti", label: "Recenti", icon: "i-lucide-history" },
-  { key: "in_lavorazione", label: "In lavorazione", icon: "i-lucide-loader-circle" },
-  { key: "completato", label: "Completati", icon: "i-lucide-circle-check-big" },
+  { key: DOCUMENT_STATUS.IN_PROGRESS, label: "In lavorazione", icon: "i-lucide-loader-circle" },
+  { key: DOCUMENT_STATUS.COMPLETED, label: "Completati", icon: "i-lucide-circle-check-big" },
   { key: "tutti", label: "Tutti i documenti", icon: "i-lucide-files" },
 ] as const;
 
-const activeFilter = ref<"recenti" | "in_lavorazione" | "completato" | "tutti">(
+const activeFilter = ref<"recenti" | typeof DOCUMENT_STATUS.IN_PROGRESS | typeof DOCUMENT_STATUS.COMPLETED | "tutti">(
   "tutti",
 );
 
@@ -46,13 +47,13 @@ watchEffect(() => {
     return;
   }
 
-  if (status === "in_lavorazione") {
-    activeFilter.value = "in_lavorazione";
+  if (status === DOCUMENT_STATUS.IN_PROGRESS) {
+    activeFilter.value = DOCUMENT_STATUS.IN_PROGRESS;
     return;
   }
 
-  if (status === "completato") {
-    activeFilter.value = "completato";
+  if (status === DOCUMENT_STATUS.COMPLETED) {
+    activeFilter.value = DOCUMENT_STATUS.COMPLETED;
     return;
   }
 
@@ -65,12 +66,12 @@ const filteredDocuments = computed(() => {
   return normalizedDocuments.value.filter((document, index) => {
     if (activeFilter.value === "recenti" && index >= 8) return false;
     if (
-      activeFilter.value === "in_lavorazione" &&
-      document.status !== "in_lavorazione"
+      activeFilter.value === DOCUMENT_STATUS.IN_PROGRESS &&
+      document.status !== DOCUMENT_STATUS.IN_PROGRESS
     ) {
       return false;
     }
-    if (activeFilter.value === "completato" && document.status !== "completato") {
+    if (activeFilter.value === DOCUMENT_STATUS.COMPLETED && document.status !== DOCUMENT_STATUS.COMPLETED) {
       return false;
     }
 
@@ -96,9 +97,9 @@ const headerTitle = computed(() => {
   switch (activeFilter.value) {
     case "recenti":
       return "Documenti recenti";
-    case "in_lavorazione":
+    case DOCUMENT_STATUS.IN_PROGRESS:
       return "Documenti in lavorazione";
-    case "completato":
+    case DOCUMENT_STATUS.COMPLETED:
       return "Documenti completati";
     default:
       return "Documenti";
@@ -114,7 +115,7 @@ const headerSubtitle = computed(() => {
 });
 
 async function selectFilter(
-  filterKey: "recenti" | "in_lavorazione" | "completato" | "tutti",
+  filterKey: "recenti" | typeof DOCUMENT_STATUS.IN_PROGRESS | typeof DOCUMENT_STATUS.COMPLETED | "tutti",
 ): Promise<void> {
   activeFilter.value = filterKey;
 
@@ -123,7 +124,7 @@ async function selectFilter(
     return;
   }
 
-  if (filterKey === "in_lavorazione" || filterKey === "completato") {
+  if (filterKey === DOCUMENT_STATUS.IN_PROGRESS || filterKey === DOCUMENT_STATUS.COMPLETED) {
     await router.push({ query: { status: filterKey } });
     return;
   }

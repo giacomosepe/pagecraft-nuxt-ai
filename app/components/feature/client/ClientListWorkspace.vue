@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import type { ClientListItem } from "~/types/app.types";
 import { clientListCols } from "~/utils/listLayout";
+import {
+	CLIENT_STATUS,
+	CLOSED_CLIENT_STATUSES,
+	type ClientStatus,
+} from "~/utils/statuses";
 
 const props = defineProps<{
 	clients?: ClientListItem[] | null;
@@ -54,12 +59,12 @@ watchEffect(() => {
 		return;
 	}
 
-	if (status === "aperto") {
+	if (status === CLIENT_STATUS.OPEN) {
 		activeFilter.value = "attivi";
 		return;
 	}
 
-	if (status === "chiuso" || status === "completato") {
+	if (CLOSED_CLIENT_STATUSES.includes(status as ClientStatus)) {
 		activeFilter.value = "chiusi";
 		return;
 	}
@@ -72,11 +77,11 @@ const filteredClients = computed(() => {
 
 	return normalizedClients.value.filter((client, index) => {
 		if (activeFilter.value === "recenti" && index >= 6) return false;
-		if (activeFilter.value === "attivi" && client.status !== "aperto")
+		if (activeFilter.value === "attivi" && client.status !== CLIENT_STATUS.OPEN)
 			return false;
 		if (
 			activeFilter.value === "chiusi" &&
-			!["chiuso", "completato"].includes(client.status)
+			!CLOSED_CLIENT_STATUSES.includes(client.status as ClientStatus)
 		) {
 			return false;
 		}
@@ -128,9 +133,9 @@ async function selectFilter(
 
 	const query =
 		filterKey === "attivi"
-			? { status: "aperto" }
+			? { status: CLIENT_STATUS.OPEN }
 			: filterKey === "chiusi"
-				? { status: "completato" }
+				? { status: CLIENT_STATUS.COMPLETED }
 				: {};
 
 	await router.push({ query });

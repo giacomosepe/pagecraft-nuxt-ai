@@ -4,6 +4,7 @@ import { formatDate } from "~/utils/date";
 import { deriveFolderStatus } from "~/utils/folderStatus";
 import { projectListCols } from "~/utils/listLayout";
 import { statusLabel, statusToneClass } from "~/utils/status";
+import { DOCUMENT_STATUS } from "~/utils/statuses";
 
 const props = defineProps<{
 	project: ProjectListItem;
@@ -24,7 +25,7 @@ const documentCount = computed((): number => props.project.pages?.length ?? 0);
 const primaryPage = computed(() => props.project.pages?.[0] ?? null);
 
 const completedCount = computed((): number =>
-	(props.project.pages ?? []).filter((page) => page.status === "completato").length,
+	(props.project.pages ?? []).filter((page) => page.status === DOCUMENT_STATUS.COMPLETED).length,
 );
 
 const projectStatus = computed((): string =>

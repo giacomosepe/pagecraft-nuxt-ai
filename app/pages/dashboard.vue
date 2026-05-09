@@ -1,5 +1,14 @@
 <script setup lang="ts">
 import { deriveFolderStatus } from "~/utils/folderStatus";
+import {
+  CLIENT_STATUS,
+  CLOSED_DOCUMENT_STATUSES,
+  CLOSED_FOLDER_STATUSES,
+  DOCUMENT_STATUS,
+  FOLDER_STATUS,
+  type DocumentStatus,
+  type FolderStatus,
+} from "~/utils/statuses";
 
 definePageMeta({ middleware: "auth" });
 
@@ -34,9 +43,9 @@ const summaryCards = computed<SummaryCard[]>(() => {
   const documentItems = toArray(documents.value);
 
   const clientCounts = {
-    aperti: clientItems.filter((client) => client.status === "aperto").length,
+    aperti: clientItems.filter((client) => client.status === CLIENT_STATUS.OPEN).length,
     inLavorazione: 0,
-    chiusi: clientItems.filter((client) => client.status === "chiuso").length,
+    chiusi: clientItems.filter((client) => client.status === CLIENT_STATUS.CLOSED).length,
   };
 
   const projectStatuses = projectItems.map((project) =>
@@ -44,20 +53,20 @@ const summaryCards = computed<SummaryCard[]>(() => {
   );
 
   const projectCounts = {
-    aperti: projectStatuses.filter((status) => status === "in_attesa").length,
-    inLavorazione: projectStatuses.filter((status) => status === "in_lavorazione").length,
+    aperti: projectStatuses.filter((status) => status === FOLDER_STATUS.WAITING).length,
+    inLavorazione: projectStatuses.filter((status) => status === FOLDER_STATUS.IN_PROGRESS).length,
     chiusi: projectStatuses.filter((status) =>
-      ["completato", "archiviato"].includes(status),
+      CLOSED_FOLDER_STATUSES.includes(status as FolderStatus),
     ).length,
   };
 
   const documentCounts = {
-    aperti: documentItems.filter((document) => document.status === "in_attesa").length,
+    aperti: documentItems.filter((document) => document.status === DOCUMENT_STATUS.WAITING).length,
     inLavorazione: documentItems.filter(
-      (document) => document.status === "in_lavorazione",
+      (document) => document.status === DOCUMENT_STATUS.IN_PROGRESS,
     ).length,
     chiusi: documentItems.filter((document) =>
-      ["completato", "archiviato"].includes(document.status),
+      CLOSED_DOCUMENT_STATUSES.includes(document.status as DocumentStatus),
     ).length,
   };
 

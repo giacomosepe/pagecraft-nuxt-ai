@@ -61,6 +61,8 @@ const isDeleting = ref(false);
 const isSaving = ref(false);
 const uploadLoading = ref<FolderDocumentSlot | null>(null);
 const deleteLoading = ref<FolderDocumentSlot | null>(null);
+const downloadLoading = ref<FolderDocumentSlot | null>(null);
+const previewLoading = ref<FolderDocumentSlot | null>(null);
 const confirmDeleteSlot = ref<FolderDocumentSlot | null>(null);
 const feedback = ref<{
 	tone: "success" | "error";
@@ -180,6 +182,65 @@ function buildPayload() {
 
 function documentForSlot(slot: FolderDocumentSlot): FolderDocument | null {
 	return data.value?.documents.find((document) => document.slot === slot) ?? null;
+}
+
+function isPdfFilename(filename: string | null | undefined): boolean {
+	return Boolean(filename?.toLowerCase().endsWith(".pdf"));
+}
+
+function showFileActionError(): void {
+	toast.add({
+		title: "Impossibile aprire il file",
+		description: "Riprova tra qualche istante.",
+		color: "error",
+	});
+}
+
+async function getFolderDocumentSignedUrl(documentId: string): Promise<string> {
+	const res = await $fetch<{ url: string }>("/api/folder-documents/signed-url", {
+		query: { id: documentId },
+	});
+	return res.url;
+}
+
+async function downloadFolderDocument(slot: FolderDocumentSlot): Promise<void> {
+	const document = documentForSlot(slot);
+	if (!document || downloadLoading.value) return;
+
+	downloadLoading.value = slot;
+	try {
+		const url = await getFolderDocumentSignedUrl(document.id);
+		const link = window.document.createElement("a");
+		link.href = url;
+		link.download = document.filename;
+		link.style.display = "none";
+		window.document.body.appendChild(link);
+		link.click();
+		window.document.body.removeChild(link);
+	}
+	catch {
+		showFileActionError();
+	}
+	finally {
+		downloadLoading.value = null;
+	}
+}
+
+async function previewFolderDocument(slot: FolderDocumentSlot): Promise<void> {
+	const document = documentForSlot(slot);
+	if (!document || previewLoading.value) return;
+
+	previewLoading.value = slot;
+	try {
+		const url = await getFolderDocumentSignedUrl(document.id);
+		window.open(url, "_blank", "noopener,noreferrer");
+	}
+	catch {
+		showFileActionError();
+	}
+	finally {
+		previewLoading.value = null;
+	}
 }
 
 function formatFileSize(size: number | null): string {
@@ -505,14 +566,38 @@ async function confirmDeleteProject(): Promise<void> {
 									</p>
 								</div>
 
-								<UButton
+								<div
 									v-if="documentForSlot(slot.key) && confirmDeleteSlot !== slot.key"
-									color="error"
-									variant="ghost"
-									icon="i-lucide-trash-2"
-									class="size-7 rounded-lg p-0"
-									@click="confirmDeleteSlot = slot.key"
-								/>
+									class="flex shrink-0 items-center gap-1"
+								>
+									<UButton
+										color="neutral"
+										variant="ghost"
+										icon="i-lucide-download"
+										class="size-7 rounded-lg p-0"
+										:loading="downloadLoading === slot.key"
+										aria-label="Scarica file"
+										@click="downloadFolderDocument(slot.key)"
+									/>
+									<UButton
+										v-if="isPdfFilename(documentForSlot(slot.key)?.filename)"
+										color="neutral"
+										variant="ghost"
+										icon="i-lucide-eye"
+										class="size-7 rounded-lg p-0"
+										:loading="previewLoading === slot.key"
+										aria-label="Anteprima file"
+										@click="previewFolderDocument(slot.key)"
+									/>
+									<UButton
+										color="error"
+										variant="ghost"
+										icon="i-lucide-trash-2"
+										class="size-7 rounded-lg p-0"
+										aria-label="Elimina file"
+										@click="confirmDeleteSlot = slot.key"
+									/>
+								</div>
 							</div>
 
 							<div v-if="confirmDeleteSlot === slot.key" class="mt-4 rounded-xl bg-rose-50 p-3">
