@@ -27,6 +27,70 @@ const ALLOWED_WHERE_KEYS: Record<string, string[]> = {
   generations: ["id", "step_id"],
 };
 
+// Whitelist of client-writable columns per table. Columns not listed here are
+// silently stripped so legacy callers do not break, while sensitive fields stay
+// outside the generic write surface.
+const ALLOWED_WRITE_COLUMNS: Record<string, string[]> = {
+  clients: [
+    "name",
+    "company_name",
+    "industry_sector",
+    "employee_count",
+    "legal_representative",
+    "vat_number",
+    "codice_fiscale",
+    "registered_address",
+    "company_form",
+    "street_address",
+    "city",
+    "provincia",
+    "cap",
+    "revenue",
+    "legal_rep_name",
+    "legal_rep_cf",
+    "legal_rep_dob",
+    "contact_name",
+    "contact_email",
+    "contact_phone",
+    "board_members",
+    "shareholders",
+    "subsidiaries",
+    "soci",
+    "partecipate",
+  ],
+  folders: [
+    "program_name",
+    "tax_year",
+    "referente",
+  ],
+  pages: [
+    "title",
+    "tax_year",
+  ],
+  files: [
+    "filename",
+    "storage_path",
+    "mime_type",
+    "file_size_bytes",
+    "scope",
+    "file_type",
+    "extraction_status",
+    "page_id",
+    "step_id",
+  ],
+  steps: [
+    "form_data",
+    "user_context",
+  ],
+  generations: [
+    "step_id",
+    "page_id",
+    "prompt",
+    "output",
+    "mode",
+  ],
+};
+
 // Tables that have user_id directly on the row (used for RLS double-check on writes)
 // steps and generations are protected by RLS through their parent chain
 const TABLES_WITH_USER_ID = [
@@ -35,6 +99,37 @@ const TABLES_WITH_USER_ID = [
   "pages",
   "files",
 ];
+
+function sanitizeWriteData(
+  table: string,
+  operation: "insert" | "update" | "delete",
+  data: Record<string, unknown>,
+): Record<string, unknown> {
+  if (operation === "delete") return {};
+
+  const allowedColumns = ALLOWED_WRITE_COLUMNS[table] ?? [];
+  const allowedColumnSet = new Set(allowedColumns);
+  const payload: Record<string, unknown> = {};
+  const strippedColumns: string[] = [];
+
+  for (const [key, value] of Object.entries(data)) {
+    if (allowedColumnSet.has(key)) {
+      payload[key] = value;
+    } else {
+      strippedColumns.push(key);
+    }
+  }
+
+  if (strippedColumns.length > 0) {
+    console.warn("[db/mutate] stripped disallowed write columns", {
+      table,
+      operation,
+      columns: strippedColumns,
+    });
+  }
+
+  return payload;
+}
 
 export default defineEventHandler(async (event) => {
   const client = await serverSupabaseClient(event);
@@ -53,6 +148,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const { table, operation, data, where } = parsed.data;
+  const sanitizedData = sanitizeWriteData(table, operation, data);
 
   // Validate where keys against whitelist
   if (where) {
@@ -71,8 +167,8 @@ export default defineEventHandler(async (event) => {
   // Always inject user_id on insert — never trust it from the client
   const payload =
     operation === "insert" && TABLES_WITH_USER_ID.includes(table)
-      ? { ...data, user_id: user.id }
-      : data;
+      ? { ...sanitizedData, user_id: user.id }
+      : sanitizedData;
 
   let query = client.from(table);
 

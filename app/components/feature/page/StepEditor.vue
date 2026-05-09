@@ -18,7 +18,6 @@ import type {
   StepRecord,
   StepType,
 } from "~/types/app.types";
-import type { GenerativeRuleSection } from "~/types/generative-rule";
 import { normalizeStepFormSchema } from "~/utils/normalizeStepFormSchema";
 import type { ExtractionResult } from "~/utils/visuraExtraction";
 import { normalizeExtractionResult } from "~/utils/visuraExtraction";
@@ -286,11 +285,8 @@ function instanceSummary(
 }
 
 // ─── UI state ─────────────────────────────────────────────────────────────────
-const extractionRuleModalOpen = ref(false);
-const activeExtractionRuleFieldKey = ref<string | null>(null);
-const extractionRuleSections = ref<GenerativeRuleSection[]>([]);
-const appliedExtractionRules = ref<Record<string, GenerativeRuleSection[]>>({});
 const connectedDetailSaveError = ref("");
+const clientProfileSaveError = ref("");
 const stepConfig = computed<StepTypeConfig>(() => {
   const stepType = effectiveStepType.value;
   if (stepType && stepType in STEP_TYPE_CONFIG) {
@@ -373,14 +369,6 @@ const areRequiredFieldsComplete = computed(() =>
   renderableFields.value.every((field) => isFieldComplete(field)),
 );
 
-watch(
-	  () => props.activeStep.id,
-	  () => {
-		    extractionRuleModalOpen.value = false;
-		    activeExtractionRuleFieldKey.value = null;
-		  },
-		);
-
 const {
   promptModalOpen,
   promptReadOnlyValue,
@@ -435,53 +423,13 @@ const {
   getVisuraData,
 });
 
-async function openExtractionRuleModal(fieldKey: string): Promise<void> {
-  activeExtractionRuleFieldKey.value = fieldKey;
-  const appliedRule = appliedExtractionRules.value[fieldKey];
-  if (appliedRule) {
-    extractionRuleSections.value = appliedRule;
-    extractionRuleModalOpen.value = true;
-    return;
-  }
-
-  extractionRuleSections.value = [
-    {
-      key: "prompt",
-      label: "Prompt di estrazione",
-      content: "Caricamento della regola di estrazione...",
-    },
-  ];
-  extractionRuleModalOpen.value = true;
-
-  try {
-    const prompt = await $fetch<string>("/api/visura/extraction-rule");
-    if (activeExtractionRuleFieldKey.value !== fieldKey) return;
-    extractionRuleSections.value = [
-      {
-        key: "prompt",
-        label: "Prompt di estrazione",
-        content: prompt,
-      },
-    ];
-  } catch {
-    extractionRuleSections.value = [
-      {
-        key: "prompt",
-        label: "Prompt di estrazione",
-        content: "Non siamo riusciti a caricare la regola di estrazione. Riprova.",
-      },
-    ];
-  }
-}
-
-function applyExtractionRule(sections: GenerativeRuleSection[]): void {
-  const fieldKey = activeExtractionRuleFieldKey.value;
-  if (!fieldKey) return;
-  appliedExtractionRules.value = {
-    ...appliedExtractionRules.value,
-    [fieldKey]: sections,
-  };
-}
+const {
+  extractionRuleModalOpen,
+  extractionRuleSections,
+  appliedExtractionRules,
+  openExtractionRuleModal,
+  applyExtractionRule,
+} = useStepExtractionRules({ activeStepId });
 
 function previewSections(text: string): { title: string; paragraphs: string[] }[] {
   const sections: { title: string; paragraphs: string[] }[] = [];
@@ -626,7 +574,6 @@ async function saveConnectedDetailField(field: StepFormField, value: unknown): P
       } as { title?: string; tax_year?: number | null; referente?: string | null });
     }
   } catch (err: unknown) {
-    console.error("[StepEditor] connected detail save error:", err);
     connectedDetailSaveError.value =
       err instanceof Error
         ? err.message
@@ -741,6 +688,7 @@ const {
   onReset: () => {
     isSavingClientProfile.value = false;
     clientProfileSaved.value = false;
+    clientProfileSaveError.value = "";
   },
   onInsert: (fieldKey, payload) => {
     emit(
@@ -795,6 +743,7 @@ function toClientProfilePartecipate(result: ExtractionResult): ClientProfilePart
 async function saveReviewedVisuraToClientProfile(result: ExtractionResult): Promise<void> {
   const clientId = props.clientData?.id;
   if (!clientId || isSavingClientProfile.value) return;
+  clientProfileSaveError.value = "";
 
   if (clientProfileHasStructureData.value) {
     const confirmed = window.confirm(
@@ -819,8 +768,10 @@ async function saveReviewedVisuraToClientProfile(result: ExtractionResult): Prom
     });
     clientProfileSaved.value = true;
   } catch (err) {
-    console.error("[StepEditor] client profile save error:", err);
-    window.alert("Non siamo riusciti a salvare i dati nel profilo cliente. Riprova.");
+    clientProfileSaveError.value =
+      err instanceof Error
+        ? err.message
+        : "Non siamo riusciti a salvare i dati nel profilo cliente. Riprova.";
   } finally {
     isSavingClientProfile.value = false;
   }
@@ -1105,6 +1056,15 @@ async function saveReviewedVisuraToClientProfile(result: ExtractionResult): Prom
         color="error"
         variant="soft"
         :description="connectedDetailSaveError"
+        icon="i-lucide-circle-alert"
+        size="sm"
+      />
+
+      <UAlert
+        v-if="clientProfileSaveError"
+        color="error"
+        variant="soft"
+        :description="clientProfileSaveError"
         icon="i-lucide-circle-alert"
         size="sm"
       />

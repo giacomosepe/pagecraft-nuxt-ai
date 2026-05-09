@@ -10,6 +10,7 @@
 import type { Ref, ComputedRef } from "vue";
 import type { StepRecord } from "~/types/app.types";
 import { isRichTextHtml, richHtmlToPlainText } from "~/utils/richText";
+import { STEP_STATUS } from "~/utils/statuses";
 
 const CONTAMINATED_GENERATION_MESSAGE =
   "Errore nella generazione. Riprova — se il problema persiste contatta il supporto.";
@@ -136,22 +137,17 @@ export function useGeneration({
     errorMsg.value = "";
 
     try {
-      await $fetch("/api/db/mutate", {
+      await $fetch("/api/steps/commit", {
         method: "POST",
         body: {
-          table: "steps",
-          operation: "update",
-          data: {
-            committed_output: output.value,
-            status: "COMMITTED",
-          },
-          where: { id: activeStep.value.id },
+          stepId: activeStep.value.id,
+          committedOutput: output.value,
         },
       });
       // Optimistic local state update — keeps the UI in sync without a refetch
       const step = steps.value?.[activeStepIndex.value];
       if (step) {
-        step.status = "COMMITTED";
+        step.status = STEP_STATUS.COMMITTED;
         step.committed_output = output.value;
       }
       commitSuccess.value = true;

@@ -2,6 +2,7 @@
 import type { ProjectListItem } from "~/types/app.types";
 import { deriveFolderStatus } from "~/utils/folderStatus";
 import { projectListCols } from "~/utils/listLayout";
+import { FOLDER_STATUS } from "~/utils/statuses";
 
 const props = defineProps<{
 	projects?: ProjectListItem[] | null;
@@ -35,11 +36,11 @@ const activeNotice = computed(() => feedback.value ?? transitionNotice.value);
 const activeFilter = computed(() => {
 	const status = route.query.status as string | undefined;
 	switch (status) {
-		case "in_attesa":
+		case FOLDER_STATUS.WAITING:
 			return "In attesa";
-		case "in_lavorazione":
+		case FOLDER_STATUS.IN_PROGRESS:
 			return "In lavorazione";
-		case "completato":
+		case FOLDER_STATUS.COMPLETED:
 			return "Completati";
 		default:
 			return "Tutti i progetti";
@@ -48,11 +49,11 @@ const activeFilter = computed(() => {
 
 const headerTitle = computed(() => {
 	switch (route.query.status as string | undefined) {
-		case "in_attesa":
+		case FOLDER_STATUS.WAITING:
 			return "Progetti in attesa";
-		case "in_lavorazione":
+		case FOLDER_STATUS.IN_PROGRESS:
 			return "Progetti in lavorazione";
-		case "completato":
+		case FOLDER_STATUS.COMPLETED:
 			return "Progetti completati";
 		default:
 			return "Progetti";
@@ -69,9 +70,9 @@ const headerSubtitle = computed(() => {
 
 const tabs = [
 	{ label: "Tutti i progetti", status: undefined },
-	{ label: "In attesa", status: "in_attesa" },
-	{ label: "In lavorazione", status: "in_lavorazione" },
-	{ label: "Completati", status: "completato" },
+	{ label: "In attesa", status: FOLDER_STATUS.WAITING },
+	{ label: "In lavorazione", status: FOLDER_STATUS.IN_PROGRESS },
+	{ label: "Completati", status: FOLDER_STATUS.COMPLETED },
 ] as const;
 
 const normalizedProjects = computed(() => props.projects ?? []);

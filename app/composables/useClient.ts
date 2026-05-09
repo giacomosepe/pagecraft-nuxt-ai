@@ -9,6 +9,7 @@
 //   const { data, pending, updateStatus } = useClient(clientId)
 
 import type { ClientDetail, FolderItem } from "~/types/app.types";
+import type { ClientStatus } from "~/utils/statuses";
 
 export function useClient(clientId: string) {
   const supabase = useSupabaseClient();
@@ -35,7 +36,7 @@ export function useClient(clientId: string) {
 
   // Persists a new status value and updates data optimistically so any
   // watchEffect / computed depending on data.value.status stays in sync.
-  async function updateStatus(newStatus: string): Promise<void> {
+  async function updateStatus(newStatus: ClientStatus): Promise<void> {
     if (data.value) {
       data.value.status = newStatus;
     }

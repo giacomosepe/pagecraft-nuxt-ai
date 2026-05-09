@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { STEP_STATUS } from "~/utils/statuses";
+
 const props = withDefaults(
   defineProps<{
     status: string;
@@ -10,7 +12,7 @@ const props = withDefaults(
 );
 
 const tone = computed(() => {
-  if (props.status === "COMMITTED") {
+  if (props.status === STEP_STATUS.COMMITTED) {
     return {
       label: "Salvato",
       className: "border-emerald-200 bg-emerald-50 text-emerald-700",
@@ -24,14 +26,14 @@ const tone = computed(() => {
     };
   }
 
-  if (props.status === "IN_PROGRESS") {
+  if (props.status === STEP_STATUS.IN_PROGRESS) {
     return {
       label: "In corso",
       className: "border-blue-200 bg-blue-50 text-blue-700",
     };
   }
 
-  if (props.status === "SKIPPED") {
+  if (props.status === STEP_STATUS.SKIPPED) {
     return {
       label: "Saltato",
       className: "border-slate-200 bg-slate-100 text-slate-600",

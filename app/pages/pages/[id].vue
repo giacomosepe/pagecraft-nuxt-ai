@@ -9,6 +9,7 @@ import type { Ref } from "vue";
 import type { StepRecord } from "~/types/app.types";
 import { buildIntestazione } from "~/utils/buildIntestazione";
 import { buildStepPreview, stepPreviewToText } from "~/utils/buildStepPreview";
+import { STEP_STATUS } from "~/utils/statuses";
 
 definePageMeta({ middleware: "auth" });
 
@@ -50,7 +51,7 @@ const hasUnsavedOutputChanges = computed(
 
 const canGoNext = computed(
 	() =>
-		activeStep.value?.status === "COMMITTED" &&
+		activeStep.value?.status === STEP_STATUS.COMMITTED &&
 		!hasUnsavedOutputChanges.value &&
 		activeStepIndex.value < ((steps.value?.length ?? 0) - 1),
 );
@@ -192,6 +193,7 @@ function selectConfiguration(): void {
 
 // ─── Word export ──────────────────────────────────────────────────────────────
 const isExporting = ref(false);
+const exportError = ref("");
 
 const allCommitted = computed(
 	() =>
@@ -202,6 +204,7 @@ const allCommitted = computed(
 async function exportWord(): Promise<void> {
 	if (!allCommitted.value || isExporting.value) return;
 	isExporting.value = true;
+	exportError.value = "";
 	try {
 		const res = await fetch("/api/export/word", {
 			method: "POST",
@@ -219,7 +222,7 @@ async function exportWord(): Promise<void> {
 		document.body.removeChild(a);
 		URL.revokeObjectURL(url);
 	} catch {
-		// Silent fail — button returns to normal state
+		exportError.value = "Non siamo riusciti a esportare il documento Word. Riprova tra qualche istante.";
 	} finally {
 		isExporting.value = false;
 	}
@@ -292,6 +295,15 @@ async function exportWord(): Promise<void> {
 					</UButton>
 				</template>
 			</BasePageHeader>
+
+			<UAlert
+				v-if="exportError"
+				color="error"
+				variant="soft"
+				icon="i-lucide-circle-alert"
+				:description="exportError"
+				class="mb-4"
+			/>
 
 			<EditorShell>
 				<template #nav>

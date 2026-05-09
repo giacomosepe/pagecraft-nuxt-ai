@@ -2,6 +2,7 @@
 import type { ClientDetail, ProjectListItem } from "~/types/app.types";
 import { formatDate } from "~/utils/date";
 import { deriveFolderStatus } from "~/utils/folderStatus";
+import { ACTIVE_FOLDER_STATUSES, FOLDER_STATUS } from "~/utils/statuses";
 
 definePageMeta({ middleware: "auth" });
 
@@ -94,8 +95,8 @@ const projectRows = computed<ProjectListItem[]>(() =>
 const visibleProjects = computed(() =>
 	projectRows.value.filter((project) => {
 		const status = deriveFolderStatus(project.pages ?? []);
-		if (projectFilter.value === "completed") return status === "completato";
-		return ["attesa_info", "in_attesa", "in_lavorazione", "in_revisione"].includes(status);
+		if (projectFilter.value === "completed") return status === FOLDER_STATUS.COMPLETED;
+		return ACTIVE_FOLDER_STATUSES.includes(status);
 	}),
 );
 

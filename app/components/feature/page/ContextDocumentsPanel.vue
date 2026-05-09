@@ -32,10 +32,13 @@ const ACCEPTED_EXTENSIONS = [".pdf", ".doc", ".docx"];
 const documents = ref<PageContextDocument[]>([]);
 const loading = ref(true);
 const uploadingSlot = ref<PageContextSlot | null>(null);
+const downloadingSlot = ref<PageContextSlot | null>(null);
+const previewingSlot = ref<PageContextSlot | null>(null);
 const deletingId = ref<string | null>(null);
 const confirmDeleteId = ref<string | null>(null);
 const errors = ref<Partial<Record<PageContextSlot, string>>>({});
 const inputRefs = ref<Partial<Record<PageContextSlot, HTMLInputElement | null>>>({});
+const toast = useToast();
 
 function setInputRef(slot: PageContextSlot, el: Element | null): void {
 	inputRefs.value[slot] = el instanceof HTMLInputElement ? el : null;
@@ -43,6 +46,63 @@ function setInputRef(slot: PageContextSlot, el: Element | null): void {
 
 function documentForSlot(slot: PageContextSlot): PageContextDocument | null {
 	return documents.value.find((document) => document.slot === slot) ?? null;
+}
+
+function isPdfFilename(filename: string | null | undefined): boolean {
+	return Boolean(filename?.toLowerCase().endsWith(".pdf"));
+}
+
+function showFileActionError(): void {
+	toast.add({
+		title: "Impossibile aprire il file",
+		description: "Riprova tra qualche istante.",
+		color: "error",
+	});
+}
+
+async function getContextDocumentSignedUrl(documentId: string): Promise<string> {
+	const res = await $fetch<{ url: string }>("/api/page-context-documents/signed-url", {
+		query: { id: documentId },
+	});
+	return res.url;
+}
+
+async function downloadDocument(document: PageContextDocument): Promise<void> {
+	if (downloadingSlot.value) return;
+
+	downloadingSlot.value = document.slot;
+	try {
+		const url = await getContextDocumentSignedUrl(document.id);
+		const link = window.document.createElement("a");
+		link.href = url;
+		link.download = document.filename;
+		link.style.display = "none";
+		window.document.body.appendChild(link);
+		link.click();
+		window.document.body.removeChild(link);
+	}
+	catch {
+		showFileActionError();
+	}
+	finally {
+		downloadingSlot.value = null;
+	}
+}
+
+async function previewDocument(document: PageContextDocument): Promise<void> {
+	if (previewingSlot.value) return;
+
+	previewingSlot.value = document.slot;
+	try {
+		const url = await getContextDocumentSignedUrl(document.id);
+		window.open(url, "_blank", "noopener,noreferrer");
+	}
+	catch {
+		showFileActionError();
+	}
+	finally {
+		previewingSlot.value = null;
+	}
 }
 
 function formatBytes(bytes: number | null): string {
@@ -228,6 +288,25 @@ onMounted(() => {
 							</div>
 
 							<div class="flex shrink-0 items-center gap-1">
+								<UButton
+									size="xs"
+									variant="ghost"
+									color="neutral"
+									icon="i-lucide-download"
+									:loading="downloadingSlot === slot.key"
+									aria-label="Scarica file"
+									@click="downloadDocument(documentForSlot(slot.key)!)"
+								/>
+								<UButton
+									v-if="isPdfFilename(documentForSlot(slot.key)?.filename)"
+									size="xs"
+									variant="ghost"
+									color="neutral"
+									icon="i-lucide-eye"
+									:loading="previewingSlot === slot.key"
+									aria-label="Anteprima file"
+									@click="previewDocument(documentForSlot(slot.key)!)"
+								/>
 								<UButton
 									size="xs"
 									variant="ghost"

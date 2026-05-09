@@ -53,7 +53,7 @@ function toggleMultiselectValue(option: string): void {
       <label
         v-for="opt in field.options ?? []"
         :key="opt"
-        class="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700 transition-colors hover:border-violet-200 hover:bg-violet-50/40"
+        class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700 transition-colors hover:border-violet-200 hover:bg-violet-50/40"
       >
         <input
           type="checkbox"
@@ -74,7 +74,7 @@ function toggleMultiselectValue(option: string): void {
       :rows="5"
       class="w-full"
       :ui="{
-        base: 'w-full rounded-2xl border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-violet-300 focus:ring-violet-200',
+        base: 'w-full rounded-xl border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-violet-300 focus:ring-violet-200',
       }"
       :disabled="disabled"
       @update:model-value="emit('update:modelValue', $event)"
@@ -86,7 +86,7 @@ function toggleMultiselectValue(option: string): void {
       :items="field.options ?? []"
       class="w-full"
       :ui="{
-        base: 'w-full rounded-2xl border-slate-200 bg-white text-sm text-slate-700',
+        base: 'w-full rounded-xl border-slate-200 bg-white text-sm text-slate-700',
       }"
       :disabled="disabled"
       @update:model-value="emit('update:modelValue', $event)"
@@ -102,7 +102,7 @@ function toggleMultiselectValue(option: string): void {
       :step="isYearField ? 1 : undefined"
       class="w-full"
       :ui="{
-        base: 'w-full rounded-2xl border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-violet-300 focus:ring-violet-200',
+        base: 'w-full rounded-xl border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-violet-300 focus:ring-violet-200',
       }"
       :disabled="disabled"
       @update:model-value="emit('update:modelValue', $event)"

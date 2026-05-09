@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { StepRecord } from "~/types/app.types";
+import { STEP_STATUS } from "~/utils/statuses";
 
 const props = defineProps<{
   steps: StepRecord[];
@@ -13,7 +14,7 @@ const emit = defineEmits<{
 }>();
 
 const committedCount = computed(
-  () => props.steps.filter((s) => s.status === "COMMITTED").length,
+  () => props.steps.filter((s) => s.status === STEP_STATUS.COMMITTED).length,
 );
 
 const progressPct = computed(() =>
@@ -30,9 +31,9 @@ function stepTypeLabel(step: StepRecord): string {
 }
 
 function stepState(step: StepRecord, index: number): "saved" | "active" | "todo" {
-  if (props.configurationActive) return step.status === "COMMITTED" ? "saved" : "todo";
+  if (props.configurationActive) return step.status === STEP_STATUS.COMMITTED ? "saved" : "todo";
   if (index === props.activeIndex) return "active";
-  return step.status === "COMMITTED" ? "saved" : "todo";
+  return step.status === STEP_STATUS.COMMITTED ? "saved" : "todo";
 }
 </script>
 

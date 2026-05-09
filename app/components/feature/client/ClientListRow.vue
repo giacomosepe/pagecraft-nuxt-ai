@@ -3,6 +3,7 @@ import type { ClientListItem } from "~/types/app.types";
 import { formatDate } from "~/utils/date";
 import { clientListCols } from "~/utils/listLayout";
 import { statusLabel, statusToneClass } from "~/utils/status";
+import { CLIENT_STATUS } from "~/utils/statuses";
 
 const props = defineProps<{
 	client: ClientListItem;
@@ -54,8 +55,8 @@ const lastActivity = computed((): string => {
 });
 
 const statusText = computed((): string => {
-	if (props.client.status === "aperto") return "Attivo";
-	if (props.client.status === "chiuso") return "Chiuso";
+	if (props.client.status === CLIENT_STATUS.OPEN) return "Attivo";
+	if (props.client.status === CLIENT_STATUS.CLOSED) return "Chiuso";
 	return statusLabel[props.client.status] ?? props.client.status;
 });
 
