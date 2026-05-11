@@ -76,18 +76,15 @@ function handleDeleteClick(event: MouseEvent): void {
 
 <template>
 	<div
-		class="grid w-full items-center gap-4 border-t border-slate-200 px-6 py-4 transition-colors hover:bg-slate-50"
+		class="interactive-row grid w-full items-center gap-4 border-t border-slate-200 px-6 py-4 text-left transition-colors hover:bg-slate-50"
 		:class="clientListCols"
+		role="button"
+		tabindex="0"
+		@click="navigate"
+		@keydown.enter="navigate"
+		@keydown.space.prevent="navigate"
 	>
-		<div
-			class="interactive-row col-span-5 grid grid-cols-[minmax(0,2.4fr)_minmax(120px,1.2fr)_minmax(110px,0.9fr)_minmax(110px,0.9fr)_minmax(120px,0.9fr)] items-center gap-4 text-left"
-			role="button"
-			tabindex="0"
-			@click="navigate"
-			@keydown.enter="navigate"
-			@keydown.space.prevent="navigate"
-		>
-			<div class="flex min-w-0 items-center gap-3">
+		<div class="flex min-w-0 items-center gap-3">
 			<div
 				class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-xs font-semibold text-slate-500"
 			>
@@ -129,7 +126,6 @@ function handleDeleteClick(event: MouseEvent): void {
 		<p class="text-sm text-slate-500">
 			{{ lastActivity }}
 		</p>
-		</div>
 
 		<div class="flex justify-end">
 			<UButton
