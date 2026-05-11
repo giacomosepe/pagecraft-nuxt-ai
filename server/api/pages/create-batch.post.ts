@@ -25,7 +25,7 @@ const CreateBatchSchema = z
     clientId: z.string().uuid("Please select a valid client"),
     folderId: z.string().uuid().optional().nullable(),
     newFolderName: z.string().min(1).max(200).optional(),
-    taxYear: z.number().int().min(2020).max(2035),
+    taxYear: z.number().int().min(2020).max(2035).optional().nullable(),
     referente: z.string().max(200).optional().nullable(),
   })
   .refine((d) => d.folderId || d.newFolderName, {
@@ -76,6 +76,8 @@ export default defineEventHandler(async (event) => {
   // ─── Step 5: Resolve folder ───────────────────────────────────────────────
   let resolvedFolderId: string;
   let resolvedFolderName: string;
+  let resolvedFolderTaxYear: number | null = null;
+  let resolvedFolderReferente: string | null = null;
   let folderWasCreated = false;
 
   if (newFolderName) {
@@ -86,6 +88,8 @@ export default defineEventHandler(async (event) => {
       user_id: user.id,
       client_id: clientId,
       program_name: trimmedName,
+      tax_year: taxYear ?? null,
+      referente: trimmedReferente,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
@@ -97,19 +101,28 @@ export default defineEventHandler(async (event) => {
     }
     resolvedFolderId = newFolderId;
     resolvedFolderName = trimmedName;
+    resolvedFolderTaxYear = taxYear ?? null;
+    resolvedFolderReferente = trimmedReferente;
     folderWasCreated = true;
   } else {
     resolvedFolderId = folderId!;
     const { data: existingFolder, error: folderLookupError } = await supabase
       .from("folders")
-      .select("program_name")
+      .select("program_name, tax_year, referente")
       .eq("id", resolvedFolderId)
+      .eq("user_id", user.id)
+      .eq("client_id", clientId)
       .single();
     if (folderLookupError || !existingFolder) {
       throw createError({ statusCode: 404, message: "Folder not found" });
     }
     resolvedFolderName = existingFolder.program_name ?? "";
+    resolvedFolderTaxYear = existingFolder.tax_year ?? null;
+    resolvedFolderReferente = existingFolder.referente ?? null;
   }
+
+  const effectiveTaxYear = taxYear ?? resolvedFolderTaxYear ?? null;
+  const effectiveReferente = trimmedReferente ?? resolvedFolderReferente ?? null;
 
   // ─── Step 6: Create each document ────────────────────────────────────────
   const createdPageIds: string[] = [];
@@ -177,8 +190,8 @@ export default defineEventHandler(async (event) => {
       status: "in_lavorazione",
       client_id: clientId,
       folder_id: resolvedFolderId,
-      tax_year: taxYear,
-      referente: trimmedReferente,
+      tax_year: effectiveTaxYear,
+      referente: effectiveReferente,
       created_at: now,
       updated_at: now,
     });
@@ -205,7 +218,7 @@ export default defineEventHandler(async (event) => {
       form_schema: fs.form_schema ?? null,
       form_data: buildInitialStepFormData(fs, {
         documentTitle: entry.title,
-        taxYear,
+        taxYear: effectiveTaxYear,
       }),
       status: "PENDING" as const,
       user_context: null,

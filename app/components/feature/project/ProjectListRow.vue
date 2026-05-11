@@ -90,13 +90,15 @@ function handleDeleteClick(event: MouseEvent): void {
 			</div>
 		</div>
 
-		<div v-if="showClient !== false || showYear" class="min-w-0">
-			<p class="truncate text-sm text-slate-600">
-				{{ secondaryColumnLabel }}
-			</p>
-			<p v-if="secondaryColumnHint" class="truncate text-xs text-slate-400">
-				{{ secondaryColumnHint }}
-			</p>
+		<div class="min-w-0">
+			<template v-if="showClient !== false || showYear">
+				<p class="truncate text-sm text-slate-600">
+					{{ secondaryColumnLabel }}
+				</p>
+				<p v-if="secondaryColumnHint" class="truncate text-xs text-slate-400">
+					{{ secondaryColumnHint }}
+				</p>
+			</template>
 		</div>
 
 		<p class="text-sm text-slate-600">
@@ -116,8 +118,9 @@ function handleDeleteClick(event: MouseEvent): void {
 			{{ lastActivity }}
 		</p>
 
-		<div v-if="showActions !== false" class="flex justify-end">
+		<div class="flex justify-end">
 			<UButton
+				v-if="showActions !== false"
 				color="error"
 				variant="soft"
 				icon="i-lucide-trash-2"
