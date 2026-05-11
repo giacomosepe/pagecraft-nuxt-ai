@@ -59,7 +59,7 @@ function toggleFramework(id: string) {
 
 // ─── Step 2: Project name + document titles ────────────────────────────────
 // Existing folders for the selected client (quick-select chips)
-const existingFolders = ref<{ id: string; program_name: string }[]>([]);
+const existingFolders = ref<{ id: string; program_name: string; tax_year: number | null }[]>([]);
 const foldersLoading = ref(false);
 
 watch(selectedClientId, async (clientId) => {
@@ -71,7 +71,7 @@ watch(selectedClientId, async (clientId) => {
 	foldersLoading.value = true;
 	const { data, error } = await client
 		.from("folders")
-		.select("id, program_name")
+		.select("id, program_name, tax_year")
 		.eq("client_id", clientId)
 		.order("program_name");
 	foldersLoading.value = false;
@@ -82,16 +82,22 @@ watch(selectedClientId, async (clientId) => {
 const selectedFolderIdFromExisting = ref<string | null>(null);
 const projectName = ref("");
 const taxYear = ref<string | number>(new Date().getFullYear());
-const referente = ref("");
 
 function selectExistingFolder(id: string) {
 	selectedFolderIdFromExisting.value = id;
 	projectName.value = "";
+	const folder = existingFolders.value.find((f) => f.id === id);
+	taxYear.value = folder?.tax_year ?? "";
 }
 
 function onProjectNameInput() {
 	// Typing a new name deselects any existing folder chip
 	selectedFolderIdFromExisting.value = null;
+}
+
+function clearExistingFolderSelection() {
+	selectedFolderIdFromExisting.value = null;
+	taxYear.value = new Date().getFullYear();
 }
 
 // Document titles — one per selected framework, keyed by frameworkId.
@@ -118,8 +124,11 @@ const canAdvance = computed(() => {
 	if (currentStep.value === 2) {
 		const folderOk =
 			!!selectedFolderIdFromExisting.value || projectName.value.trim().length > 0;
-		const year = Number(String(taxYear.value).trim());
-		const projectDetailsOk = Number.isInteger(year) && year >= 2020 && year <= 2035;
+		const yearText = String(taxYear.value).trim();
+		const year = Number(yearText);
+		const projectDetailsOk = selectedFolderIdFromExisting.value
+			? yearText.length === 0 || (Number.isInteger(year) && year >= 2020 && year <= 2035)
+			: Number.isInteger(year) && year >= 2020 && year <= 2035;
 		const titlesOk = selectedFrameworkIds.value.every(
 			(id) => documentTitles.value[id]?.trim().length > 0,
 		);
@@ -150,8 +159,9 @@ async function submit() {
 				newFolderName: selectedFolderIdFromExisting.value
 					? undefined
 					: projectName.value.trim(),
-				taxYear: Number(String(taxYear.value).trim()),
-				referente: referente.value.trim() || undefined,
+				taxYear: String(taxYear.value).trim()
+					? Number(String(taxYear.value).trim())
+					: undefined,
 				pages: selectedFrameworkIds.value.map((id) => ({
 					frameworkId: id,
 					title: documentTitles.value[id]?.trim(),
@@ -384,7 +394,7 @@ async function submit() {
 							<button
 								type="button"
 								class="ml-1 underline"
-								@click="selectedFolderIdFromExisting = null"
+								@click="clearExistingFolderSelection"
 							>
 								(cambia)
 							</button>
@@ -407,14 +417,6 @@ async function submit() {
 								max="2035"
 								step="1"
 								placeholder="es. 2026"
-								class="w-full"
-							/>
-						</UFormField>
-
-						<UFormField label="Referente">
-							<UInput
-								v-model="referente"
-								placeholder="es. Mario Rossi"
 								class="w-full"
 							/>
 						</UFormField>

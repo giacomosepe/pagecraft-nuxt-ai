@@ -23,6 +23,7 @@ const CreatePageSchema = z.object({
     .max(200)
     .transform((s) => s.trim()),
   clientId: nullable_uuid,
+  folderId: nullable_uuid,
   taxYear: z.number().int().min(2020).max(2035).optional().nullable(),
   referente: z.string().max(200).optional().nullable(),
 });
@@ -55,7 +56,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // From here on, parsed.data is fully typed and guaranteed valid
-  const { frameworkId, title, clientId, taxYear, referente } = parsed.data;
+  const { frameworkId, title, clientId, folderId, taxYear, referente } = parsed.data;
   const trimmedReferente = referente?.trim() || null;
 
   // ─── Step 3: Get service role client ─────────────────────────────────────
@@ -103,6 +104,28 @@ export default defineEventHandler(async (event) => {
     });
   }
 
+  let folderTaxYear: number | null = null;
+  let folderReferente: string | null = null;
+
+  if (folderId) {
+    const { data: folder, error: folderError } = await supabase
+      .from("folders")
+      .select("tax_year, referente")
+      .eq("id", folderId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (folderError || !folder) {
+      throw createError({ statusCode: 404, message: "Folder not found" });
+    }
+
+    folderTaxYear = folder.tax_year ?? null;
+    folderReferente = folder.referente ?? null;
+  }
+
+  const effectiveTaxYear = taxYear ?? folderTaxYear ?? null;
+  const effectiveReferente = trimmedReferente ?? folderReferente ?? null;
+
   // ─── Step 6: Create the page row ─────────────────────────────────────────
   // We set framework_name as a snapshot — if the framework is renamed later,
   // existing pages are unaffected.
@@ -117,9 +140,9 @@ export default defineEventHandler(async (event) => {
     title,
     status: "in_lavorazione",
     client_id: clientId ?? null,
-    folder_id: null,
-    tax_year: taxYear ?? null,
-    referente: trimmedReferente,
+    folder_id: folderId ?? null,
+    tax_year: effectiveTaxYear,
+    referente: effectiveReferente,
     created_at: now,
     updated_at: now,
   });
@@ -143,7 +166,7 @@ export default defineEventHandler(async (event) => {
     form_schema: fs.form_schema ?? null,
     form_data: buildInitialStepFormData(fs, {
       documentTitle: title,
-      taxYear: taxYear ?? null,
+      taxYear: effectiveTaxYear,
     }),
     status: "PENDING" as const,
     user_context: null,
